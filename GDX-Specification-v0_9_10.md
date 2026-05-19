@@ -1,0 +1,1916 @@
+# GDX — Graph Data eXchange Specification
+
+- **Status:** Draft v0.9.10 (working draft, pre-1.0)
+- **Date:** 2026-05-18
+- **Editors:** 
+- **Authors:** Julian Mussi
+
+
+## Abstract
+
+GDX (Graph Data eXchange) is a typed graph data format for representing structured information as elements with explicit roles, identifiers, predicates, values, and schema references. It combines the typing of programming languages, the predicate alignment of semantic-web formats, and the document orientation of human-readable formats in a single representation.
+
+GDX targets applications requiring structured data, semantic relationships, and stable identity within a unified model. The core specification defines a small closed vocabulary of structural roles, a uniform identifier and literal grammar, and a Template-based schema mechanism in which schemas are themselves GDX documents. Vocabularies layer on top through extension and template mechanisms; the core specification stays stable while vocabularies evolve independently.
+
+This document defines the abstract data model, the prefix vocabulary and composition rules, the canonical text form, and the schema and validation mechanism. It is independent of any particular wire format. Companion specifications cover the Compact Form, the Binary Form, and the GDX Common Vocabulary.
+
+
+## Status of This Document
+
+This is the v0.9 working draft.
+
+Changes in v0.9.7 from v0.9.6: §1 (Introduction) restructured into §1.1 What GDX Is, §1.2 Existing Approaches, §1.3 GDX Design Goals, §1.4 Where GDX Fits, §1.5 Scope. Conventions and Terminology promoted back to top-level §2, scoped to term definitions only (Core Terms, Conformance Layers, Vocabulary Terms, Identifier Schemes). The GDX Element and Core Data Model renumbered to §3 and §4. §6 renamed to "Element Kinds." Field Sigils and Separators (previously in §2.7 of Conventions) absorbed into §3.4. No normative semantics change.
+
+Changes in v0.9.8 from v0.9.7: the technical term "Kind" (naming the closed enumeration of Object, Record, Edge, etc.) renamed to "Role" throughout. "Kind" was ambiguous against generic English usage and competed with "value-kind." §6 renamed from "Element Kinds" to "Element Roles"; §6.3 from "Kinds in Detail" to "Roles in Detail." §4.1 renamed from "Field Roles" to "Element Fields" to avoid collision with the new technical term; its column header changed from "Role" to "Purpose." The §3.4 sigil table column header changed from "Role" to "Purpose" for the same reason. Sub-subsection numbering in §4.3 corrected from the stale §3.3.x to §4.3.x. The term "value-kind" (the value-category of a Resource) is preserved unchanged; only the structural-position concept renamed. No normative semantics change.
+
+Changes in v0.9.9 from v0.9.8 sharpen the conceptual / data-model / text-form boundary across §3, §4, §5. Each section now has a distinct focus, signaled by its title: §3 "GDX Concepts" defines what GDX expresses; §4 "The GDX Abstract Data Model" defines what an implementation represents at runtime; §5 "Canonical Text Form" defines how elements are written. Substantial content moved between sections to eliminate the three-way overlap that had accumulated. The Sigils and Separators subsection moved from §3.4 to §5.1.1 (sigils are textual mechanics, not conceptual). The Real-Number Representation subsection from §4.3.2 merged into §5.2.3 Float Literals (suffix mechanics are textual). The two textual forms of null values (bare and empty-value) moved from §4.3.4 to a new §5.1.3, while the three-state Property semantics (Absent/Null/Present-with-value) remain in §4. A new §3.4 "The Implicit Parent-Child Relationship" promotes a conceptual point previously buried in §3.2's closing paragraph. Cross-references throughout the spec updated accordingly. No normative semantics change.
+
+Changes in v0.9.10 from v0.9.9 are corrections: (1) §7.4 Resource Rules erroneously listed DEF prefixes (`DEFSTR`, `DEFINT`, etc.) as Resource-bearing; Templates declare a contract for instances and do not carry an instance value themselves. The DEF prefixes have been removed from the resource-family bullets and added to the list of roles that do not carry Resources. (2) Appendix C.2 was reframed from "Reference Cycle Detection" (a generic implementation-correctness concern) to "Reference Cycle Exploitation," emphasizing the adversarial framing consistent with the rest of Appendix C. (3) Several Quick Start examples in Appendix D (§D.1, §D.2, §D.3, §D.4, §D.6, §D.7, §D.8) were updated to wrap their content in an Object or Template root; the previous examples placed bare Properties, Records, or Sets at the document root, which violates the conformance requirement that a document's root MUST be an Object, Template, REL declaration, or Package (§7). No normative semantics change.
+
+
+## Table of Contents
+
+1. [Introduction](#1-introduction)
+2. [Conventions and Terminology](#2-conventions-and-terminology)
+3. [GDX Concepts](#3-gdx-concepts)
+4. [The GDX Abstract Data Model](#4-the-gdx-abstract-data-model)
+5. [Canonical Text Form](#5-canonical-text-form)
+6. [Element Roles](#6-element-roles)
+7. [Composition Axioms](#7-composition-axioms)
+8. [Schemas and Validation (Templates)](#8-schemas-and-validation-templates)
+9. [Transport Semantics](#9-transport-semantics)
+10. [Data Persistence](#10-data-persistence)
+11. [Open Issues](#11-open-issues)
+- [Appendix A — Conformance](#appendix-a--conformance)
+- [Appendix B — Format Comparison](#appendix-b--format-comparison)
+- [Appendix C — Security Considerations](#appendix-c--security-considerations)
+- [Appendix D — Quick Start](#appendix-d--quick-start)
+
+---
+
+## 1. Introduction
+
+### 1.1 What GDX Is
+
+GDX (Graph Data eXchange) is a data persistence and exchange format. GDX is designed to be easily read, modified and created by humans.  A GDX document is composed of a set of nested elements. Each element has the same strutural composition. Each element carries a role prefix, comprised of a minimal yet expressive closed vocabulary, which enables unambiguous interpretation of the elements resouce field. Elements may carry an identifier, a predicate that aligns it to a shared semantic definition,  a typed resource value, and a reference to a schema type.
+
+A small GDX example:
+
+```
+<OBJ Alice
+    <STR firstName : "Alice">
+    <INT age : 24>
+    <BOOL active : true>
+    <EDGE #knows : @Bob>
+>
+```
+
+This declares an Object identified as `Alice` with three typed properties (string, integer, boolean) and an Edge expressing a `knows` relationship to another Object identified as `Bob`. Every element states its type, its role, and its content explicitly. No external schema is required to know that `age` is an integer, that `active` is a boolean, or that the Edge points to another entity.
+
+GDX carries structured application data, semantic relationships, and stable identity within a single uniform model. The properties it combines — typed values like a programming language, semantic alignment like the semantic web, hierarchical structure like a document format, and graph relationships like a property graph — are typically split across separate formats; GDX provides them in one.
+
+
+
+### 1.2 Existing Approaches
+
+The data format landscape offers several established options, each with real strengths and real limits.
+
+**JSON** is simple, ubiquitous, and supported by every modern programming environment. Its weaknesses follow from its simplicity: numbers have no integer-vs-float distinction, binary data has no native form, semantic alignment requires external convention, and validation requires a separate schema language. JSON is the right answer when universality matters more than richness.
+
+**YAML** is friendly for human authoring and widely used for configuration. Its type inference is permissive — `yes`, `no`, `on`, `off` may parse as booleans depending on YAML version, version numbers like `1.10` may parse as floats, country codes like `NO` may parse as the boolean false. Round-trip stability requires careful quoting discipline. YAML documents also become unweildly as they become more complex loosing the readibility benefits it is designed for.
+
+**XML** provides hierarchical structure, namespaces, and a mature schema language (XSD). Its weaknesses are verbosity and the attribute-versus-element ambiguity (some data goes in attributes, some in elements, with no principled rule). As a mechanism for markup XML is excellent but is less efficient for pure information exchange.
+
+**RDF/OWL** models data as a graph of subject-predicate-object triples and supports semantic interoperability through shared vocabularies. RDF triples function as the basis for ontology building. Its strengths come at the cost of high complexity (multiple serializations, blank nodes, named graphs, OWL inference) and ergonomics that many application developers find off-putting. 
+
+**Binary protocols** (Protobuf, FlatBuffers, Cap'n Proto, Avro) optimize wire format size and parse speed at the cost of human readability and schema portability. Each requires schema definition in its own language and ahead-of-time compilation. These are the right answer for high-frequency machine-to-machine traffic.
+
+In the preceding example each format's development can be traced to a primary motivation, XML as markup, YAML for human Write and Read, RDF for ontological development, JSON as object serialization.  Each of these formats does its job well within its domain. The gap is for applications that need *several* of these properties together: explicit types like a binary protocol, semantic alignment like RDF, schema validation like XML, and document readability like JSON.
+
+### 1.3 GDX Design Goals
+
+GDX's design choices are responses to the problems named in §1.2 and the gaps left by existing formats.
+
+**Portability and exchange.** GDX is designed so that complex typed data structures and object graphs can be encapsulated in a single document and uniformly parsed wihtout requiring external schemas. GDX is well suited for exchange of relational data to and from databases. It also works well as an intermediate data exchange between different file formats. 
+
+**Variable complexity.** GDX is able to encode simple key value pairs with minimal overhead in one element, and express semantic relationships and explicit graph edges in the next. The use of GDX features is entirely driven by user requirements and can vary across a document.
+
+**Typed elements.** Every GDX element begins with a prefix that declares its role and/or value-kind. The prefix ensures that an explicit interpretation of the resource is communicated. This may be a value literal type like `STR` declaring a string-valued property or a compound data type 'REC'. In other cases the element's prefix communicates that that it's resource should be interpreted as a reference to another object. It is this explicit declaration of the role of each element means that the receiver does not infer types from value appearance and removes the need for an external schema just to read the data correctly. 
+
+**Efficient encoding of high information density.** Every GDX element is able to encode several pieces of information through the use of field location and sigil prefixes. This allows GDX to contain rich expressions on a minimal surface.
+
+**Closed minimal vocabulary.** The structural surface, the prefix vocabulary, composition rules, identifier grammar, literal grammar is closed and small (§6). This minimal set of prefix terms produces a core vocaulary sufficient to explicitly communicate concepts about value relationship, data literal vs reference relationsip, using basic graph concepts. this core vocabulary is designed to be expressive enough to handle a wide range of requirements. GDX also is designed for vocabularies to be layer on top through the existing extension and template mechanisms. The core specification stays stable while vocabularies evolve independently.
+
+**Inline semantic layer.** The optional `#rel` field on any element names a shared predicate that aligns the element's local identity to a cross-document vocabulary. A property `<STR #schema:givenName firstName : "Alice">` is locally named `firstName` but semantically identifies as `schema:givenName`. Two systems using different local names can recognize the same concept by matching the predicate. The alignment travels with the data. This functionality allows data and and semantic layers to be constructed in parallel.
+
+**Simple schemas.** Schemas in GDX are GDX. A Template is an element with a `DEF[type]` prefix that declares the expected shape of conforming instances. The same parser reads Templates and instances; the same syntax expresses both. There is no separate schema language, and a Template can travel in the same document as the instances it describes. 
+
+**Unified document and graph model.** A GDX document is a tree, but tree elements may carry Edges that reference other elements by identifier. Object identifiers can be local names, paths, GUIDs, or full IRIs. The same document can be read as a tree (for hierarchical access), traversed as a graph (for relationship navigation), or stored as relational rows (for operational systems). Each access pattern uses the same underlying data; no separate format is needed.
+
+**Round-trip stability by design.** The spec defines exactly what a serialization must preserve (Appendix A). Numeric width, value-kind, identifier ordering, child order, and Annotation positions all round-trip exactly. A strict canonical form supports content addressing and cryptographic signing.
+
+GDX expresses everything through a single repeating element form: a prefix declaring the role, optional identifying fields, an optional typed resource, and an optional schema reference. The same form expresses Properties, Records, Objects, Edges, Sets, and Templates — every role GDX defines.
+
+This shape is the load-bearing design choice from which the rest of the specification follows. §3 develops the element as a concept; §4 defines it formally.
+
+A short side-by-side example illustrates the contrast. The same composite record in several formats:
+
+**GDX:**
+
+```
+<REC customer
+    <STR firstName : "Alice">
+    <INT age : 24>
+    <BOOL active : true>
+>
+```
+
+**JSON:**
+
+```json
+{
+  "customer": {
+    "firstName": "Alice",
+    "age": 24,
+    "active": true
+  }
+}
+```
+**GDX: Compact**
+
+```
+REC customer
+  STR firstName : "Alice"
+  INT age : 24
+  BOOL active : true
+
+```
+
+**YAML:**
+
+```yaml
+customer:
+  firstName: Alice
+  age: 24
+  active: true
+```
+
+**XML:**
+
+```xml
+<customer>
+  <firstName>Alice</firstName>
+  <age>24</age>
+  <active>true</active>
+</customer>
+```
+
+The shapes are similar; the information each carries is not. JSON, YAML, and XML each leave several things implicit: that `age` is an integer (not a string `"24"`), that `active` is a boolean (not the string `"true"`), and that `firstName` aligns with the `schema:givenName` predicate. The receiver must already know — through external schema, convention, or out-of-band documentation — what types and meanings to assign. The GDX form makes each of these explicit on the element itself.
+
+A more extensive comparison covering predicate alignment, schema validation, and graph-structured data is in Appendix B.
+
+### 1.4 Where GDX Fits
+
+GDX targets a range of problems where existing formats produce friction. Within this band, GDX combines properties no single alternative provides; outside it, an established format is usually the better choice.
+
+GDX is well-suited to:
+
+**Multi-tenant operational systems where tenants share semantics but not naming.** When two tenants both have a "customer" concept but call the field different things, GDX's `#rel` predicate puts the alignment directly on the data — local names stay tenant-specific while shared meaning travels with the field.
+
+**Configuration and infrastructure systems with strong typing requirements.** YAML and JSON give readable configuration but no type safety; switching to a typed language gives safety but loses the data-as-data property. GDX provides both — readable like YAML, typed like a programming language, with Templates as the schema layer.
+
+**Storage systems that need both document and graph semantics.** GDX maps cleanly to relational rows for document-style storage (§10.2) and supports graph traversal through Edges. This is a niche that document databases and graph databases currently force a choice between.
+
+**Internal service interchange where contracts must be readable and validated.** Service-to-service messages where developers want JSON-grade readability for debugging, schema-grade validation for contracts, and predicate-style semantics for evolution.
+
+GDX may **not** the right tool for:
+
+- Public web APIs, where JSON's universality matters more than any feature GDX adds.
+- Document publishing with mixed text and markup, where XML's mixed-content model is the right shape.
+- High-frequency binary wire formats where every byte matters, where Protobuf, FlatBuffers, or Cap'n Proto will outperform GDX's binary form.
+
+The common shape of GDX's target domain: data that is graph-shaped but predominantly hierarchical, where semantic alignment matters but full ontology reasoning does not, and where producer and consumer are within an organizational boundary loose enough that "everyone agrees on the schema" is not trivially true.
+
+### 1.5 Scope of This Document
+
+This specification defines the GDX core: the data model, the prefix vocabulary, composition rules, the canonical text form, the identifier and literal grammars, and the Template-based schema mechanism. It does not define standardized predicate vocabularies, semantic types, validation extension catalogs, or the binary wire format. These are the subject of companion specifications and the *GDX Common Vocabulary*.
+
+The core specification is intentionally minimal. Concerns that are likely to evolve over time — predicate semantics, domain-specific types, validation extensions, mapping conventions — live outside the core in versioned vocabularies that may evolve without revising the structural specification.
+
+This document specifies:
+
+- The conceptual element form (§3).
+- The abstract structure of a GDX element (§4).
+- The canonical text form (§5).
+- The closed prefix vocabulary, structural roles, and modifiers (§6).
+- The composition rules that govern legal nesting (§7).
+- The Template-based schema and validation mechanism (§8).
+- Transport-layer semantics for exchange between systems (§9).
+- Persistence and interchange considerations (§10).
+- Conformance requirements (Appendix A).
+- Comparison with other data formats (Appendix B).
+
+
+---
+
+## 2. Conventions and Terminology
+
+This section defines the terms used throughout the specification. The key words **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT**, and **MAY** are interpreted in the sense established by RFC 2119.
+
+### 2.1 Core Terms
+
+- **element** — a single GDX node. The unit of structure; every element has a prefix and may have identity fields, a resource, and children. The term is generic and applies to any role.
+
+- **Prefix** — the leading token that declares an element's role. Belongs to the closed vocabulary defined in §6.
+
+- **Role** — the structural position an element occupies in the data model: Object, Record, Block, Edge, Property, Set, Node, Qualifier, Extension, Template, Relation Declaration, Annotation, Package, or Group. Obtained from a prefix by stripping any modifier. See §6.
+
+- **Modifier** — a sigil or letter prefix-fragment that adapts a base role without changing its composition rules: `*`(Set), `%`(Embedded), `.`(Qualifier), `_`(Extension), `N`(Node), `DEF`(Template).
+
+- **Resource** — the typed scalar value carried by an element, when present. Resource value-kinds are `string`, `int`, `float`, `bool`, `bytes`, and `reference` (§4.3).
+
+- **Value-Kind** — the type category of a Resource. Distinct from Role (which describes structural position). A Property of prefix `STR` carries a Resource of value-kind `string`.
+
+- **Identifier** — any of the three identity fields (`Id`, `Key`, `Rel`) that name or link an element. Some roles require at least one (§4.2).
+
+- **Document** — a single rooted GDX tree, or a sequence of root-eligible elements treated as a unit of serialization. The root(s) of a document MUST be Objects, Templates, REL declarations, or Packages (§9).
+
+- **Data layer** — the set of GDX roles representing persistent, addressable, schema-validatable content: Objects, Records, Blocks, Properties, Sets, Nodes, Edges, Qualifiers, Extensions, Templates, Relation Declarations, and Annotations.
+
+- **Transport layer** — the set of GDX roles representing transient organizational and exchange constructs: Package and Group (§9). Transport-layer constructs are unpacked by receivers and are not persisted as such.
+
+### 2.2 Conformance Layers
+
+GDX defines two distinct conformance layers, each addressing a different category of assertion.
+
+- **Representation Conformance (Layer 1)** — assertions about how a value is encoded. Includes prefix-to-value-kind matching, literal grammar conformance, representation tags (§5.2), and the round-trip text equivalence requirement (Appendix A). Evaluable at parse time without external context. Errors at this layer are *malformed document* errors.
+
+- **Schema Conformance (Layer 2)** — assertions about what a value is allowed to mean. Includes Template satisfaction, Extension constraints, and any vocabulary-defined predicate semantics. Evaluable after parsing, requires Template resolution. Errors at this layer are *schema violation* errors.
+
+The two layers are independent. A document may be representation-conforming without being schema-conforming, or vice versa. The two layers MUST be reported and handled distinctly by conforming implementations.
+
+### 2.3 Vocabulary Terms
+
+- **Vocabulary** — a versioned collection of standardized identifiers, Templates, and Extensions defining shared semantics for a domain. Vocabularies are layered on top of the core specification through the existing extension and template mechanisms.
+
+- **Common Vocabulary** — the GDX Common Vocabulary, a companion specification shipping with the core. Defines standardized representation-tag suffixes, common Templates (numeric width, hash types, semantic types), and common predicate refinement extensions.
+
+- **Representation Tag** — a literal-level annotation declaring how a value is encoded. Drawn from a closed vocabulary defined in §5.2 and referenced by suffix (e.g., `i8`, `f64`, `d`) or prefix (e.g., `0x`, `0b`).
+
+### 2.4 Identifier Schemes
+
+- **Local Identifier** — an identifier whose meaning is scoped to the document containing it. Property and Record names are local identifiers.
+
+- **Resource Identifier** — an identifier whose meaning extends beyond the document. Object identifiers are resource identifiers. The specification does not constrain the identifier scheme; CURIEs, paths, GUIDs, and other forms are all valid.
+
+- **CURIE** — a Compact URI, of the form `prefix:local`, where `prefix` is a vocabulary alias and `local` is the local identifier within that vocabulary. Example: `gdx:Person`.
+
+The grammar for identifiers is uniform across all identifier-bearing positions (§5.4). The semantic interpretation differs by context but the lexical form does not.
+
+---
+
+## 3. GDX Concepts
+
+This section defines the concepts that the rest of the specification builds on: what an element is, what its fields express, how elements relate to each other, and how the same form expresses both hierarchical structure and graph relationships.
+
+The focus is conceptual. Programming-model concerns — how an implementation represents elements at runtime, what an implementation MUST enforce — are in §4. Text-form concerns — sigils, whitespace, literal grammars — are in §5.
+
+### 3.1 The Self-Describing Element
+
+A GDX element states its own type, its own role, and its own content. No external schema is required to determine that a value is an integer rather than a string, that a reference points to another entity, or that a field aligns with a shared predicate. The element carries this information on itself.
+
+This is the design choice that responds to the problems §1.2 named. Type ambiguity dissolves when the element declares its value-kind through its prefix. Semantic drift dissolves when the element carries its own predicate alignment. Schema separation dissolves when the schema is itself written in the same form as the data. Document-vs-graph tension dissolves when the same element form expresses both hierarchical containment (parent-child) and graph relationships (Edges). Round-trip instability dissolves when the form is canonical enough that parsing and re-emitting produce identical text.
+
+None of these dissolutions requires an external interpretation layer. The element is enough on its own.
+
+### 3.2 Anatomy of an Element
+
+An element has six defined positions: Prefix, Key, Rel, Id, Resource, Type. A richly-fielded example showing all six:
+
+```
+<STR &1 #gdx:givenName fname : "Alice" --gdx:string>
+```
+
+This example is contrived to show all six fields together; in practice an element typically carries a subset. Each field plays a distinct conceptual role:
+
+**Prefix** declares the element's role. It is the only required field. The Prefix tells consumers what kind of structural entity this element is — a Property, Record, Edge, Set, Object, and so on — and from the Prefix alone, a consumer knows the element's structural position, the value-kind of any Resource it carries, and what compositions are allowed. Prefixes are drawn from a closed vocabulary defined in §6.
+
+**Key** identifies the element's position within a Template. When an element claims to satisfy a Template, the Key field names the slot it fills. Keys may be numeric (positional) or named (field-aligned). Without the Key, instances could not unambiguously claim conformance to typed shapes that have multiple slots of the same role.
+
+**Rel** names the predicate that aligns this element to a shared vocabulary. The Rel field is GDX's mechanism for cross-document semantic alignment. Two documents using the same Rel are asserting the same conceptual attribute, even when their local identifiers differ. The alignment travels with the data, not in a separate mapping layer.
+
+**Id** is the element's name in the document. For Properties and Records, the Id is a local identifier — a field name meaningful within the document. For Objects, the Id is a resource identifier — a path, CURIE, GUID, or IRI that may be referenced from elsewhere. Whether an Id is required depends on the element's role and position; see §4.2 for the runtime rules.
+
+**Resource** is the typed value the element carries. The Resource follows the typed value-kind appropriate to the Prefix family: a `STR` element's Resource is a string; an `INT` element's Resource is an integer; an `EDGE` element's Resource is a reference to another Object. The Resource is optional — an element may declare a slot or a null value with no Resource at all (§4.3.3).
+
+**Type** is a reference to a Template the element claims to satisfy. The Type field is the element's schema-level claim about its content. When present, it triggers schema validation against the named Template. When absent, the element is interpreted purely at the structural level. Templates are defined in §8.
+
+Together these six fields are sufficient to express identity, alignment, value, and schema-claim — every conceptual concern at the element level. Higher-order concerns (containment, schema definition, transport) are expressed through composition of multiple elements rather than additional fields.
+
+### 3.3 The Identity / Value Split
+
+The `:` separator divides every element into two sides. The left side carries identity — what this element is in the document. The right side carries content — what it actually says.
+
+```
+<Prefix Key Rel Id : Resource Type>
+ ──────identity───── : ───value────
+```
+
+This split is a deliberate commitment about how typed structured data is shaped. Formats that don't make this split tend to tangle the two: XML's choice between attributes and child elements is a recurring source of confusion because both can serve identity or content roles depending on convention. JSON's bare key-value pairs put identity (the key) and content (the value) on the same syntactic level with no way to distinguish "this element claims to be of type X" from "this element has a value of X." RDF expresses identity (subject/predicate) and content (object) as separate triples that must be assembled to recover an element's full meaning.
+
+GDX makes the split explicit. The identity portion (Prefix, Key, Rel, Id) tells a reader *what role the element plays*; the value portion (Resource, Type) tells them *what content the element carries and what schema it claims*. A consumer can stop after reading identity and know everything about the element's place in the document; they read further to learn what the element actually says. The textual mechanism that marks this split — the `:` separator — is defined in §5.
+
+### 3.4 The Implicit Parent-Child Relationship
+
+When one element appears as a child of another, the relationship between them is implicit — GDX does not label parent-child edges. The role of the child element determines what kind of attribute it represents to the parent. A `STR` child of a `REC` parent is a string-valued property of that record; an `EDGE` child of an `OBJ` parent is a directed relationship from that object; a `REC` child of an `OBJ` parent is a structured composite property of that object.
+
+This is a deliberate design choice. Naming the parent-child relation on every element would add a field that the prefix already determines. By making the relationship implicit, GDX avoids redundant labeling while preserving the information: a consumer always knows, from the child's prefix and the parent's role, what the containment relationship means.
+
+Which roles may contain which roles is not a conceptual question but a composition question. The composition rules are defined in §7.
+
+### 3.5 Elements as Graph Statements
+
+The same six-field form supports GDX's graph dimension. The subject of a statement is the parent element; the object is either a child Property's Resource (a literal value) or a child Edge's Resource (a reference to another Object); the predicate is the child's Rel field when present. This produces two forms of graph statement:
+
+- **Literal-valued statement.** `<OBJ Alice>` containing `<STR #gdx:givenName fname : "Alice">` expresses *Alice — gdx:givenName — "Alice"*.
+- **Edge-valued statement.** `<OBJ Alice>` containing `<EDGE #knows : @Bob>` expresses *Alice — knows — Bob*.
+
+The document remains a tree while expressing graph relationships. A reader can navigate it as a tree, traverse it as a graph, or store it as relational rows (§10.2) — all without changing the underlying form. Comparison with RDF and labeled property graphs is in Appendix B.
+
+---
+
+## 4. The GDX Abstract Data Model
+
+This section defines GDX at runtime: the abstract structure an implementation must represent, the rules an implementation must enforce, and the semantic states an implementation must distinguish. Concepts are in §3; text form is in §5.
+
+A GDX element is the tuple
+
+```
+(Prefix, Key?, Rel?, Id?, Resource?, Type?, Children*)
+```
+
+All fields except Prefix are optional at the data-model level. Whether a given role requires a particular field is governed by §6 (Element Roles) and §7 (Composition Axioms).
+
+### 4.1 Element Fields
+
+An element has six defined fields. The Prefix is required; the others are optional at the data-model level. Whether a particular field is required for an element depends on the element's role (§6) and its position relative to its parent (§4.2).
+
+| Field      | Purpose |
+|------------|---------|
+| `Prefix`   | Declares the element's role. Required. Drawn from the closed vocabulary in §6. |
+| `Key`      | A schema-aligned slot name identifying the element's position within a Template. |
+| `Rel`      | A predicate-style label naming the relationship between this element and its parent. |
+| `Id`       | A local or resource identifier — the element's name in the document. |
+| `Resource` | The element's typed scalar value. |
+| `Type`     | A reference to a Template the element claims to satisfy. |
+
+All identity fields (`Id`, `Key`, `Rel`) use case-sensitive ordinal comparison.
+
+Implementations MUST represent these fields as distinct elements of an element's runtime structure. The order in which fields are stored or accessed is implementation-defined; only the children list has a normative order (§4.4).
+
+### 4.2 Identifier Requirements
+
+Identifier requirements apply to elements in *named-attribute positions* — positions where the element represents a distinct named property of its parent.
+
+The following roles, when in named-attribute position, MUST carry at least one of `Id`, `Key`, or `Rel`:
+
+- Object (`OBJ`/`O`, `DEFOBJ`)
+- Record (`REC`/`R`, `%REC`/`%R`, `DEFREC`, `NREC`/`NR`) when not in Set member position
+- Property (`STR`/`S`, `INT`/`I`, `FLOAT`/`F`, `BOOL`/`L`, `BYTE`/`B`, and their embedded/template variants) when not in Set member position
+- Template (any `DEF…`)
+
+Elements appearing as members of a Set (§6.3.13) are in *positional* rather than named-attribute position. They are not required to carry identifiers; they identify themselves by position and value within the Set. Identifiers on Set members are valid and MAY be used when meaningful (for example, to identify individual Records within a Record Set).
+
+A Prefix is REQUIRED on every element regardless of position. Set members MUST carry their prefix even when their identifier is omitted, because the prefix distinguishes Set members from Qualifiers, Annotations, Extensions, and other elements that may appear within a Set's children.
+
+A Property, Record, Edge, or other Resource-bearing element MAY appear with an identifier but no Resource section. The element is well-formed in this state. The semantic interpretation depends on context: in Template context, the form declares a slot without a default value; in instance context, the form represents a null value (§4.3.3).
+
+The lexical grammar for identifiers is uniform across all identifier-bearing positions; see §5.4. The semantic interpretation of an identifier depends on the role that carries it:
+
+- Identifiers on Property, Record, Edge, and Template elements name a relationship within the document. They are functionally equivalent to a field name, label, or variable name in a programming language.
+
+- Identifiers on Object elements identify a resource and are used to resolve references to that Object. The specification places no constraint on the identifier scheme; paths (`/people/alice`), CURIEs (`gdx:Person`), GUIDs, and IRIs (`https://acme.com/people/alice`) are all valid.
+
+This semantic distinction is not reflected in the grammar. A property identifier and an Object identifier draw from the same lexical production (§5.4); they differ only in how consumers interpret them.
+
+### 4.3 Resource Value Kinds
+
+A Resource, when present, MUST be one of:
+
+| Value-Kind  | Description                                                                |
+|-------------|----------------------------------------------------------------------------|
+| `string`    | UTF-16 character sequence; quoted in text.                                 |
+| `int`       | Mathematical integer (any whole number).                                   |
+| `float`     | Real number. Representation is determined by suffix (§5.2).                |
+| `bool`      | `true` or `false`.                                                         |
+| `bytes`     | Opaque sequence of octets.                                                 |
+| `reference` | A reference to another Object by identifier.                               |
+
+The Resource value-kind MUST be consistent with the element's prefix family (string-family prefixes carry strings, int-family prefixes carry ints, etc.). Coercion between value-kinds is implementation-defined and SHOULD be avoided.
+
+#### 4.3.1 Numeric Value-Kinds
+
+The `int` value-kind represents any whole number. The `float` value-kind represents any real number. Neither value-kind constrains the numeric range or precision at the model layer. Constraints on range, width, or representation are expressed at the representation layer through suffix tags (§5.2) or at the schema layer through Templates (§8).
+
+A conforming implementation MUST round-trip every representation-conforming numeric literal through serialization (Appendix A). An implementation that cannot represent a particular literal in its internal numeric type MUST reject the literal at parse time as a representation-conformance failure; it MUST NOT silently truncate, round, or coerce.
+
+#### 4.3.2 Reference Value-Kind
+
+A `reference` resource is a directional pointer to another Object by identifier. References are interpreted by a resolver, not by the GDX parser; the parser validates only that the literal is well-formed (§5.2.6).
+
+The resolution scheme is system-defined. Common approaches include local-document resolution (the reference targets an Object within the same document), namespace-relative resolution (the reference targets an Object within a known scope), and global resolution (the reference is a fully qualified URI). The specification does not mandate any particular scheme; resolvers SHOULD attempt local resolution before broader scopes.
+
+For the special case of Edge elements (§6.3.4), the Resource is always a reference value-kind, and the `#rel` field names the edge type.
+
+#### 4.3.3 Absence and Null Values
+
+A Property element exhibits one of three distinct states with respect to its value:
+
+- **Absent**: the element does not appear in the document. Whether absence is permitted is a schema concern (§8).
+
+- **Null**: the element is present but carries no Resource value. The Property exists structurally but has no value. In Template context, this form declares a slot without a default value; in instance context, this form represents a null value (analogous to SQL `NULL` or JSON `null`).
+
+- **Present with value**: the element appears with an explicit Resource. The Property carries the indicated value.
+
+These three states are structurally and semantically distinct. Implementations MUST represent them as distinct values at runtime; consumers MUST NOT conflate null with present-with-value, and SHOULD NOT conflate either with absent.
+
+For string-typed Properties, the present-with-value state includes the empty string. The empty string is a legitimate string value, distinct from null — an explicit empty string is a value the Property carries, while a null Property carries no value at all. For other value-kinds, there is no "empty value" analogue — the integer zero is a value, not an "empty integer"; the boolean false is a value, not an "empty bool". The distinction between empty and null applies only to strings.
+
+The following table summarizes the states and their typical use:
+
+| State                | Semantic                                                  | When to use                                         |
+|----------------------|-----------------------------------------------------------|-----------------------------------------------------|
+| Absent               | The attribute does not apply or has not been determined   | The schema declares the field as optional; the value is genuinely unknown or inapplicable |
+| Null                 | The attribute applies but has no value                    | The value is known to be missing (e.g., a person with no middle name) |
+| Present with value   | The attribute has the indicated value                     | The value is known and is the indicated content     |
+| Empty string (strings only) | The attribute has the empty-string value           | The value is known to be the empty string (rare in practice; usually indicates a default or placeholder value rather than a true absence) |
+
+Distinguishing absent from null matters most when consumers act on the difference. Absent typically means "no information"; null typically means "information that the value is missing"; present-with-value means "this is the value." A schema designer who treats all three as equivalent is generally creating bugs that surface in transit between systems with different default behaviors.
+
+The textual representation of these states — the bare-versus-empty-value forms a null element may take in serialization — is defined in §5.1.
+
+### 4.4 Children
+
+Children form an ordered list. Order is preserved through serialization and is significant for round-trip equivalence (Appendix A). The semantic significance of order is determined by the parent role and any Template the element claims to satisfy.
+
+Set elements (§6.3.13) carry their members in document order. Set membership does not imply unordered semantics in the data-structure sense; the term refers to the multi-valued nature of the collection rather than to any ordering property.
+
+Every child has exactly one parent. A node detached from its parent and not reattached is no longer part of the document.
+
+---
+
+## 5. Canonical Text Form
+
+This section defines how GDX elements are represented as text: the syntax for writing an element, the textual markers (sigils and separators) that introduce its fields, the whitespace rules, and the literal grammars for each value-kind. Concepts are in §3; the data-model rules an implementation enforces are in §4.
+
+Other text forms (compact, binary, alternative tab-indented) MAY be defined elsewhere and remain conforming so long as they preserve the fields, ordering, and values defined in §4.
+
+### 5.1 Element Syntax
+
+An element is written as a bracketed token sequence between `<` and `>`. The general form is:
+
+```
+<Prefix [&Key] [#Rel] [Id] [: Resource] [--Type]>
+    [child elements ...]
+>
+```
+
+Field write order is **Prefix · Key · Rel · Id · Resource · Type**. The Prefix is required; all other fields are optional.
+
+A leaf element MAY be written on a single line:
+
+```
+<STR name : "Alice">
+```
+
+A non-leaf element places its children between its open and close brackets. The closing `>` matches the most recently opened unclosed `<`. Implementations MAY indent children for readability:
+
+```
+<REC address
+    <STR street : "Main St">
+    <INT number : 100>
+>
+```
+
+#### 5.1.1 Sigils and Separators
+
+A *sigil* is a single non-alphabetic character (or short character sequence) that introduces a field. The sigils used in field positions are:
+
+| Sigil | Purpose |
+|-------|---------|
+| `&`   | Introduces the Key field |
+| `#`   | Introduces the Rel field |
+| `--`  | Introduces the Type field |
+| `@`   | Introduces a reference literal (§5.2.6) |
+
+The character `:` is a *separator*, not a sigil. It divides an element into an identity portion (Prefix, Key, Rel, Id) and a value portion (Resource, Type). The Resource itself has no sigil; it is identified by appearing on the value side of `:`.
+
+The sigils `&`, `#`, and `--` MUST be immediately followed by their field content with no intervening whitespace. Whitespace MAY appear before a sigil to separate it from the preceding token. Whitespace MAY appear on either side of `:`.
+
+When the `:` separator appears with no identity field on the left in a context where an identifier is required, the element is malformed; conforming parsers MUST reject it. When the `--` sigil appears without a type identifier following, the element is malformed.
+
+**Modifier characters** (`*`, `%`, `.`, `_`, `N`, `DEF`) are not field sigils — they are part of the prefix token itself and are defined in §6.
+
+#### 5.1.2 Whitespace Rules
+
+Tokens within an element are separated by whitespace. The following rules apply:
+
+- Whitespace MUST separate the Prefix from a following Id when no sigil-introduced field intervenes (so `<REC address>` not `<Raddress>`).
+- The `:` separator MAY have whitespace on either side. The forms `<STR name:"Alice">`, `<STR name :"Alice">`, `<STR name: "Alice">`, and `<STR name : "Alice">` are all valid and equivalent.
+- Whitespace MAY appear immediately after `<` and immediately before `>`.
+- Whitespace within an element is otherwise not significant.
+
+The canonical form used in this specification's examples places a single space between adjacent fields and around the `:` separator. Implementations producing GDX text MAY choose more compact forms (e.g., `<STR name:"Alice">`) where appropriate to context.
+
+#### 5.1.3 Null Forms
+
+The null state of a Property element (§4.3.3) has two equivalent textual forms:
+
+- **Bare form** (canonical): `<STR middleName>`, `<INT age>`, `<FLOAT weight>`. The Resource section is omitted entirely.
+- **Empty-value form**: `<STR middleName : >`, `<INT age : >`, `<FLOAT weight : >`. The `:` separator is present but no Resource value follows.
+
+Both forms denote the same null state. The bare form is canonical for serialization (Appendix A.5); a conforming parser MUST accept either input form, but a conforming serializer SHOULD output the bare form. The empty-value form exists primarily to support natural human editing — when a user removes a value from a present element by deleting the literal but not the separator, the element remains valid rather than becoming malformed.
+
+The same equivalence applies when a Type reference is present with no Resource value: `<STR name --gdx:string>` and `<STR name : --gdx:string>` are equivalent. The bare form (no `:`) is canonical.
+
+### 5.2 Resource Literals
+
+The Resource of an element, when present, is one of six value-kinds. Each value-kind has a defined literal form in the canonical text representation.
+
+| Value-Kind  | Literal Form                                                             | Example                          |
+|-------------|--------------------------------------------------------------------------|----------------------------------|
+| `string`    | Double-quoted string with backslash escapes                              | `"Alice"`                        |
+| `int`       | Decimal digits with optional sign and optional width suffix; alternative bases via `0b`/`0o` prefix | `42`, `25i8`, `0b1010`, `0o17` |
+| `float`     | Decimal with point, optional width/representation suffix; or keyword     | `3.14`, `25.50d`, `1.5708f32`    |
+| `bool`      | `true` or `false`                                                        | `true`                           |
+| `bytes`     | Hex prefix form (canonical) or alternative encoding prefix               | `0x4a3f8c`                       |
+| `reference` | At-prefixed identifier                                                   | `@/people/bob`                   |
+
+#### 5.2.1 String Literals
+
+A string literal is a sequence of characters enclosed in double quotes. The following escape sequences are recognized:
+
+| Escape | Meaning           |
+|--------|-------------------|
+| `\"`   | Literal `"`       |
+| `\\`   | Literal `\`       |
+| `\n`   | Newline           |
+| `\t`   | Tab               |
+| `\r`   | Carriage return   |
+| `\u{X}` | Unicode codepoint, where `X` is one or more hex digits |
+
+All other characters appear literally. The string content is interpreted as a UTF-16 character sequence.
+
+```
+<STR greeting : "Hello, world">
+<STR path : "C:\\Users\\alice">
+<STR quoted : "She said \"hello\"">
+```
+
+#### 5.2.2 Integer Literals
+
+An integer literal is a sequence of decimal digits, optionally preceded by `-` or `+`, optionally followed by a width suffix.
+
+The width suffix, when present, declares a representation-layer commitment to a specific integer width. The closed suffix vocabulary is:
+
+| Suffix    | Representation                          |
+|-----------|-----------------------------------------|
+| `i8`      | 8-bit signed integer, range -128 to 127 |
+| `i16`     | 16-bit signed integer                   |
+| `i32`     | 32-bit signed integer                   |
+| `i64`     | 64-bit signed integer                   |
+| `u8`      | 8-bit unsigned integer, range 0 to 255  |
+| `u16`     | 16-bit unsigned integer                 |
+| `u32`     | 32-bit unsigned integer                 |
+| `u64`     | 64-bit unsigned integer                 |
+| `bigint`  | Arbitrary-precision integer             |
+
+Suffix tokens MUST be immediately adjacent to the numeric portion with no intervening whitespace. A literal whose value exceeds the suffix's range MUST be rejected at parse time as a representation-conformance failure.
+
+Untagged integer literals carry no representation commitment; the implementation chooses an internal representation sufficient to round-trip the literal (Appendix A).
+
+```
+<INT count : 42>
+<INT temperature : 25i8>
+<INT packetSize : 1500u16>
+<INT balance : 9999999999999999999bigint>
+```
+
+Alternative bases are supported through prefix forms:
+
+| Prefix | Base    | Example      |
+|--------|---------|--------------|
+| `0b`   | Binary  | `0b1010`     |
+| `0o`   | Octal   | `0o17`       |
+
+Width suffixes MAY follow base-prefix literals: `0b11111111u8` is a valid representation of 255 as an unsigned 8-bit integer.
+
+#### 5.2.3 Float Literals
+
+A float literal represents a real number. Three forms are defined:
+
+**Numeric form:** decimal digits with a decimal point, optional sign, optional exponent (`e` or `E` followed by signed digits), and optional representation suffix.
+
+**Integer-form:** decimal digits with optional sign and required representation suffix, or decimal digits with optional sign and optional exponent. An integer-form literal in a float context represents the corresponding real-valued number (`5` represents the real number 5).
+
+**Keyword form:** the keywords `nan`, `inf`, and `-inf` representing IEEE 754 special values.
+
+The closed representation suffix vocabulary for floats is:
+
+| Suffix  | Representation                                    |
+|---------|---------------------------------------------------|
+| `f32`   | IEEE 754 binary32 (single-precision binary float) |
+| `f64`   | IEEE 754 binary64 (double-precision binary float) |
+| `d`     | Arbitrary-precision decimal                       |
+| `d32`   | IEEE 754-2008 decimal32                           |
+| `d64`   | IEEE 754-2008 decimal64                           |
+| `d128`  | IEEE 754-2008 decimal128                          |
+
+The suffix commits the literal to a specific representation:
+
+- Untagged literals (e.g., `3.14`) carry no representation commitment. The implementation chooses a representation sufficient to satisfy round-trip text equivalence.
+- Binary float suffixes (`f32`, `f64`) commit the value to IEEE 754 binary floating-point at the indicated width.
+- Decimal suffixes (`d`, `d32`, `d64`, `d128`) commit the value to a decimal representation, exact for any finite decimal literal.
+
+The choice of representation has consequences for arithmetic exactness, round-trip precision, and inter-system interchange. Applications carrying values where decimal precision matters (currency, exact-precision measurement) SHOULD use a decimal suffix or bind the property to a Template-defined semantic type that constrains representation.
+
+```
+<FLOAT temperature : 21.5>
+<FLOAT angle : 1.5708f32>
+<FLOAT price : 25.50d>
+<FLOAT precise : 9.999999999999999d128>
+<FLOAT infinity : inf>
+<FLOAT undefined : nan>
+<FLOAT count : 5>
+<FLOAT angleAtRight : 90f32>
+<FLOAT balance : 1000d>
+```
+
+The integer-form examples (`5`, `90f32`, `1000d`) are valid in float-prefix positions because integers are real numbers; the prefix declares the value-kind and the literal value is representable as a real.
+
+A literal whose precision exceeds the representable precision of the suffix MUST be rejected at parse time as a representation-conformance failure.
+
+Numeric literals are culture-invariant. `.` is the decimal separator. `e` or `E` introduces a base-10 exponent.
+
+**Asymmetry with integer literals.** Float literals (literals containing a decimal point, an exponent, a float suffix, or a float keyword) are NOT valid in integer-prefix positions. A literal with a decimal point implies a real-valued representation regardless of whether the value is integer-valued: `<INT count : 5.0>` is malformed even though 5.0 represents the integer 5. The asymmetry is intentional — integers are a subset of reals, but reals are not a subset of integers, and the literal form signals the intended representation domain.
+
+#### 5.2.4 Boolean Literals
+
+A boolean literal is one of the following forms:
+
+| Form        | Value |
+|-------------|-------|
+| `true`      | true  |
+| `false`     | false |
+| `t`         | true  |
+| `f`         | false |
+
+Boolean literals are case-insensitive on read. The forms `TRUE`, `True`, `T`, `FALSE`, `False`, and `F` are all valid input. Conforming implementations write boolean values in the lowercase spelled-out form (`true`, `false`); the single-letter forms exist to support input from systems that use abbreviated boolean conventions (PostgreSQL `t`/`f`, certain command-line tools) and to accommodate compact human entry.
+
+```
+<BOOL active : true>
+<BOOL deleted : false>
+<BOOL verified : t>
+<BOOL hidden : F>
+```
+
+The single-letter forms are unambiguous in Resource position because the prefix declares the value-kind. `<BOOL flag : t>` parses `t` as the boolean true; the same input outside a bool-prefix position would parse as the identifier `t`.
+
+#### 5.2.5 Bytes Literals
+
+A bytes literal is an opaque sequence of octets. Two encoding forms are defined:
+
+| Prefix | Encoding | Example                          |
+|--------|----------|----------------------------------|
+| `0x`   | Hex (canonical)        | `0x4a3f8c`         |
+| `0z`   | Base64 (alternative)   | `0zSj+M`           |
+
+The hex form is the canonical representation. The base64 form is provided as an alternative for cases where compactness matters.
+
+Hex digits are case-insensitive on read; conforming implementations write hex bytes in lowercase. The total number of hex digits MUST be even.
+
+Base64 uses the standard alphabet (RFC 4648). Padding (`=` characters) is required to align the encoded length to a multiple of four characters.
+
+```
+<BYTE contentHash : 0xe3b0c44298fc1c149afbf4c8996fb92427ae41e4>
+<BYTE publicKey : 0x4a3f8c2b>
+<BYTE compactBlob : 0zSGVsbG8sIHdvcmxkIQ==>
+```
+
+A bytes literal with no following digits (`0x` alone) is malformed. A hex literal with an odd number of digits is malformed. A base64 literal with invalid padding is malformed.
+
+#### 5.2.6 Reference Literals
+
+A reference literal designates another Object by identifier. The literal form is an `@` sigil followed by an identifier:
+
+```
+@/people/bob
+@gdx:Person
+@7f3a2b9c-4e21-4f88-91d5-abcdef012345
+@https://acme.com/people/alice
+```
+
+The identifier following `@` follows the lexical rules in §5.4. The reference is resolved by the implementation's reference resolver; the parser validates only that the literal is well-formed.
+
+The `@` sigil MUST be immediately followed by the identifier with no intervening whitespace.
+
+References are most commonly used as the Resource of Edge elements (§6.3.4), where they designate the edge's target Object.
+
+```
+<OBJ alice
+    <EDGE #knows : @/people/bob>
+>
+```
+
+### 5.3 Type References
+
+A Type reference attaches to an element via the `--` sigil and follows the Resource (or the Id, if no Resource is present):
+
+```
+<REC address : --com.acme.Address
+    <STR street : "Main St">
+    <INT number : 100>
+>
+
+<DEFOBJ MyAddress --schema:address
+    <STR &1 : "Broadway">
+    <STR &2 : "Oakland">
+>
+```
+
+The `--` sigil MUST be preceded by whitespace separating it from the previous token, and MUST be immediately followed by a Type identifier with no intervening whitespace. The Type identifier follows the lexical rules in §5.4.
+
+A Type reference asserts that the element's contents satisfy the named Template. Resolution and validation are described in §8.
+
+### 5.4 Identifier Lexical Rules
+
+A single identifier grammar applies to all identifier-bearing positions: the `Id` field, the contents of the `Key` field (when not numeric), the contents of the `Rel` field, and the contents of the `Type` field.
+
+#### 5.4.1 Identifier Grammar
+
+```
+Id              ::= IdStartChar IdContChar*
+
+IdStartChar     ::= ALPHA | "_" | "/"
+IdContChar      ::= ALPHA | DIGIT | "_" | "-" | "." | "/" | ":"
+
+ALPHA           ::= "A".."Z" | "a".."z"
+DIGIT           ::= "0".."9"
+```
+
+An identifier MUST begin with a letter, an underscore, or a forward slash. It MAY continue with any combination of letters, digits, underscores, hyphens, periods, forward slashes, and colons.
+
+Identifiers MUST NOT begin with a digit (which would be lexically ambiguous with numeric literals). Identifiers MUST NOT contain whitespace, brackets, sigil characters (other than as listed above), or other punctuation.
+
+Single-letter identifiers are valid. Position parsing disambiguates them from prefix tokens: the first non-whitespace token after `<` (and any modifier sigil) is always the prefix; subsequent unsigiled tokens in identifier position are identifiers.
+
+#### 5.4.2 Identifier Forms
+
+The grammar is uniform but admits several conventional forms. The following are all valid and serve common purposes:
+
+| Form               | Example                                | Common use                                  |
+|--------------------|----------------------------------------|---------------------------------------------|
+| Local name         | `name`, `firstName`, `customer_id`     | Property and Record identifiers             |
+| Single letter      | `r`, `g`, `b`, `x`, `y`                | Mathematical or abbreviated conventions     |
+| Path               | `/people/alice`, `/orders/123`         | Object identifiers within a hierarchy       |
+| CURIE              | `gdx:Person`, `schema:givenName`       | Object IDs, Type refs, Rel refs             |
+| Dotted CURIE local | `gdx:com.acme.Person`                  | Namespace-qualified types                   |
+| GUID / opaque      | `7f3a2b9c-4e21-4f88-91d5-abcdef012345` | System-generated identifiers                |
+| IRI                | `https://acme.com/people/alice`        | Globally resolvable identifiers             |
+
+All forms work in any identifier position because the grammar accepts the union of their characters. An identifier `gdx:Person` may appear as a Property identifier (unusual but valid), an Object identifier, a Type reference, or a Rel reference. Consumers interpret the identifier in context.
+
+CURIEs are typically expanded to full IRIs by the resolver. The choice between IRI and CURIE is a tradeoff between explicitness (IRI) and compactness (CURIE):
+
+- IRI form: `<OBJ https://acme.com/people/alice ...>`
+- CURIE form: `<OBJ acme:people/alice ...>` (where `acme:` resolves to `https://acme.com/`)
+
+This identity model parallels RDF's: globally resolvable identifiers are the canonical scheme; CURIEs and other syntactic forms (paths, local names, GUIDs) are conveniences for specific use cases.
+
+When an IRI appears in `Rel` position, the lexer recognizes it by the `://` scheme separator and parses it as a URI reference following RFC 3986 syntax. In other identifier positions, the same input is parsed as a maximal identifier (which incidentally captures the URI-like form because all its characters are valid IdContChars). Either way, the value carried is the same identifier; the distinction is lexical.
+
+#### 5.4.3 Numeric Keys
+
+The `Key` field, when introduced by `&`, MAY take a purely numeric form in addition to the standard identifier form. Numeric keys designate ordered slot positions in Templates:
+
+```
+<STR &1 : "Broadway">
+<STR &2 : "Oakland">
+```
+
+A numeric key is one or more decimal digits. It is distinguished from an identifier by being all-digits; an identifier may not begin with a digit, so the two forms are unambiguous.
+
+#### 5.4.4 Identifier Length and Collisions
+
+The identifier grammar imposes no maximum length. In practice, identifiers should be long enough to be meaningful and short enough to keep documents readable.
+
+Practical guidance:
+
+- Local identifiers (Property names, Record fields) typically fit comfortably in 1-50 characters. Longer names accumulate visual weight without adding clarity.
+- Path-style identifiers (`/orders/2026/04/29/customer-12345`) may run longer when they encode hierarchy; readability remains the constraint.
+- IRI-form identifiers may run to several hundred characters when full URIs are used. This is acceptable but compact identifiers (CURIEs, GUIDs) are preferred for documents that are read or edited by humans.
+- Implementations SHOULD impose an upper limit on identifier length (a reasonable default is 1024 characters) to bound memory use and prevent denial-of-service via pathologically long identifiers in untrusted documents.
+
+Identifier collisions across documents are an application concern, not a parser concern. Two documents using `gdx:Person` are referencing the same conceptual identifier; whether they refer to the same Template depends on the resolver's vocabulary mapping (§8.5.2). Within a single document, identifiers in the same scope MUST be unique among elements that compete for resolution (e.g., two top-level Objects with the same Id is malformed); identifiers in different scopes (different parents) are independent.
+
+### 5.5 Whitespace Between Elements
+
+§5.1.2 covers whitespace within an element. This section covers whitespace between elements.
+
+The canonical form for single-line elements uses a single space between adjacent tokens and around the `:` separator. Multi-line elements indent children for readability. The amount of indentation is implementation choice; conforming implementations preserve element structure but MAY normalize whitespace during round-trip.
+
+Newlines, carriage returns, and tabs are equivalent to spaces for the purpose of token separation. A line break does not terminate an element; element termination is signaled exclusively by the matching `>` bracket.
+
+### 5.6 Comments
+
+GDX has no comment syntax in the canonical text form. Documentation that should travel with the data is expressed through Annotation elements (`REM`, §6.3.6). Documentation that should not travel with the data is expressed in surrounding application or build context, not in the GDX document itself.
+
+### 5.7 Use-Case Adaptability
+
+The same text form scales across a wide range of complexity without changing format. An application that needs only typed key-value data uses Properties and nothing else; an application that needs full graph semantics with schema validation uses the same parser and the same syntax with more features engaged. Choosing which features to use is an application decision, not a maturity progression.
+
+The simplest form is typed key-value:
+
+```
+<STR databaseHost : "db.internal">
+<INT databasePort : 5432>
+<BOOL tlsEnabled : true>
+```
+
+A richer form adds composition, predicates, and schema:
+
+```
+<OBJ CurrentConfig
+    <REC Server : --vocab:ServerConfig
+        <STR #vocab:hostName databaseHost : "db.internal">
+        <INT #vocab:portNumber databasePort : 5432>
+        <STR #vocab:primaryIP ipAddress : 192.168.1.1 --vocab:ipv4format>
+        <BOOL tlsEnabled : true>
+        <EDGE #vocab:dependsOn cache : @cache-primary>
+    >
+>
+```
+
+Both are valid GDX. The simple form is not a stripped-down version of the rich form; both use the same syntax and the same parser. Applications pay for the features they use and not for the ones they don't. The GDX Cookbook (companion specification) demonstrates idiomatic usage at each level of feature engagement.
+
+---
+
+## 6. Element Roles
+
+An element's **role** is its structural position in the data model. The role is declared by the element's prefix; the closed set of roles is enumerated by the closed set of prefixes. This section defines each role, its prefix (the textual token used to declare it), its identifier requirements, and its composition rules. Modifiers (`*`, `%`, `.`, `_`, `N`, `DEF`) adapt a base role without changing which roles it may contain or appear under.
+
+The prefix vocabulary is **closed** and committed against future change. Implementations MUST NOT introduce new prefixes; extensibility is provided through Templates (§8), Extensions (§6.3.10), and the predicate vocabulary mechanism (§6.3.15). New primitive types, new structural roles, or new domain concerns are expressed by composing existing prefixes with Templates, Extensions, and vocabulary identifiers — never by adding a new prefix.
+
+### 6.1 Canonical and Minified Forms
+
+GDX prefix tokens are textual renderings of underlying type tags. The same data model is expressible in two equivalent textual forms:
+
+- **Canonical form** uses three-letter (or longer where natural) prefix names. Canonical is the default for authoring, storage, content addressing, and inter-system exchange where readability matters.
+- **Minified form** uses single-letter prefix names. Minified is for transport-efficiency contexts (high-frequency machine-to-machine traffic, embedded systems, size-constrained storage) where every byte matters.
+
+Both forms are equivalent at the data-model level. Conversion is deterministic; round-tripping a document through canonical and minified forms preserves the data exactly.
+
+**Recognition rules:**
+
+- Implementations MUST recognize both canonical and minified forms on input.
+- Prefix tokens are case-insensitive. `STR`, `Str`, `str`, and `sTR` are all recognized; the canonical case for output is uppercase.
+- Mixed forms within a document are accepted on input. The serializer normalizes to the configured output style.
+- Identifiers (Id, Key, Rel) remain case-sensitive (§5.4). The case-insensitive rule applies only to prefix tokens at prefix position.
+
+**Form is style, not data.** Round-trip preserves data and configured output style, not authorial form choices. Tools serializing in canonical form produce uppercase three-letter prefixes regardless of input case or form.
+
+**Strict canonical for content addressing.** The strict canonical form (Appendix A.5), used for content addressing and signing, uses canonical prefix names. Minified output is valid GDX but does not produce strict canonical bytes.
+
+**Prefixes without minified forms.** Some prefixes are canonical-only — they are already three or more letters and represent infrequent declarative items where minification would save little: `REL`, `REM`, `PKG`, `BLK`, `GRP`, and all `DEF…` Template prefixes. These are identity-mapped between canonical and minified output: a minified document still contains `<REL gdx:knows>` and `<DEFREC Customer>`.
+
+### 6.2 Cheat Sheet
+
+The complete prefix vocabulary in one view. Rows are core types; columns are modifiers. Each cell shows the resulting prefix in canonical form. An em dash (—) indicates the combination is not defined.
+
+| Type    | `*` Set   | `N` Node   | `.` Qualifier | `_` Extension | `%` Embedded | `DEF` Template |
+|---------|-----------|------------|---------------|---------------|--------------|----------------|
+| `STR`   | `*STR`    | `NSTR`     | `.STR`        | `_STR`        | `%STR`       | `DEFSTR`       |
+| `INT`   | `*INT`    | `NINT`     | `.INT`        | `_INT`        | `%INT`       | `DEFINT`       |
+| `FLOAT` | `*FLOAT`  | `NFLOAT`   | `.FLOAT`      | `_FLOAT`      | `%FLOAT`     | `DEFFLOAT`     |
+| `BOOL`  | `*BOOL`   | `NBOOL`    | `.BOOL`       | `_BOOL`       | `%BOOL`      | `DEFBOOL`      |
+| `BYTE`  | `*BYTE`   | `NBYTE`    | `.BYTE`       | `_BYTE`       | `%BYTE`      | `DEFBYTE`      |
+| `REC`   | `*REC`    | `NREC`     | —             | —             | `%REC`       | `DEFREC`       |
+| `OBJ`   | —         | —          | —             | —             | `%OBJ`       | `DEFOBJ`       |
+| `EDGE`  | —         | —          | —             | —             | —            | —              |
+| `BLK`   | —         | —          | —             | —             | —            | —              |
+| `REL`   | —         | —          | —             | —             | —            | —              |
+| `REM`   | —         | —          | —             | —             | —            | —              |
+| `PKG`   | —         | —          | —             | —             | —            | —              |
+| `GRP`   | —         | —          | —             | —             | —            | —              |
+
+**Modifiers do not stack.** An element carries at most one modifier (or none). `*%STR`, `%*REC`, `DEF*STR`, `*DEFREC`, and `N*STR` are all malformed. See §7.2 rule 12.
+
+**Closure.** A parser encountering a prefix-position token not in this grid MUST reject the element as malformed.
+
+The remainder of this section groups the same vocabulary by typological role, showing identifier requirements and resource value-kinds that the grid does not.
+
+**Structural primitives** — roles whose identity is the thing they represent:
+
+| Canonical | Minified | Role   | Resource? | Identifier | Detail |
+|-----------|----------|--------|-----------|------------|--------|
+| `OBJ`     | `O`      | Object | —         | required (resource) | §6.3.1 |
+| `REC`     | `R`      | Record | —         | required (local) when named | §6.3.2 |
+
+**Relational primitive** — the data-layer role whose primary content is a reference:
+
+| Canonical | Minified | Role | Resource value-kind | Identifier | Detail |
+|-----------|----------|------|---------------------|------------|--------|
+| `EDGE`    | `E`      | Edge | `reference`         | `#rel` required | §6.3.4 |
+
+**Organization (data-layer)** — scaffolding within an Object's scope:
+
+| Canonical | Minified | Role  | Identifier | Detail |
+|-----------|----------|-------|------------|--------|
+| `BLK`     | —        | Block | required (local) | §6.3.5 |
+
+**Value primitives** — typed scalar values:
+
+| Canonical | Minified | Role     | Resource value-kind | Detail |
+|-----------|----------|----------|---------------------|--------|
+| `STR`     | `S`      | Property | `string`            | §6.3.3 |
+| `INT`     | `I`      | Property | `int`               | §6.3.3 |
+| `FLOAT`   | `F`      | Property | `float`             | §6.3.3 |
+| `BOOL`    | `L`      | Property | `bool`               | §6.3.3 |
+| `BYTE`    | `B`      | Property | `bytes`             | §6.3.3 |
+
+**Relation Declaration** — first-class predicate definitions:
+
+| Canonical | Minified | Role                  | Detail |
+|-----------|----------|-----------------------|--------|
+| `REL`     | —        | Relation Declaration  | §6.3.15 |
+
+**Annotation** — leaf-only metadata:
+
+| Canonical | Minified | Role       | Resource value-kind | Detail |
+|-----------|----------|------------|---------------------|--------|
+| `REM`     | —        | Annotation | `string`            | §6.3.6 |
+
+**Organization (transport-layer)** — scaffolding for inter-system exchange:
+
+| Canonical | Minified | Role    | Identifier | Detail |
+|-----------|----------|---------|------------|--------|
+| `PKG`     | —        | Package | optional   | §6.3.7 |
+| `GRP`     | —        | Group   | required (local) | §6.3.8 |
+
+### 6.3 Roles in Detail
+
+This section provides detailed treatment of each role introduced in §6.2. Each subsection covers one role, its prefix(es), composition rules, identifier requirements, and worked examples.
+
+#### 6.3.1 Object — `OBJ`
+
+| Canonical | Minified | Resource? | Identifier |
+|-----------|----------|-----------|------------|
+| `OBJ`     | `O`      | —         | required (resource identifier) |
+
+An Object is an identifiable entity that may be referenced by other Objects. Objects are the primary type for data that will be persisted and exchanged. An Object's identifier is a resource identifier: a path, CURIE, GUID, IRI, or other globally meaningful identifier. The specification places no constraint on the scheme.
+
+The root of a GDX document MUST be one or more Objects, Templates, REL declarations, or Packages. Objects may not contain other Objects except through the Embedded modifier (§6.3.11) or as transport-layer payload (§6.3.7, §9).
+
+```
+<OBJ /people/alice
+    <STR firstName : "Alice">
+    <INT age : 24>
+>
+```
+
+#### 6.3.2 Record — `REC`
+
+| Canonical | Minified | Resource? | Identifier |
+|-----------|----------|-----------|------------|
+| `REC`     | `R`      | —         | required (local) when in named-attribute position |
+
+A Record is a composite of named properties — the canonical class instance or struct equivalent in GDX. A Record *contains* its children, in contrast to a Block which merely *labels* a region of children (§6.3.5). A Record's identifier is a local identifier, meaningful within the document.
+
+A Record may contain Properties, Sets, Edges, nested Records, Qualifiers, Nodes, and Annotations. Records may not contain Objects (except through the Embedded modifier, §6.3.11), Groups, or Extensions.
+
+```
+<REC address
+    <STR street : "Main St">
+    <INT number : 100>
+>
+```
+
+#### 6.3.3 Property — `STR`, `INT`, `FLOAT`, `BOOL`, `BYTE`
+
+Value primitives carry typed scalar values as their Resource. The Resource value-kind MUST match the prefix family.
+
+| Canonical | Minified | Resource value-kind |
+|-----------|----------|---------------------|
+| `STR`     | `S`      | `string`            |
+| `INT`     | `I`      | `int`               |
+| `FLOAT`   | `F`      | `float`             |
+| `BOOL`    | `L`      | `bool`              |
+| `BYTE`    | `B`      | `bytes`             |
+
+Properties require an identifier when in named-attribute position and may carry Annotations, Qualifiers, Extensions, and Nodes — but not other structural children. The three-state semantics (Absent, Null, Present-with-value) are defined in §4.3.3.
+
+```
+<STR name : "Alice">
+<INT age : 24>
+<FLOAT weight : 5.7>
+<BOOL active : true>
+<BYTE contentHash : 0xe3b0c44298fc1c14>
+```
+
+#### 6.3.4 Edge — `EDGE`
+
+| Canonical | Minified | Resource value-kind | Identifier |
+|-----------|----------|---------------------|------------|
+| `EDGE`    | `E`      | `reference`         | `#rel` field required |
+
+An Edge expresses a directed relation between two entities. Edges are GDX's representation of labeled property graph (LPG) edges: the parent element is the source, the Resource is a reference (`@target-id`) designating the target Object, and the `#rel` field names the edge type.
+
+```
+<OBJ alice
+    <EDGE #knows : @/people/bob>
+>
+```
+
+This reads as: alice — knows → bob. The edge is unidirectional in the data model.
+
+Edges accept the same children as Records and MAY carry properties as edge attributes. An edge with attributes is a labeled property graph edge in the full sense:
+
+```
+<EDGE #knows : @/people/bob
+    <STR since : "2024-01-15">
+    <FLOAT weight : 0.8>
+>
+```
+
+The `#rel` field references a predicate. A predicate may be declared as a first-class `REL` element (§6.3.15) when domain, range, inverse, or other semantic properties need to be expressed. The core specification makes no claim about the symmetry, transitivity, or other semantic properties of any predicate; those are declared at the REL level and computed by consumers.
+
+Multiple edges MAY originate from the same source referencing the same target with different `#rel` tags, allowing multiple forms of relationship between the same pair of entities.
+
+##### 6.3.4.1 Edge Reference Resolution
+
+An Edge's Resource is a reference to a target Object. Reference resolution determines whether the named target exists and what Object it identifies. Resolution behavior parallels Template reference resolution (§8.5.2) but operates on Object identifiers rather than Template names.
+
+The default resolution order for Edge references is normative:
+
+1. **Local document.** Object identifiers declared within the same document as the Edge are checked first. An `@bob` reference is satisfied by an `<OBJ bob>` declaration in the same document if one exists.
+2. **Loaded document context.** When the Edge appears in a document being processed alongside other documents (e.g., in a batch import or registry context), Objects from those documents are checked in the order they were loaded.
+3. **Globally-resolvable IRIs.** Object references expressed as full IRIs (e.g., `@https://acme.com/people/alice`) MAY be resolved by a network-aware resolver if the implementation supports it. Implementations are not required to perform network resolution.
+4. **Resolution failure.** If no scope yields a target, the reference is unresolved.
+
+When an Edge reference cannot be resolved:
+
+- The Edge is reported as schema-non-conforming (Layer 2). The Edge itself is structurally well-formed (Layer 1); it is the schema-level claim that the reference points to an existing Object that fails.
+- The error MUST identify the unresolved reference and the Edge that carries it.
+- Validation of the rest of the document continues; unresolved Edge references do not halt validation.
+
+A resolution failure means the target named by the reference does not exist in any resolvable scope. The unresolved reference does not become a placeholder, virtual Object, or tombstone in the data model — the data is exactly what was authored, and the validator's report indicates that the reference does not resolve. Applications that want placeholder behavior must construct it at the application layer.
+
+Implementations MAY support modes where unresolved references are treated as warnings rather than errors, useful for ingesting partial data sets or for documents that intentionally reference targets in other systems. When such modes are supported, the strict mode (errors on unresolved references) SHOULD remain the default.
+
+#### 6.3.5 Block — `BLK`
+
+| Canonical | Minified | Resource? | Identifier |
+|-----------|----------|-----------|------------|
+| `BLK`     | —        | —         | required (local) |
+
+A Block labels a region of an Object's children with a shared purpose or context. Where a Record asks "what is this composite value?", a Block asks "what context do these children belong to?". A Block is not a data type — it does not represent a structured composite that the parent *has*; it labels a region of the parent's children, asserting that they share a common purpose. BLK has no minified form.
+
+Blocks accept the same children as Objects and may only appear under an Object or another Block. The children of a Block are addressed through the Block identifier (e.g., `/article-42/head/title`).
+
+```
+<OBJ Article42
+    <BLK head
+        <STR title : "Introducing GDX">
+        <STR author : "Julian Mussi">
+        <INT publishedYear : 2026>
+    >
+    <BLK body
+        <REC intro>
+        <REC section>
+    >
+>
+```
+
+A Block label says something about its children's purpose in the Object, but is not considered "data" in the sense a Record is. Pick a Record when the children together form a single conceptual value; pick a Block when they share context but do not form a composite.
+
+#### 6.3.6 Annotation — `REM`
+
+| Canonical | Minified | Resource value-kind |
+|-----------|----------|---------------------|
+| `REM`     | —        | `string`            |
+
+A `REM` element is a leaf-only metadata note. REM elements may appear under any role and never have children. The Resource is a string carrying the annotation text. REM has no minified form.
+
+```
+<OBJ Order123
+    <REM : "Imported from legacy system 2026-04-27">
+    <STR customer : "ACME Corp">
+    <FLOAT total : 1250.00d>
+>
+```
+
+Annotations survive round-trip serialization and are part of the document, but carry no semantic weight in the data model. Tooling MAY surface them; data interpretation SHOULD NOT depend on them.
+
+#### 6.3.7 Package — `PKG`
+
+| Canonical | Minified | Resource? | Identifier |
+|-----------|----------|-----------|------------|
+| `PKG`     | —        | —         | optional   |
+
+A Package is a transport-layer construct (§9). It wraps Objects, Templates, REL declarations, and metadata for transport between systems. Packages are not persisted as such; receivers unpack them and store the contents. PKG has no minified form.
+
+```
+<PKG color-export-2026-04-29
+    <STR source : "color-system-v3">
+    <OBJ Pantone-485-C ...>
+    <OBJ Pantone-186-C ...>
+>
+```
+
+Packages MUST NOT contain other Packages. See §7.2 rule 10 and §9 for transport semantics.
+
+#### 6.3.8 Group — `GRP`
+
+| Canonical | Minified | Resource? | Identifier |
+|-----------|----------|-----------|------------|
+| `GRP`     | —        | —         | required (local) |
+
+A Group is a transport-layer construct (§9) that partitions a Package's contents into named subsets with optional metadata. Groups may only appear as children of Packages or other Groups. Like Packages, Groups are not designed to be persisted. GRP has no minified form.
+
+```
+<PKG color-export-2026-04-29
+    <GRP pantone
+        <STR libraryName : "Pantone Solid Coated">
+        <OBJ Pantone-485-C ...>
+    >
+    <GRP ral
+        <STR libraryName : "RAL Classic">
+        <OBJ RAL-3020 ...>
+    >
+>
+```
+
+#### 6.3.9 Qualifier — `.`
+
+The `.` modifier marks an element as a Qualifier. Qualifiers carry constraints, units, modes, confidence levels, or other metadata that refines the meaning of their parent. They contribute to data semantics and travel with the data. Qualifiers may contain Annotations only.
+
+Qualifier is best understood by contrast with Extension (§6.3.10): a **Qualifier** modifies *instance data* (it travels with the value, contributes to interpretation, and is part of the data model); an **Extension** defines *schema rules* (it travels with the Template, contributes to validation, and is NOT part of the data model). Removing a Qualifier changes the meaning of the data; removing an Extension may relax validation but does not change instance data semantics. The `.` sigil signals "this element refines what its parent *means*"; the `_` sigil signals "this element constrains what instances *must satisfy*."
+
+| Canonical | Minified | Resource value-kind |
+|-----------|----------|---------------------|
+| `.STR`    | `.S`     | `string`            |
+| `.INT`    | `.I`     | `int`               |
+| `.FLOAT`  | `.F`     | `float`             |
+| `.BOOL`   | `.L`     | `bool`              |
+| `.BYTE`   | `.B`     | `bytes`             |
+
+```
+<FLOAT temperature : 21.5
+    <.STR unit : "celsius">
+    <.BOOL observed : true>
+>
+```
+
+#### 6.3.10 Extension — `_`
+
+The `_` modifier marks an element as an Extension — a schema-only attachment that appears as a child of a Template (§6.3.14). Extensions are NOT part of the data model. The structural restriction — Extensions valid only under Templates — is enforced by the composition matrix (§7.1). An Extension appearing outside a Template is malformed.
+
+See §6.3.9 for the contrast with Qualifier — both attach to elements, but Extension defines schema rules while Qualifier refines instance data.
+
+| Canonical | Minified | Resource value-kind |
+|-----------|----------|---------------------|
+| `_STR`    | `_S`     | `string`            |
+| `_INT`    | `_I`     | `int`               |
+| `_FLOAT`  | `_F`     | `float`             |
+| `_BOOL`   | `_L`     | `bool`              |
+| `_BYTE`   | `_B`     | `bytes`             |
+
+```
+<DEFSTR Email
+    <_BOOL required : true>
+    <_STR pattern : "^[^@]+@[^@]+$">
+>
+```
+
+The same value-kind may appear as a Qualifier or as an Extension depending on what is being said:
+
+```
+<FLOAT temperature : 21.5
+    <.STR unit : "celsius">          ← Qualifier: this temperature is in celsius
+>
+
+<DEFFLOAT TemperatureReading
+    <_STR unit : "celsius">          ← Extension: instances of this Template are constrained to celsius
+>
+```
+
+The first is data ("the temperature value, expressed in celsius"); the second is schema ("any instance of TemperatureReading is required to be in celsius"). The grammar makes the distinction explicit at the prefix level.
+
+#### 6.3.11 Embedded — `%`
+
+The `%` modifier marks a Property, Record, or Object as eligible to appear in a property-value position — where a scalar value would otherwise sit. The embedded element retains its base role's children and identifier rules.
+
+Embedded is the mechanism by which structured values can occupy positions normally reserved for scalars. Without `%`, a Property's value is its Resource (a typed scalar); with `%`, a Property may carry a structured value as its content.
+
+| Canonical | Minified | Base role |
+|-----------|----------|-----------|
+| `%STR`    | `%S`     | Property  |
+| `%INT`    | `%I`     | Property  |
+| `%FLOAT`  | `%F`     | Property  |
+| `%BOOL`   | `%L`     | Property  |
+| `%BYTE`   | `%B`     | Property  |
+| `%REC`    | `%R`     | Record    |
+| `%OBJ`    | `%O`     | Object    |
+
+```
+<STR contact
+    <%REC details
+        <STR email : "a@example.com">
+        <STR phone : "555-0100">
+    >
+>
+```
+
+The Embedded modifier is particularly useful when a structured value should retain its full GDX identity rather than being serialized to a string and re-parsed:
+
+```
+<REC colorReading
+    <%OBJ lab
+        <FLOAT l : 50.0>
+        <FLOAT a : 25.3>
+        <FLOAT b : -12.7>
+    >
+    <%OBJ rgb
+        <INT r : 124>
+        <INT g : 89>
+        <INT b : 200>
+    >
+>
+```
+
+#### 6.3.12 Node — `N`
+
+The `N` letter-modifier marks an element as establishing or participating in a Node-zone subtree — a semi-structured container for ad-hoc or schema-less material. The Node modifier composes with primitive bases or with `REC`. The `N` is a letter rather than a sigil because Node-zone elements have different composition rules than the rest of GDX (isolated subtrees — see §7.2 rule 5).
+
+| Canonical | Minified | Carries Resource? | Resource value-kind |
+|-----------|----------|-------------------|---------------------|
+| `NREC`    | `NR`     | No                | —                   |
+| `NSTR`    | `NS`     | Yes               | `string`            |
+| `NINT`    | `NI`     | Yes               | `int`               |
+| `NFLOAT`  | `NF`     | Yes               | `float`             |
+| `NBOOL`   | `NL`     | Yes               | `bool`              |
+| `NBYTE`   | `NB`     | Yes               | `bytes`             |
+
+Node-zone elements are permissive in what may *contain* them — any structural role may have a Node-zone child — but restrictive in what they may *contain*: a Node-zone element's children MUST themselves be Node-zone elements (or Annotations). This isolation rule keeps validation and tooling tractable: above the Node, structured rules apply; within the Node, structure is informal.
+
+The Node modifier always composes with a base — there is no bare Node prefix. `NREC` is the no-Resource form (Node-zone container analogous to a Record); it replaces the bare `<N>` form used in earlier versions. Earlier-version documents using bare `<N>` MUST be migrated to `<NREC>` for v0.9 conformance.
+
+```
+<NREC audit
+    <NSTR source : "import">
+    <NINT lineNumber : 42>
+    <NREC raw
+        <NSTR originalFormat : "csv">
+        <NINT columnCount : 12>
+    >
+>
+```
+
+Use Node-zone elements sparingly. Their permissiveness in containment positions and restrictiveness on internal structure make them appropriate for material that doesn't fit GDX's structured roles — imported audit data with unknown shape, blobs of metadata from external systems, ad-hoc payloads where a Template would be premature. When the shape of formerly-Node content becomes well-understood, migrating it to structured roles is straightforward: replace the Node subtree with a Record, the Node-typed payloads with their structured equivalents, and define a Template to validate. The migration is destructive (the subtree is replaced, not augmented) and is a deliberate decision to formalize what was provisional.
+
+#### 6.3.13 Set — `*`
+
+The `*` modifier promotes a value-bearing primitive or Record into a multi-valued collection. A Set is a role in its own right, not a transparent overlay on its base role: Set composition rules differ from Property composition rules — a Set may contain its members; a Property cannot.
+
+| Canonical | Minified | Member type      |
+|-----------|----------|------------------|
+| `*STR`    | `*S`     | string members   |
+| `*INT`    | `*I`     | int members      |
+| `*FLOAT`  | `*F`     | float members    |
+| `*BOOL`   | `*L`     | bool members     |
+| `*BYTE`   | `*B`     | bytes members    |
+| `*REC`    | `*R`     | Record members   |
+
+A Set element holds multiple members of its declared element type. Members appear in document order; the term "set" refers to the multi-valued nature of the collection, not to any unordered semantics. Member order is preserved through serialization and is significant for round-trip equivalence. Set members carry their prefix (matching the Set's element type) and MAY omit identifiers when their position and value are sufficient.
+
+```
+<*STR tags
+    <STR : "blue">
+    <STR : "red">
+    <STR : "green">
+>
+
+<*REC contacts
+    <REC alice <STR email : "a@example.com">>
+    <REC bob   <STR email : "b@example.com">>
+>
+```
+
+##### 6.3.13.1 Empty and Absent States for Sets
+
+Sets have two distinguishable states (in contrast to Properties, which have three per §4.3.3). The simpler taxonomy reflects the fact that a Set's content is determined by its child members rather than by a Resource value:
+
+- **Absent.** The Set element does not appear in the parent at all. The collection is undeclared; consumers cannot determine whether members exist or not.
+- **Present.** The Set element appears in the parent, with zero or more member children. The collection is declared to exist; the members are exactly what is present.
+
+A Present Set with zero members — `<*STR tags>` — is an **empty Set**. It is semantically distinct from an Absent Set: the empty form asserts "this collection exists and contains no members"; absence asserts nothing about the collection.
+
+This distinction is significant for database mapping, query semantics, and API design. A `Customer` Object with `<*STR tags>` (no children) and a `Customer` Object with no `tags` element at all are not equivalent. The first declares an empty tag list (which can be serialized, stored, queried as "tag count = 0"); the second declares nothing about tags (which may indicate the field doesn't apply, hasn't been computed, or is unknown).
+
+There is no third "null Set" state analogous to a null Property. Sets do not carry a Resource value of their own — their content is fully expressed through their children — so the present-but-null state has no meaningful encoding for Sets.
+
+Templates that declare a Set property MAY use the `gdx:required` and `gdx:optional` extensions (Common Vocabulary §5.1) to constrain whether the Set element must be present:
+
+- **Required Set.** The Set element MUST appear; it MAY be empty.
+- **Optional Set.** The Set element MAY be absent; if present, it MAY be empty.
+
+When emptiness itself is meaningful for the application, the Template MAY use `gdx:minItems` to require at least one member:
+
+- **Required non-empty Set.** The Set element MUST appear and MUST contain at least one member.
+
+#### 6.3.14 Template — `DEF`
+
+The `DEF` prefix-fragment marks an element as a Template definition — a type contract rather than an instance (§8). A Template MUST carry an identifier (the type name) and follows the composition rules of its base role. Templates are the only role that may carry Extension children. Template prefixes are canonical-only; they have no minified form.
+
+| Canonical  | Base role |
+|------------|-----------|
+| `DEFOBJ`   | Object    |
+| `DEFREC`   | Record    |
+| `DEFSTR`   | Property  |
+| `DEFINT`   | Property  |
+| `DEFFLOAT` | Property  |
+| `DEFBOOL`  | Property  |
+| `DEFBYTE`  | Property  |
+
+Property Templates (`DEFSTR`, `DEFINT`, `DEFFLOAT`, `DEFBOOL`, `DEFBYTE`) typically declare semantic types or representation refinements on top of a base value-kind. A Template does not change the underlying value-kind; it adds interpretation or validation rules that consumers may apply.
+
+A Template's *fields* are described using regular prefixes (not `DEF…` prefixes). The DEF prefix appears only at the Template's declaration root; the children are field descriptions using the standard structural and value prefixes.
+
+```
+<DEFREC com.acme.Address
+    <STR street>
+    <INT number>
+>
+
+<DEFSTR schema:csv
+    <_STR separator : ",">
+    <_BOOL hasHeader : true>
+>
+
+<DEFINT gdx:i8
+    <_INT gdx:min : -128>
+    <_INT gdx:max : 127>
+>
+```
+
+#### 6.3.15 Relation Declaration — `REL`
+
+| Canonical | Minified | Resource? | Identifier |
+|-----------|----------|-----------|------------|
+| `REL`     | —        | —         | required (predicate identifier) |
+
+A `REL` element declares a predicate as a first-class entity. Predicates declared via REL are referenced from Edges (and other relation-bearing positions) through the `#rel` field. REL has no minified form.
+
+The fields a REL carries — domain, range, inverse, symmetry, cardinality, and other semantic properties — are determined by the vocabulary the predicate participates in. The core specification defines REL only as a structural role; the predicate semantics live in vocabulary specifications. The GDX Common Vocabulary defines a base set of predicate refinement extensions. Applications may use additional vocabulary-defined extensions or define their own.
+
+```
+<REL gdx:knows>
+
+<REL gdx:manages
+    <_STR inverse : "gdx:reportsTo">
+>
+```
+
+A REL declaration MAY appear at the document root (alongside or instead of a primary Object) or within a vocabulary document. Resolution of `#rel` references follows the same mechanism as Type reference resolution (§8.5).
+
+---
+
+## 7. Composition Axioms
+
+GDX nesting is governed by a single matrix indexed by **role**. The table below is the normative source: any prefix is admitted as a child if its role appears in the parent role's row.
+
+Modifier-bearing prefixes are validated as their base role. A `%REC` element follows the rules for Record; a `*STR` element follows the rules for Set; a `DEFOBJ` element follows the rules for Object; an `NSTR` element follows the rules for Node. The `%`, `*`, `.`, `_`, `N`, and `DEF` modifiers do not change which roles may contain or be contained by an element (with one exception: Extensions may only appear under Templates — see §7.2 rule 7).
+
+### 7.1 Allowed Children Matrix
+
+| Parent ↓ \ Child →  | Object | Record | Block | Property | Set | Node | Edge | Qualifier | Extension | Annotation | REL | Group |
+|---------------------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| **Object**          |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   | ✓ |   |   |
+| **Record**          |   | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ |   | ✓ |   |   |
+| **Block**           |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   | ✓ |   |   |
+| **Property**        |   |   |   |   |   | ✓ |   | ✓ |   | ✓ |   |   |
+| **Set**             |   |   |   | ✓ |   | ✓ |   | ✓ |   | ✓ |   |   |
+| **Node**            |   |   |   |   |   | ✓ |   |   |   | ✓ |   |   |
+| **Edge**            |   | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ |   | ✓ |   |   |
+| **Qualifier**       |   |   |   |   |   |   |   |   |   | ✓ |   |   |
+| **Extension**       |   |   |   |   |   |   |   |   |   | ✓ |   |   |
+| **Annotation**      |   |   |   |   |   |   |   |   |   |   |   |   |
+| **Template**        |   | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |
+| **REL**             |   |   |   |   |   |   |   |   | ✓ | ✓ |   |   |
+| **Package**         | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   | ✓ | ✓ | ✓ |
+| **Group**           | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   | ✓ | ✓ | ✓ |
+| **Document root**   | ✓ |   |   |   |   |   |   |   |   |   | ✓ |   |
+
+The Template row covers all `DEF…` prefixes, validated by their base role's row except where Extensions are admitted (Templates are the only parent role that admits Extension children).
+
+The Package row admits Templates (any `DEF…` prefix) and REL declarations as payload along with Objects. For clarity: a Package may directly contain Object instances (`OBJ`/`O`), Template definitions (`DEF…`), REL declarations (`REL`), Properties (metadata), Records (metadata), Sets (metadata), Annotations, and Groups for transport-internal organization. A Group admits the same children as a Package except for Package itself.
+
+The Document root row covers what may appear as the root of a GDX document: an Object, a Template, a REL, or a Package. A document MAY contain multiple top-level elements when each is a recognized root-eligible type.
+
+### 7.2 Derived Rules
+
+The following rules are consequences of the matrix and are repeated here for clarity:
+
+1. **Root rule.** A document root MUST be an Object, a Template, a REL declaration, or a Package. A document MAY contain multiple top-level elements; each top-level element MUST independently be a root-eligible type.
+
+2. **Object exclusion.** No role other than the Embedded modifier (`%O`, §6.3.11) and the transport-layer roles (Package, Group) may contain another Object. The `%O` form expresses Object-as-property-value within data-layer composition; Package and Group contain Objects as transport-layer payload, not as ownership relationships.
+
+3. **Block containment.** A Block may only appear under an Object or another Block. Blocks do not appear in transport-layer roles.
+
+4. **Annotations are leaves.** Annotations never have children and are permitted under every role except other Annotations.
+
+5. **Nodes are isolated subtrees.** A Node-zone element's children MUST themselves be Node-zone elements (or Annotations). Once a Node-zone element appears in a document, its subtree is uniformly Node-typed. Structured roles (Properties, Records, Sets, Edges, etc.) cannot appear within a Node subtree. Use `NREC` for the no-Resource Node-zone container that establishes such a subtree.
+
+6. **Sets contain members of their declared element type.** A Set's children MUST be elements whose prefix matches the Set's element type. A `*STR` Set contains `STR` members; a `*REC` Set contains `REC` members. Qualifiers, Extensions (where permitted), and Annotations may also appear as Set children to refine or annotate the Set itself.
+
+7. **Extensions are schema-only.** Extensions MAY appear only under Template (`DEF…`) elements. An Extension under any other parent role is malformed.
+
+8. **REL declares predicates.** A REL element may carry Extension children that declare predicate semantics (domain, range, inverse, symmetry, cardinality, etc.). The vocabulary of those Extensions is defined by the GDX Common Vocabulary or by application vocabularies.
+
+9. **Modifier transparency.** Embedded (`%X`), Template (`DEF…`), Qualifier (`.X`), Extension (`_X`), and Node (`NX`) modifier-bearing prefixes are validated as their base role for composition purposes. The modifier never changes what is allowed inside or what may contain the element, with two exceptions: Extensions are restricted to Template parents (rule 7), and Node-zone elements have isolated-subtree semantics (rule 5).
+
+10. **Transport non-nesting.** Packages MUST NOT contain other Packages. Groups MUST NOT contain Packages. Transport-layer roles form a controlled structure: a Package may contain Groups and data-layer items; a Group may contain other Groups and data-layer items.
+
+11. **Transport non-persistence.** Package and Group elements are not persisted as such by storage layers. Their contents (Objects, Templates, REL declarations) are extracted and stored individually; transport-layer metadata MAY be retained as provenance information but the transport wrapping is discarded. See §9 and §10.4.
+
+12. **Modifiers do not stack.** An element carries at most one modifier (or none). The following are NOT valid prefixes:
+    - `*%STR` — Set of Embedded strings
+    - `%*REC` — Embedded Set of Records
+    - `DEF*STR` — Template for a Set
+    - `*DEFREC` — Set of Templates
+    - `N*STR` — Node-zone Set of strings
+
+    Where multi-valued semantics on an embedded or template-defined value are needed, the structure is expressed through normal nesting:
+
+    ```
+    <*REC tagSets
+        <REC group1
+            <*STR tags
+                <STR : "red">
+                <STR : "blue">
+            >
+        >
+        <REC group2
+            <*STR tags
+                <STR : "green">
+            >
+        >
+    >
+    ```
+
+    This restriction keeps the prefix vocabulary closed and bounded. The combinations expressible through nested structure are sufficient for all use cases the specification anticipates.
+
+### 7.3 Identifier Rules
+
+Per §4.2, the following roles MUST carry at least one identifier (`Id`, `Key`, or `Rel`) when in named-attribute position:
+
+- Object (`OBJ`/`O`, `DEFOBJ`)
+- Record (`REC`/`R`, `%REC`/`%R`, `DEFREC`, `NREC`/`NR`) when not in Set member position
+- Property (`STR`/`S`, `INT`/`I`, `FLOAT`/`F`, `BOOL`/`L`, `BYTE`/`B` and their variants) when not in Set member position
+- Template (any `DEF…`)
+- REL (`REL`)
+- Block (`BLK`) — Blocks always require an identifier; the identifier names the partition
+- Group (`GRP`) — Groups always require an identifier; the identifier names the partition within a Package
+
+Set members are exempt from the identifier requirement but MUST carry their prefix.
+
+Package (`PKG`) carries an optional identifier. When present, the identifier is used for transport correlation (request/response matching, deduplication, audit) and is local to the transport context.
+
+Other roles MAY carry identifiers but do not require them.
+
+### 7.4 Resource Rules
+
+Per §4.3, when a Resource is present, its value-kind MUST be consistent with the element's prefix family:
+
+- String-family prefixes (`STR`/`S`, `*STR`/`*S`, `%STR`/`%S`, `.STR`/`.S`, `_STR`/`_S`, `NSTR`/`NS`) carry `string` resources.
+- Int-family prefixes (`INT`/`I`, `*INT`/`*I`, `%INT`/`%I`, `.INT`/`.I`, `_INT`/`_I`, `NINT`/`NI`) carry `int` resources.
+- Float-family prefixes (`FLOAT`/`F`, `*FLOAT`/`*F`, `%FLOAT`/`%F`, `.FLOAT`/`.F`, `_FLOAT`/`_F`, `NFLOAT`/`NF`) carry `float` resources.
+- Bool-family prefixes (`BOOL`/`L`, `*BOOL`/`*L`, `%BOOL`/`%L`, `.BOOL`/`.L`, `_BOOL`/`_L`, `NBOOL`/`NL`) carry `bool` resources.
+- Bytes-family prefixes (`BYTE`/`B`, `*BYTE`/`*B`, `%BYTE`/`%B`, `.BYTE`/`.B`, `_BYTE`/`_B`, `NBYTE`/`NB`) carry `bytes` resources.
+- Edge prefixes (`EDGE`/`E`) carry `reference` resources.
+- Annotation prefix (`REM`) carries `string` resources.
+
+The Resource itself is optional on Resource-bearing roles; an element with no Resource represents a null value (instance context) or a slot declaration (Template context). See §4.3.3.
+
+Object, Block, Record, Node-Record (`NREC`/`NR`), Set, Template (all `DEF…`), Relation Declaration (`REL`), Package, and Group elements do not carry Resources at the element level. Their content is conveyed through their children. A Template (`DEFSTR`, `DEFREC`, etc.) declares a contract for instances; it does not carry an instance value itself.
+
+### 7.5 Validation
+
+A conforming parser MUST reject any document containing:
+
+- An element whose prefix is not in the closed vocabulary (§6.2).
+- A child element whose role is not admitted by the parent role's row in §7.1.
+- A required identifier that is missing (§7.3).
+- A Resource whose value-kind does not match the prefix family (§7.4).
+- An Extension appearing outside a Template parent.
+- A Node containing a non-Node, non-Annotation child.
+- A Set containing a member whose prefix does not match the Set's element type.
+- An Object appearing as a non-root child in a position other than `%O` Embedded form, a Package payload, or a Group payload.
+- A Package containing another Package.
+- A Group containing a Package.
+- A Block at the document root or in any position other than as a child of an Object or another Block.
+- A Block missing its required identifier.
+- A Group missing its required identifier.
+
+A conforming parser MUST accept any element with an identifier but no Resource section. Such elements are well-formed and represent null values (instance context) or slot declarations (Template context).
+
+The above are *structural* validation requirements (Layer 1, §2.2). Schema validation (Layer 2 — Template satisfaction, Extension-defined constraints) is described in §8.
+
+---
+
+## 8. Schemas and Validation (Templates)
+
+> **Status:** Sections 9.1 through 9.5 are stable. Section 9.6 describes mechanisms that are committed in principle but require companion specifications for full normative treatment.
+
+### 8.1 Templates
+
+A Template is an element with a `TD…` prefix. It declares an *interface* — a set of properties, records, edges, and constraints — that an instance element claims to satisfy via its `--type` field.
+
+```
+<DEFREC com.acme.Address
+    <STR street>
+    <INT number>
+    <STR country
+        <_BOOL optional : true>
+    >
+>
+```
+
+A Template's children describe the *expected shape* of conforming instances. By default, every declared child is required. Optional fields are marked with the `_L optional` Extension (or other vocabulary-defined optionality markers).
+
+Templates are themselves GDX elements. They use the same composition rules, the same identifier grammar, and the same syntactic conventions as data elements. The schema is data. Tools that read GDX read Templates the same way they read instances; tools that write GDX write Templates the same way they write instances. There is no separate schema language.
+
+A Template MUST carry an identifier — the Template's name. The identifier follows the same lexical rules as any other identifier (§5.4) and typically takes a CURIE form (`gdx:Address`, `com.acme.Person`) for cross-vocabulary clarity.
+
+### 8.2 Conformance via `--type`
+
+An instance element references a Template by name in its `--type` field. The validator resolves the reference (§8.5) and checks that the instance's children satisfy the Template's declared shape.
+
+```
+<REC address --com.acme.Address
+    <STR street : "Main St">
+    <INT number : 100>
+>
+```
+
+The `--type` reference is a Layer 2 (schema) assertion (§2.2). Resolving the reference and validating the instance against the Template are operations performed after parsing and structural validation. An instance may be representation-conforming (Layer 1) without being schema-conforming (Layer 2): the structure is well-formed, but the contents may not satisfy the claimed Template.
+
+A `--type` reference MUST resolve to a Template whose base role matches the instance's role:
+
+- An `STR`/`S` instance may reference `DEFSTR` only.
+- An `INT`/`I` instance may reference `DEFINT` only.
+- A `FLOAT`/`F` instance may reference `DEFFLOAT` only.
+- A `BOOL`/`L` instance may reference `DEFBOOL` only.
+- A `BYTE`/`B` instance may reference `DEFBYTE` only.
+- A `REC`/`R` instance may reference `DEFREC` only.
+- An `OBJ`/`O` instance may reference `DEFOBJ` only.
+
+Cross-role references (e.g., a Record instance referencing an Object Template) are schema-conformance failures.
+
+Transport-layer roles (Package, Group) are not subjects of Templates in the core specification. Their structure is defined entirely by §7 composition rules and §9 transport semantics. Vocabularies MAY define Templates for transport-construct validation purposes, but support for such Templates is a vocabulary concern, not a core requirement.
+
+### 8.3 Property Templates and Semantic Types
+
+Property Templates (`DEFSTR`, `DEFINT`, `DEFFLOAT`, `DEFBOOL`, `DEFBYTE`) declare semantic types or representation refinements on top of a base value-kind. A Property Template does not change the underlying value-kind; it adds interpretation or validation rules that consumers may apply.
+
+A typical Property Template uses Extensions to express constraints:
+
+```
+<DEFSTR gdx:email
+    <_STR gdx:pattern : "^[^@]+@[^@]+$">
+    <_INT gdx:maxLength : 254>
+>
+
+<STR contact : "alice@example.com" --gdx:email>
+```
+
+The same pattern serves several common needs: width-bounded numerics (`<DEFINT gdx:i8>` with min/max constraints), format-bounded strings (patterns, length limits), semantic interpretation (a `gdx:csv` Template signaling structured string content), and domain typing (a `gdx:uuid` Template constraining a string to UUID format). The constraint vocabulary on the Template determines what each Template means.
+
+The interpretation rules are carried by Extensions on the Template. The Extension vocabulary is application-extensible; the GDX Common Vocabulary defines a base set (§8.6).
+
+The specific identifiers used in examples (`gdx:email`, `gdx:i8`, `gdx:csv`, `gdx:uuid`) are illustrative. Whether these specific Templates exist, and what their constraints are, is a vocabulary concern, not a core specification concern. The patterns are general; their realization in any particular vocabulary is documented by that vocabulary.
+
+### 8.4 Validation Extensions
+
+Extensions on Template properties express constraints that instances must satisfy. The structural carriers — the closed set of Extension prefixes (`_STR`/`_S`, `_INT`/`_I`, `_FLOAT`/`_F`, `_BOOL`/`_L`, `_BYTE`/`_B`) — are defined by this specification (§6.3.10). The *vocabulary* of named extensions (the identifiers like `gdx:pattern`, `gdx:min`, or any application-defined equivalents) is defined by the GDX Common Vocabulary or by other vocabularies, not by this core specification.
+
+This separation is intentional. The core specification defines *how* extensions attach to Templates and *how* they are structurally validated. It does not define *which* specific extensions exist or *what* they mean. Extension vocabularies evolve independently of the core specification: new extensions can be added, refined, or deprecated in vocabulary specifications without revising the core.
+
+The general form of an extension on a Template is:
+
+```
+<TD-X TemplateName
+    <STR propertyName
+        <_X extensionName : extensionValue>
+    >
+>
+```
+
+Where `_X` is one of the Extension carrier prefixes (`_STR`/`_S`, `_INT`/`_I`, `_FLOAT`/`_F`, `_BOOL`/`_L`, `_BYTE`/`_B`) and `extensionName` is an identifier drawn from a vocabulary.
+
+A worked example using a hypothetical vocabulary:
+
+```
+<DEFSTR UserHandle
+    <_BOOL vocab:required : true>
+    <_STR vocab:pattern : "^[a-z0-9_]+$">
+    <_INT vocab:minLength : 3>
+    <_INT vocab:maxLength : 32>
+>
+```
+
+Here `vocab:required`, `vocab:pattern`, `vocab:minLength`, and `vocab:maxLength` are vocabulary-defined extension names. Their meanings are specified by the `vocab:` vocabulary, not by this document.
+
+A validator processing a Template applies the extensions it recognizes and ignores those it does not. If the validator recognizes an extension and the instance satisfies the constraint, validation continues. If the validator recognizes an extension and the instance fails the constraint, the instance is reported as schema-non-conforming. If the validator does not recognize an extension, the validator MAY emit a warning (to indicate that a constraint was present but not checked) and MUST NOT fail validation on the unrecognized extension alone.
+
+This permissive behavior on unrecognized extensions allows vocabularies to evolve without breaking implementations that have not been updated. An implementation that supports vocabulary version N reads documents using vocabulary version N+1 successfully, treating unknown extensions as advisory.
+
+An implementation MAY claim conformance to one or more vocabularies. A vocabulary-conforming implementation honors the vocabulary's defined extensions according to the vocabulary's specification. The core specification does not require any particular vocabulary to be supported.
+
+### 8.5 Conformance Modes, Type Resolution, and Error Reporting
+
+#### 8.5.1 Conformance Modes
+
+Validators MAY operate in **strict** mode or **lenient** mode:
+
+- **Strict mode** (default): Every declared Template child MUST be present and conforming on the instance. Undeclared children on the instance are an error. Unrecognized extensions produce warnings.
+- **Lenient mode**: Missing optional fields produce warnings. Undeclared children on the instance are accepted. Unrecognized extensions are silently ignored.
+
+Implementations declare their default mode and provide configuration to override it.
+
+#### 8.5.2 Type Resolution
+
+A `--type` reference is resolved to a Template by walking a defined sequence of resolution scopes. The default resolution order is normative:
+
+1. **Local document.** Templates declared within the same document as the reference are checked first. A `--Person` reference is satisfied by a `<DEFREC Person>` declaration in the same document if one exists.
+2. **Loaded vocabularies.** Templates from explicitly-loaded vocabularies are checked next, in the order the vocabularies were loaded. CURIE prefixes (`gdx:`, `vocab:`) expand to their declared IRI bases via the resolver's vocabulary mapping table.
+3. **Globally-resolvable IRIs.** Templates referenced by full IRI (e.g., `--https://acme.com/vocab/Person`) MAY be resolved by a network-aware resolver if the implementation supports it. Implementations are not required to perform network resolution.
+4. **Resolution failure.** If no scope yields a Template, the reference is unresolved.
+
+Implementations MUST follow this order by default. Implementations MAY provide configuration to alter the order — for example, to disable network resolution, to prepend an in-memory registry, or to invert the local/vocabulary precedence — but the spec-defined default applies when no explicit configuration is provided.
+
+The default order (local first, then declared vocabularies, then global) reflects the principle that closer scopes are more specific and authoritative. A Template defined within a document is always intended for that document; vocabulary-defined Templates are shared definitions; globally-addressable Templates are the most general fallback.
+
+Resolvers SHOULD cache resolved Templates to avoid repeated lookups. Cache invalidation is implementation-defined; resolvers MAY treat resolved Templates as stable for the lifetime of a process or until an explicit reload.
+
+#### 8.5.3 Resolution Failure Behavior
+
+When a `--type` reference cannot be resolved:
+
+- The element carrying the reference is reported as schema-non-conforming.
+- The error MUST identify the unresolved reference and the element that carries it.
+- Validation of the rest of the document continues; resolution failures do not halt validation.
+
+A resolution failure is distinct from a Template-mismatch error. The former means "the reference does not name any known Template"; the latter means "the reference names a Template, but the instance does not satisfy it." Implementations should distinguish these in error reports.
+
+#### 8.5.4 Error Accumulation
+
+Validators SHOULD accumulate validation errors and report them as a set, rather than failing at the first error encountered. A single validation pass over a document SHOULD produce a complete list of all conformance violations the validator can detect.
+
+This recommendation exists because fail-fast validation forces users to fix one error, re-run, fix the next, re-run, etc. — a workflow that wastes time on documents with multiple independent issues. Accumulating errors lets users address all issues in one round.
+
+Implementations MAY provide a fail-fast mode for use cases where early termination is preferred (e.g., performance-critical pipelines validating known-good data). When both modes are supported, accumulating mode SHOULD be the default.
+
+Error reports SHOULD include:
+
+- The element where the violation occurred (path or location)
+- The nature of the violation (resolution failure, constraint failure, etc.)
+- A reference to the relevant Template constraint when applicable
+- A severity indicator (error, warning, info)
+
+The format of error reports is implementation-defined; the recommendation is for completeness and clarity, not for a specific schema.
+
+### 8.6 Templates Are Flat; Companion Vocabulary
+
+GDX Templates are flat shape declarations. A Template's effective contract is exactly what the Template declares; Templates do not inherit fields or constraints from other Templates. Shared structure across Templates is achieved through application convention, vocabulary versioning, or tooling — not through a Template-level inheritance mechanism.
+
+This decision is deliberate. Inheritance in distributed-vocabulary environments — where Templates from different vocabularies may reference each other across publication boundaries, without compile-time checking to catch breaks — creates failure modes (silent constraint propagation, transitive dependency brittleness, schema-evolution surprises) that outweigh the authoring conveniences inheritance provides. Applications needing shared structure across Templates should publish Templates as flat declarations, possibly generated by tooling from a common source.
+
+A Template's relationship to other Templates is expressed through `--type` references on its child elements. A Customer Template that has an `address` Record whose shape conforms to an Address Template uses `<REC address --Address>` — a structural reference at the field level, not at the Template level. This composition pattern at the field level provides the shared-shape benefit without the propagation problems that Template-level inheritance would introduce.
+
+**The GDX Common Vocabulary.** The GDX Common Vocabulary is a companion specification, separately versioned from this core specification. It defines a base set of widely useful Templates and Extensions covering numeric width and representation refinements, common semantic types (identifiers, dates, durations, currency), cryptographic and hash types, validation extensions, and predicate refinement extensions for use on REL declarations.
+
+The Common Vocabulary is versioned independently of the core specification. Vocabulary additions and refinements may occur without revising the core; structural changes to GDX require core revision. Conforming implementations SHOULD support the Common Vocabulary in addition to the core; an implementation that supports only the core is conforming but limited, since common types and constraints will require explicit declaration in every document that uses them.
+
+---
+
+## 9. Transport Semantics
+
+Package (§6.3.7) and Group (§6.3.8) are the two roles reserved for transport: they wrap and partition data items during exchange between systems. This section defines how transport-layer wrappers behave operationally — how to populate them with metadata and payload, how receivers unpack them, and what survives serialization. Definitions of the prefix tokens, composition rules, and required identifiers live in §6.3.7 and §6.3.8.
+
+### 9.1 Package Patterns
+
+A Package carries Objects, Templates, and REL declarations as payload, alongside Properties, Records, Sets, and Annotations as transport metadata. The identifier (when present) is used for transport correlation: request/response matching, deduplication, audit.
+
+A Package with transport metadata and payload:
+
+```
+<PKG customer-import-2026-04-29
+    <STR source : "crm-v3">
+    <STR contentType : "customer-batch">
+    <INT count : 2>
+    <REM : "Daily customer sync">
+    
+    <OBJ Alice ...>
+    <OBJ Bob ...>
+>
+```
+
+A vocabulary export Package carrying Templates and RELs:
+
+```
+<PKG color-vocab-v1
+    <STR vocabName : "color-science">
+    <STR version : "1.0.0">
+    
+    <DEFREC ColorReading
+        <FLOAT l>
+        <FLOAT a>
+        <FLOAT b>
+    >
+    
+    <REL color:measuredBy>
+    <REL color:hasReading>
+>
+```
+
+### 9.2 Group Patterns
+
+A Group identifier is local to its containing Package. Two different Packages may both contain a Group named `pantone`; these are independent. Groups are not globally addressable; their identifiers exist only within the transport scope of their Package.
+
+Multiple color libraries in a single Package:
+
+```
+<PKG color-export-2026-04-29
+    <STR source : "color-system-v3">
+    
+    <GRP pantone
+        <STR libraryName : "Pantone Solid Coated">
+        <STR version : "2023">
+        <OBJ Pantone-485-C
+            <FLOAT l : 47.2>
+            <FLOAT a : 67.8>
+            <FLOAT b : 54.1>
+        >
+        <OBJ Pantone-186-C ...>
+    >
+    
+    <GRP ral
+        <STR libraryName : "RAL Classic">
+        <STR version : "2022">
+        <OBJ RAL-3020 ...>
+        <OBJ RAL-9010 ...>
+    >
+>
+```
+
+A choice-of-one transport pattern, where Package metadata signals the receiver to apply only one of the contained Groups:
+
+```
+<PKG config-update-2026-04-29
+    <STR choose : "one">
+    
+    <GRP production-config
+        <STR environment : "production">
+        <OBJ Server-1 ...>
+        <OBJ Server-2 ...>
+    >
+    
+    <GRP staging-config
+        <STR environment : "staging">
+        <OBJ Server-1 ...>
+        <OBJ Server-2 ...>
+    >
+>
+```
+
+### 9.3 Unpacking Behavior
+
+A receiver processing a transport-layer wrapper:
+
+1. Reads transport-level metadata (Package and Group identifiers, Properties, Records, Annotations) for any provenance or processing context.
+2. Extracts the data-layer payload (Objects, Templates, REL declarations) from the wrapper.
+3. Stores or processes the extracted data items according to the receiver's data-layer rules.
+4. Discards the transport wrapping; Package and Group elements are not part of what the receiver retains as data.
+
+Receivers MAY log transport metadata as audit information and MAY use Group identifiers to correlate processing of contained items. Receivers MUST NOT treat transport identifiers as part of the data layer; the identifier `pantone` on a Group does not become part of the identity of any contained Object.
+
+### 9.4 Round-Trip Considerations
+
+Transport-layer wrappers do not survive a parse-store-serialize round-trip in their original form. A receiver that imports a Package and later exports the same data items will not necessarily produce a Package; the items might be exported bare or as a different Package with metadata reflecting the export rather than the original import.
+
+Persistence layers MAY retain transport metadata as provenance attached to the imported data items (for example, as a Qualifier or Annotation noting the source Package's identifier and timestamp). Such retention is application-defined and is not part of the core specification's round-trip contract. The data items themselves (Objects, Templates, REL declarations) round-trip per Appendix A regardless of the transport wrapper they arrived in.
+
+---
+
+## 10. Data Persistence
+
+This section addresses how GDX data is stored and how stored data round-trips through serialization. It is informative; the core specification defines the data model and canonical text form, while persistence concerns are layered on top.
+
+### 10.1 Wire Formats
+
+The Standard Form defined in §5 is the normative reference. Two additional wire formats are defined in companion specifications:
+
+- **Compact Form** — a line-oriented form using indentation rather than brackets to convey structure, designed for human authoring and for environments where bracket noise is unwanted. Each element occupies one line; child elements are indented under their parents. The Compact Form preserves all fields of the Standard Form; only the structural delimiters differ.
+- **Binary Form** — a binary encoding optimized for fast wire transfer, compact size, and efficient parsing. The Binary Form preserves the data model of §4 with no information loss; round-trip through the Binary Form produces a document equivalent to the original Standard Form input.
+
+A wire format is *conforming* if it preserves the data model defined in §4 and admits round-trip equivalence with the canonical form (Appendix A). The full grammars and encoding rules for the Compact Form and Binary Form are defined in their respective companion specifications.
+
+### 10.2 Database Persistence
+
+GDX maps cleanly to relational storage with a row-to-element mapping. This is one of several persistence strategies; document stores, graph databases, and key-value stores can also serve as GDX backends.
+
+A single table can store an arbitrary GDX document with the following column structure:
+
+| Column         | Purpose                                                            |
+|----------------|--------------------------------------------------------------------|
+| `RowId`        | Unique identifier for this element row                             |
+| `RootId`       | The RowId of the document's root element                           |
+| `ParentId`     | The RowId of this element's parent (NULL for the root)             |
+| `NextSiblingId`| The RowId of the next sibling, for ordered child traversal         |
+| `Prefix`       | The element's prefix token                                         |
+| `Key`          | The element's Key field (NULL if not present)                      |
+| `Rel`          | The element's Rel field (NULL if not present)                      |
+| `Id`           | The element's Id field (NULL if not present)                       |
+| `ValueKind`    | The value-kind of the Resource (NULL if not present)               |
+| `ResourceValue`| The Resource value, encoded per the value-kind                     |
+| `Type`         | The element's Type reference (NULL if not present)                 |
+
+This single-schema approach allows GDX storage without per-document schema migration. Adding a new Object role, Property, or Template requires no schema changes — just additional rows.
+
+Edge references stored as `ResourceValue` strings can be resolved at query time by joining against the `Id` column. For systems where the reference target is known at write time, the reference can be denormalized to a `TargetRowId` column for direct lookup. The resolution strategy is implementation choice; both approaches are conforming.
+
+Other persistence strategies (document store, graph database, key-value store) follow analogous principles: preserve the data model, preserve element ordering, and preserve the round-trip contract (§10.4).
+
+### 10.3 Data Interchange
+
+GDX maps to and from common data interchange formats (JSON, YAML, XML, RDF). Each mapping has trade-offs: GDX features without direct equivalents in the target format (predicate alignment, native bytes, schema-as-data) require convention-based encoding or are lost in conversion. Implementations performing format conversion SHOULD document their conventions.
+
+Side-by-side comparisons between GDX and other formats, along with discussion of mapping considerations, are in Appendix B.
+
+### 10.4 Persistence Round-Trip
+
+A persistence layer is *round-trip conforming* if a document parsed, stored, and serialized back produces a document equivalent to the original under Appendix A's structural equivalence rules.
+
+Specifically, persistence layers MUST preserve:
+
+1. Element prefixes
+2. Identity fields (Id, Key, Rel) with case-sensitive ordinal comparison
+3. Resource value-kinds and values
+4. Type references
+5. Child element order
+6. Annotations (REM elements)
+7. Null state: an element with no Resource value MUST round-trip as an element with no Resource value. An element with a Resource MUST round-trip with the same Resource value, including the empty string for string-typed Properties. The semantic distinction between null and present-with-value MUST be preserved.
+
+Persistence layers MAY normalize:
+
+- Whitespace within and between elements (per §5.1.2)
+- Hex case in bytes literals (canonical form is lowercase)
+- Boolean literal forms (canonical form is `true`/`false`; `t`/`f` and uppercase variants normalize to lowercase spelled-out form)
+- Null Property forms (canonical form is the bare `<STR name>`; the empty-value form `<STR name : >` normalizes to the bare form)
+- Indentation in Standard or Compact forms
+
+Persistence layers MUST NOT alter:
+
+- Numeric representation suffixes (a value stored as `25i8` is retrieved as `25i8`)
+- String content within quotes (escape sequences are part of the literal)
+- Element identity or ordering
+- The semantic distinction between null and present-with-value
+
+Transport-layer roles (Package, Group) are not subjects of the round-trip contract; see §9.4.
+
+---
+
+## 11. Open Issues
+
+This section enumerates issues that the v1.0 specification SHOULD resolve before final publication. Each entry describes the issue and references the affected section.
+
+### 11.1 Common Vocabulary Specification
+
+**Section:** §8.6
+
+The GDX Common Vocabulary is a companion specification, separately versioned. The current draft (v0.2) defines a Core / Standard / Extended level structure with approximately 70 normatively-defined identifiers across Core and Standard levels and a sketch of Extended-level content. Full population of Extended-level content, refinement based on implementer experience, and additional domain-specific vocabularies remain ongoing work.
+
+### 11.2 Compact Form Grammar
+
+**Section:** §10.1
+
+The Compact Form is described conceptually and demonstrated by example in this specification. A companion grammar specification (v0.2) now defines the indentation rules, line-continuation handling, escape conventions, multi-line literals, and the precise mapping to Standard Form. 
+
+### 11.3 Three-State Constraint Vocabulary
+
+**Section:** §4.3.3
+
+The introduction of distinct absent/null/present states implies three independent constraint dimensions for Templates: required-vs-optional (whether the Property may be absent), nullable-vs-non-nullable (whether a present Property may have no Resource), and value constraints (what values are permitted when a Resource is present). The Common Vocabulary v0.2 begins addressing this through `gdx:required`, `gdx:optional`, and value-constraint extensions; the full taxonomy and the relationship between optionality and nullability may benefit from further refinement based on implementer experience.
+
+---
