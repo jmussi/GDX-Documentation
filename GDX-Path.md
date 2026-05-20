@@ -2,7 +2,7 @@
 
 - **Status:** Draft v0.1 (working draft)
 - **Date:** 2026-05-20
-- **Companion to:** GDX Core Specification v0.10.0
+- **Companion to:** GDX Core Specification v0.11.0
 - **Authors:** Julian Mussi
 
 
@@ -374,7 +374,7 @@ For a conforming document, conforming resolvers MUST produce the same resolution
 
 ## 8. Required Changes to GDX Core Specification
 
-The introduction of path-mode reference resolution requires the following modifications to the GDX Core Specification. These changes are normative for the next revision of the Core Spec that incorporates path-mode (anticipated v0.10.x or v0.11).
+The introduction of path-mode reference resolution requires the following modifications to the GDX Core Specification. These changes are normative as of Core Specification v0.11.0, which incorporates path-mode in lockstep with the publication of this companion specification.
 
 ### 8.1 Identifier Grammar (Core Spec §5.4.1)
 

@@ -1,7 +1,7 @@
 # GDX — Graph Data eXchange Specification
 
-- **Status:** Draft v0.10.0 (working draft, pre-1.0)
-- **Date:** 2026-05-19
+- **Status:** Draft v0.11.0 (working draft, pre-1.0)
+- **Date:** 2026-05-20
 - **Editors:** 
 - **Authors:** Julian Mussi
 
@@ -48,6 +48,26 @@ Changes in v0.10.0 from v0.9.10 are substantial:
 (9) **Migration impact.** All `*PREFIX` notation in existing documents must migrate to `PREFIX*`. The `@KIND` family is additive and does not affect existing documents. EDGE is unchanged. Templates and RELs are unchanged.
 
 (10) **Appendix split.** The previously-included Appendices B (Format Comparison), C (Security Considerations), and D (Quick Start) have been extracted into separate companion specifications, joining the existing Grammar, Compact Form, and Cookbook companions. The previously-included Appendix A (Conformance) remains in the core specification as normative content. Cross-references throughout the spec updated to point at the new companion documents. The split reduces the core specification by approximately 700 lines and clarifies the boundary between normative content (this specification, Appendix A, Grammar) and non-normative content (Format Comparison, Security Considerations, Quick Start, Cookbook).
+
+Changes in v0.11.0 from v0.10.0:
+
+(1) **Path-mode reference resolution is now normative.** The `$PathExpression` form reserved in v0.10.0 §11.4 is fully specified in a new companion document, the GDX Path Expressions Specification (`GDX-Path.md`). The path grammar supports four segment kinds — `IdSegment` (bareword, matches `Id`), `KeySegment` (`&K`, matches `Key`), `RelSegment` (`#R`, matches `Rel`), and `OrdinalSegment` (`[N]`, matches by 1-based document order). The composed form `@Identifier$PathExpression` (`IdPathRef`) expresses cross-document addressing: the `@Identifier` portion resolves a starting element by scope walk, and the `$PathExpression` portion traverses structurally from there. The `$` and `@` sigils retain their independent meanings under composition.
+
+(2) **§11.4 closes.** Path-mode reference resolution is no longer an open issue. References to §11.4 in earlier revisions are satisfied by the companion specification.
+
+(3) **`/` removed from `IdStartChar` (§5.4.1).** Breaking change. Identifiers may no longer begin with `/`. The `IdContChar` set is unchanged, so identifiers may continue to contain `/` (e.g., IRIs like `https://acme.com/people/alice` remain valid). The narrowing makes the `$/...` path-mode form unambiguous and the `@Identifier$PathExpression` boundary lexically clean. Path-style local identifiers such as `<OBJ /people/alice>` MUST be migrated; the recommended migrations are documented in `GDX-Path.md` Appendix C.
+
+(4) **§5.4.2 identifier-forms table updated.** The "Path" row is removed; path-style local naming is replaced by path-mode reference resolution. The remaining identifier forms (Local name, Single letter, CURIE, Dotted CURIE local, GUID/opaque, IRI) are unchanged.
+
+(5) **§5.2.6 reference literal grammar updated.** The placeholder for `$PathExpression` is replaced with the three-form `ReferenceLiteral` production from `GDX-Path.md` §5: `IdRef`, `PathRef`, `IdPathRef`. The "reserved, grammar deferred" language is removed. Address-mode singularity (the requirement that a path used as a reference literal MUST resolve to exactly one element of the matching role) is incorporated by reference.
+
+(6) **§7.1 composition matrix expands the resolvable target set.** `@KIND` references composed with a `PathRef` or `IdPathRef` resource may now resolve against Records, Blocks, value Properties, Qualifiers, Extensions, and Embedded elements. Parent-context restrictions on where `@KIND` reference elements may appear are unchanged; only the addressability of the target expands.
+
+(7) **§6.5.16 updates.** The paragraph deferring path-mode resolution is replaced with a forward reference to `GDX-Path.md` §5. The cross-document addressing pattern using `@Identifier$PathExpression` is documented.
+
+(8) **§5.1.1 sigils table updated.** The `$` row is updated from "reserved, grammar deferred" to "introduces a path-mode reference literal (§5.2.6, GDX-Path.md)."
+
+(9) **Migration impact.** Existing documents using leading-slash identifiers MUST be migrated (drop the leading slash, retaining any interior `/`). Existing documents using only `@Identifier` references are unaffected. Existing documents that used a non-normative `$`-prefixed literal under v0.10.0 §11.4's implementation-defined window MUST conform to the v0.11.0 grammar.
 
 
 ## Table of Contents
@@ -539,7 +559,7 @@ A *sigil* is a single non-alphabetic character (or short character sequence) tha
 | `#`   | Introduces the Rel field |
 | `--`  | Introduces the Type field |
 | `@`   | Introduces an identifier-mode reference literal (§5.2.6) |
-| `$`   | Introduces a path-mode reference literal (§5.2.6); reserved, grammar deferred (§11.4) |
+| `$`   | Introduces a path-mode reference literal (§5.2.6); grammar specified in `GDX-Path.md` |
 
 The character `:` is a *separator*, not a sigil. It divides an element into an identity portion (Prefix, Key, Rel, Id) and a value portion (Resource, Type). The Resource itself has no sigil; it is identified by appearing on the value side of `:`.
 
@@ -582,7 +602,7 @@ The Resource of an element, when present, is one of six value-kinds. Each value-
 | `float`     | Decimal with point, optional width/representation suffix; or keyword     | `3.14`, `25.50d`, `1.5708f32`    |
 | `bool`      | `true` or `false`                                                        | `true`                           |
 | `bytes`     | Hex prefix form (canonical) or alternative encoding prefix               | `0x4a3f8c`                       |
-| `reference` | At-prefixed identifier                                                   | `@/people/bob`                   |
+| `reference` | At-prefixed identifier, optionally composed with a path                  | `@people/bob`, `$/people/[1]`    |
 
 #### 5.2.1 String Literals
 
@@ -739,12 +759,21 @@ A bytes literal with no following digits (`0x` alone) is malformed. A hex litera
 
 #### 5.2.6 Reference Literals
 
-A reference literal designates another addressable element. Two forms are recognized: identifier-mode (`@`) and path-mode (`$`).
+A reference literal designates another addressable element. Three forms are recognized: identifier-mode (`@Identifier`), path-mode (`$PathExpression`), and composed (`@Identifier$PathExpression`).
+
+```ebnf
+ReferenceLiteral  ::= IdRef | PathRef | IdPathRef
+IdRef             ::= "@" Identifier
+PathRef           ::= "$" PathExpression
+IdPathRef         ::= "@" Identifier "$" PathExpression
+```
+
+The `PathExpression` grammar and resolution algorithm are specified in the companion GDX Path Expressions Specification (`GDX-Path.md`). Implementations MUST conform to that specification for the contents of any `$`-introduced literal.
 
 **Identifier-mode** is an `@` sigil followed by an identifier:
 
 ```
-@/people/bob
+@people/bob
 @gdx:Person
 @7f3a2b9c-4e21-4f88-91d5-abcdef012345
 @https://acme.com/people/alice
@@ -752,18 +781,37 @@ A reference literal designates another addressable element. Two forms are recogn
 
 The identifier following `@` follows the lexical rules in §5.4. The reference is resolved by the implementation's reference resolver; the parser validates only that the literal is well-formed. The `@` sigil MUST be immediately followed by the identifier with no intervening whitespace.
 
+**Path-mode** is a `$` sigil followed by a path expression. The path traverses the structural tree of the current document, starting at the document root, addressing an element by its location:
+
+```
+$/people/alice/mailing
+$/orders/[3]/#gdx:postalAddress
+```
+
+The `$` sigil MUST be immediately followed by the path expression with no intervening whitespace.
+
+**Composed** form concatenates identifier-mode and path-mode with no intervening whitespace. The `@Identifier` portion resolves to a starting element by scope walk; the `$PathExpression` portion is then evaluated rooted at that starting element. The composed form is the canonical mechanism for cross-document addressing:
+
+```
+@gdx:bob$/contacts/[1]
+@https://acme.com/people/alice$/address/&2
+```
+
+Because `$` is not a member of `IdContChar`, the boundary between the identifier portion and the path portion is lexically unambiguous.
+
 References are commonly used as the Resource of Edge elements (§6.5.4) or of `@KIND` reference elements (§6.5.16):
 
 ```
 <OBJ alice
-    <EDGE #knows : @/people/bob>
+    <EDGE #knows : @people/bob>
     <@OBJ employer : @com.acme>
+    <@REC mailing : $/addresses/[1]>
 >
 ```
 
-**Path-mode** is reserved. The `$` sigil introduces a path expression (`$PathExpression`) addressing an element by its structural location in the document tree. The path-expression grammar and resolution algorithm are not normatively specified in this revision; they are reserved for a future revision (§11.4). Parsers MUST recognize `$` as a reference-literal introducer but the contents are implementation-defined until path-mode is normatively specified.
+**Address-mode singularity.** A reference literal whose Resource is a `PathRef` or `IdPathRef` resolves to a single element. The reference is resolved if and only if path evaluation yields exactly one element whose role matches the enclosing prefix; zero matches, multiple matches, and a single match of non-matching role all yield an unresolved reference. Resolvers MUST NOT silently select a first match in the multi-match case. See `GDX-Path.md` §7 for the normative definition.
 
-The two reference modes serve different addressing strategies. Identifier-mode looks up a target by name in the appropriate scope; path-mode (when specified) traverses a structural path to reach an element that may not have a global identifier. Both produce a reference value-kind; the choice between them is the author's, based on what the target is and how it is addressable.
+The three reference forms serve different addressing strategies. Identifier-mode looks up a target by name in the appropriate scope. Path-mode traverses a structural path to reach an element that may not have a global identifier within the current document. The composed form combines both: name-resolve to land at a starting element, then traverse structurally from there. The choice among them is the author's, based on what the target is and how it is addressable.
 
 ### 5.3 Type References
 
@@ -794,14 +842,16 @@ A single identifier grammar applies to all identifier-bearing positions: the `Id
 ```
 Id              ::= IdStartChar IdContChar*
 
-IdStartChar     ::= ALPHA | "_" | "/"
+IdStartChar     ::= ALPHA | "_"
 IdContChar      ::= ALPHA | DIGIT | "_" | "-" | "." | "/" | ":"
 
 ALPHA           ::= "A".."Z" | "a".."z"
 DIGIT           ::= "0".."9"
 ```
 
-An identifier MUST begin with a letter, an underscore, or a forward slash. It MAY continue with any combination of letters, digits, underscores, hyphens, periods, forward slashes, and colons.
+An identifier MUST begin with a letter or an underscore. It MAY continue with any combination of letters, digits, underscores, hyphens, periods, forward slashes, and colons.
+
+The forward slash (`/`) is admitted as a continuation character so that IRIs (e.g., `https://acme.com/people/alice`) remain valid identifiers. The forward slash is **not** admitted as a start character: identifiers may not begin with `/`. This narrowing (introduced in v0.11.0) reserves the leading-slash syntactic slot for path-mode reference literals (§5.2.6 and the companion GDX Path Expressions Specification). Documents conforming to v0.10.0 or earlier that use leading-slash identifiers MUST be migrated; see `GDX-Path.md` Appendix C for migration patterns.
 
 Identifiers MUST NOT begin with a digit (which would be lexically ambiguous with numeric literals). Identifiers MUST NOT contain whitespace, brackets, sigil characters (other than as listed above), or other punctuation.
 
@@ -815,7 +865,7 @@ The grammar is uniform but admits several conventional forms. The following are 
 |--------------------|----------------------------------------|---------------------------------------------|
 | Local name         | `name`, `firstName`, `customer_id`     | Property and Record identifiers             |
 | Single letter      | `r`, `g`, `b`, `x`, `y`                | Mathematical or abbreviated conventions     |
-| Path               | `/people/alice`, `/orders/123`         | Object identifiers within a hierarchy       |
+| Hierarchical local | `people/alice`, `orders/123`           | Object identifiers within a hierarchy (no leading `/`) |
 | CURIE              | `gdx:Person`, `schema:givenName`       | Object IDs, Type refs, Rel refs             |
 | Dotted CURIE local | `gdx:com.acme.Person`                  | Namespace-qualified types                   |
 | GUID / opaque      | `7f3a2b9c-4e21-4f88-91d5-abcdef012345` | System-generated identifiers                |
@@ -850,7 +900,7 @@ The identifier grammar imposes no maximum length. In practice, identifiers shoul
 Practical guidance:
 
 - Local identifiers (Property names, Record fields) typically fit comfortably in 1-50 characters. Longer names accumulate visual weight without adding clarity.
-- Path-style identifiers (`/orders/2026/04/29/customer-12345`) may run longer when they encode hierarchy; readability remains the constraint.
+- Hierarchical local identifiers (`orders/2026/04/29/customer-12345`) may run longer when they encode hierarchy; readability remains the constraint. Such identifiers do not begin with `/` (see §5.4.1); the leading-slash form is the path-mode reference syntax (§5.2.6).
 - IRI-form identifiers may run to several hundred characters when full URIs are used. This is acceptable but compact identifiers (CURIEs, GUIDs) are preferred for documents that are read or edited by humans.
 - Implementations SHOULD impose an upper limit on identifier length (a reasonable default is 1024 characters) to bound memory use and prevent denial-of-service via pathologically long identifiers in untrusted documents.
 
@@ -1088,7 +1138,7 @@ An Object is an identifiable entity that may be referenced by other Objects. Obj
 The root of a GDX document MUST be one or more Objects, Templates, REL declarations, or Packages. Objects may not contain other Objects except through the Embedded modifier (§6.5.11) or as transport-layer payload (§6.5.7, §9).
 
 ```
-<OBJ /people/alice
+<OBJ people/alice
     <STR firstName : "Alice">
     <INT age : 24>
 >
@@ -1143,7 +1193,7 @@ An Edge expresses a directed relation between two entities. Edges are GDX's repr
 
 ```
 <OBJ alice
-    <EDGE #knows : @/people/bob>
+    <EDGE #knows : @people/bob>
 >
 ```
 
@@ -1152,7 +1202,7 @@ This reads as: alice — knows → bob. The edge is unidirectional in the data m
 Edges accept the same children as Records and MAY carry properties as edge attributes. An edge with attributes is a labeled property graph edge in the full sense:
 
 ```
-<EDGE #knows : @/people/bob
+<EDGE #knows : @people/bob
     <STR since : "2024-01-15">
     <FLOAT weight : 0.8>
 >
@@ -1532,7 +1582,7 @@ This produces references like `@OBJ`, `@REL`, `@DEFSTR`, `@.STR`, `@_BOOL`, `@%R
 
 **Resolution.** A reference's Resource is a reference literal (`@identifier`) naming the target. The resolver uses the target-kind declared by the prefix to scope the search: a `@REL` reference resolves against the REL declaration scope; a `@DEFOBJ` reference resolves against the Template scope; a `@OBJ` reference resolves against the Object scope. The resolution algorithm parallels Edge Reference Resolution (§6.5.4.1) but is scoped by target-kind.
 
-This revision of the specification normatively defines identifier-based reference resolution (`@id`). The reference literal grammar reserves the `$` introducer for path-based references (`$path/expression`) but defers normative specification of path-mode resolution to a future revision. See §11.
+Identifier-based reference resolution (`@id`) is normative in this specification. Path-based reference resolution (`$path` and the composed `@id$path` form) is specified in the companion GDX Path Expressions Specification (`GDX-Path.md`). The composed `@Identifier$PathExpression` form expresses cross-document addressing: the identifier portion resolves a starting element by scope walk, and the path portion traverses structurally from there. A reference whose Resource is a path or composed literal MUST resolve to exactly one element of the matching role (see `GDX-Path.md` §7).
 
 **Distinguishing `@OBJ` from EDGE.** Both `@OBJ` and EDGE carry an Object reference, but they are structurally distinct. An `@OBJ` element is a leaf-like typed pointer — it identifies a target without having its own substructure beyond Qualifiers. An EDGE element is a graph-statement element with its own children, including Properties that express edge metadata (weight, confidence, timestamp). Use `@OBJ` when the link is just an identifier; use EDGE when the link itself is a structural participant in the graph with attributes of its own. The full comparison is in §3.6.
 
@@ -2094,20 +2144,20 @@ The Compact Form is described conceptually and demonstrated by example in this s
 
 The introduction of distinct absent/null/present states implies three independent constraint dimensions for Templates: required-vs-optional (whether the Property may be absent), nullable-vs-non-nullable (whether a present Property may have no Resource), and value constraints (what values are permitted when a Resource is present). The Common Vocabulary v0.2 begins addressing this through `gdx:required`, `gdx:optional`, and value-constraint extensions; the full taxonomy and the relationship between optionality and nullability may benefit from further refinement based on implementer experience.
 
-### 11.4 Path-Mode Reference Resolution
+### 11.4 Path-Mode Reference Resolution — Resolved
 
 **Section:** §5.2.6, §6.5.16, §7.1
 
-This revision normatively defines identifier-based reference resolution: a `@KIND` element's Resource is a `@Identifier` literal that resolves against the scope of addressable elements matching the target-kind (Objects, RELs, or Templates by global identifier).
+**Status:** Closed as of v0.11.0.
 
-The reference literal grammar reserves the `$` introducer for path-mode references — `$PathExpression` — but defers normative specification of:
+Path-mode reference resolution is normatively specified by the companion GDX Path Expressions Specification (`GDX-Path.md`). All sub-items previously open under this issue are addressed:
 
-- **The path expression grammar.** What constitutes a valid path expression: separators, segment forms, key/index access, identifier vs. position semantics.
-- **The resolution algorithm.** How a path expression is traversed against a document tree, scoping rules for path starting points, behavior on partial matches and missing intermediates.
-- **The composition matrix expansion.** Once paths are addressable, Records, Blocks, value Properties, and modifier-bearing elements (e.g., `@*STR`) become path-addressable. Composition rules permitting `@REC`, `@BLK`, `@.STR`, `@_INT`, etc. as references in additional parent contexts.
-- **Modifier-stacking interaction.** The current revision's `@`-with-modifier-bases pattern (`@.STR`, `@_INT`) is syntactically valid but resolves only when path-mode lands and these targets become addressable.
+- **The path expression grammar.** Specified in `GDX-Path.md` §3 and §4. Four segment kinds — `IdSegment`, `KeySegment`, `RelSegment`, `OrdinalSegment` — separated by `/`.
+- **The resolution algorithm.** Specified in `GDX-Path.md` §6. Left-to-right segment traversal from a defined starting element, with per-segment match semantics and explicit handling of zero, one, and multi-match outcomes.
+- **The composition matrix expansion.** Specified in `GDX-Path.md` §8.5 (changes required of this specification). `@REC`, `@BLK`, `@.STR`, `@_INT`, `@%REC`, value-Property targets, and other previously-unresolvable `@KIND` forms become resolvable when the resource is a `PathRef` or `IdPathRef`. Parent-context restrictions are unchanged; only target-addressability expands.
+- **Modifier-stacking interaction.** The `@`-with-modifier-bases pattern (`@.STR`, `@_INT`) now resolves through path-mode references.
 
-A future revision will normatively specify path-mode resolution. The reservation in this revision ensures that authors do not accidentally write path-like identifiers that conflict with future path syntax.
+The composed reference form `@Identifier$PathExpression` is the canonical mechanism for cross-document addressing: the identifier portion resolves a starting element by scope walk (per §6.5.16), and the path portion traverses structurally from there. This form replaces the speculative path-style identifier convention (e.g., `@/people/alice`) used in earlier revisions; with the v0.11.0 narrowing of `IdStartChar` (§5.4.1), identifiers no longer begin with `/`.
 
 ---
 
