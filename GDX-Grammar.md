@@ -1,8 +1,8 @@
 # GDX Standard Form — Grammar Specification
 
-- **Status:** Draft v0.6 (working draft)
-- **Date:** 2026-05-19
-- **Companion to:** GDX Core Specification v0.10.0
+- **Status:** Draft v0.7 (working draft)
+- **Date:** 2026-05-20
+- **Companion to:** GDX Core Specification v0.11.0
 - **Authors:** Julian Mussi
 
 
@@ -18,7 +18,9 @@ Changes from v0.3: prefix vocabulary restructured for the canonical/minified sys
 
 Changes from v0.4 (this revision, v0.5): conformance with Core Specification v0.9.10. Cross-references updated to current section numbering: §8.1 (composition matrix) → §7.1; §8.2 rule 1 (root rule) → §7.2 rule 1; §11 (transport-layer) → §9; §3.3.1 (Numeric Value-Kinds) → §4.3.1; §6.10 (REM Annotation) → §6.3.6; "§4" in the abstract (Standard Form definition) → §5. Corrected `GroupPrefix` (§7.1 and Appendix A): GRP has no minified form; the previous `"G"` minified alternative was removed. Group prefix relocated in the §7.1 grammar from "bare structural primitives" to "transport-layer prefixes" to match the Core Spec's typological grouping.
 
-Changes from v0.5 (this revision, v0.6): conformance with Core Specification v0.10.0. The prefix vocabulary is reframed around the composition pattern `[@?][refinement-modifier?][base][*?]`. (1) The Set marker `*` is now a suffix rather than a prefix; the EBNF `SetPrefix` production is replaced by `SetSuffix`, which composes after a base or refinement-modifier-base. (2) A new `ReferencePrefix` (`@`) is added as the reference operator; the `@KIND` family composes with any `ModifierBase`, optionally followed by `SetSuffix`. The composition pattern is described rather than enumerated; valid `@KIND` prefixes are derived from the pattern. (3) The Reference operator MUST NOT compose with itself (`@@`-prefixed compositions are malformed). (4) The reference literal grammar (§5.6) is extended: identifier-mode `@Id` is normatively specified; path-mode `$PathExpression` is syntactically reserved with grammar deferred to a future revision (Core Specification §11.4). (5) The §3.1 element-variations table is reorganized by role category (instance, refinement, declaration, transport) and includes `ReferenceElement` and `SetElement` as derived forms. Cross-references to the Core Specification updated for §6.5.x renumbering (REM Annotation §6.3.6 → §6.5.6). No changes to literal grammars (strings, numerics, booleans, bytes), identifier grammar, field grammars, or whitespace rules.
+Changes from v0.5 (revision v0.6): conformance with Core Specification v0.10.0. The prefix vocabulary is reframed around the composition pattern `[@?][refinement-modifier?][base][*?]`. (1) The Set marker `*` is now a suffix rather than a prefix; the EBNF `SetPrefix` production is replaced by `SetSuffix`, which composes after a base or refinement-modifier-base. (2) A new `ReferencePrefix` (`@`) is added as the reference operator; the `@KIND` family composes with any `ModifierBase`, optionally followed by `SetSuffix`. The composition pattern is described rather than enumerated; valid `@KIND` prefixes are derived from the pattern. (3) The Reference operator MUST NOT compose with itself (`@@`-prefixed compositions are malformed). (4) The reference literal grammar (§5.6) is extended: identifier-mode `@Id` is normatively specified; path-mode `$PathExpression` is syntactically reserved with grammar deferred to a future revision (Core Specification §11.4). (5) The §3.1 element-variations table is reorganized by role category (instance, refinement, declaration, transport) and includes `ReferenceElement` and `SetElement` as derived forms. Cross-references to the Core Specification updated for §6.5.x renumbering (REM Annotation §6.3.6 → §6.5.6). No changes to literal grammars (strings, numerics, booleans, bytes), identifier grammar, field grammars, or whitespace rules.
+
+Changes from v0.6 (this revision, v0.7): conformance with Core Specification v0.11.0. (1) **§5.6 reference literal grammar normatively specifies path-mode.** The placeholder `PathExpression ::= (* reserved; grammar deferred *)` is replaced by a forward reference to the companion GDX Path Expressions Specification (`GDX-Path.md`). A new `IdPathReference` production `"@" Id "$" PathExpression` is added to express the composed cross-document addressing form. (2) **§6 identifier grammar narrows.** `IdStartChar` no longer admits `/`. Identifiers may continue to contain `/` (`IdContChar` unchanged); only the leading-`/` form is removed. This change is a breaking change for documents conforming to v0.6 or earlier; the migration is mechanical (drop the leading `/` or move to a path-mode reference). (3) Appendix A updated to reflect the new reference-literal productions and the narrowed identifier grammar. (4) Cross-references to Core Specification updated to v0.11.0.
 
 
 ## Table of Contents
@@ -354,23 +356,27 @@ Base64Char      ::= ALPHA | DIGIT | "+" | "/"
 
 ### 5.6 Reference Literals
 
-Reference literals designate addressable elements. Two forms are recognized: identifier-mode (`@`) and path-mode (`$`).
+Reference literals designate addressable elements. Three forms are recognized: identifier-mode (`@Id`), path-mode (`$PathExpression`), and composed (`@Id$PathExpression`).
 
 ```ebnf
-ReferenceLiteral ::= IdentifierReference | PathReference
+ReferenceLiteral    ::= IdentifierReference | PathReference | IdPathReference
 
 IdentifierReference ::= "@" Id
 
-PathReference    ::= "$" PathExpression
+PathReference       ::= "$" PathExpression
 
-PathExpression   ::= (* reserved; grammar deferred to future revision *)
+IdPathReference     ::= "@" Id "$" PathExpression
+
+PathExpression      ::= (* specified in GDX-Path.md §3-§4 *)
 ```
 
-**Identifier-mode** (`@Id`) is normatively defined. The `@` sigil MUST be immediately followed by an identifier with no intervening whitespace. The identifier may be in any of the forms permitted by §6, including IRIs, paths, CURIEs, GUIDs, or local names.
+**Identifier-mode** (`@Id`) is normatively defined. The `@` sigil MUST be immediately followed by an identifier with no intervening whitespace. The identifier may be in any of the forms permitted by §6 (CURIEs, GUIDs, IRIs, local names, or hierarchical local names).
 
-**Path-mode** (`$PathExpression`) is syntactically reserved. The `$` sigil introduces a path expression addressing an element by its structural location in the document tree. The path-expression grammar and resolution algorithm are not normatively specified in this revision of the grammar; they are reserved for a future revision (see Core Specification §11.4). Parsers MUST recognize `$` as a reference-literal introducer but the contents are implementation-defined until path-mode is normatively specified.
+**Path-mode** (`$PathExpression`) is normatively defined by the companion GDX Path Expressions Specification (`GDX-Path.md`). The `$` sigil introduces a path expression addressing an element by its structural location in the document tree. The path-expression grammar and resolution algorithm are specified in `GDX-Path.md` §3–§6. The `$` sigil MUST be immediately followed by the `/` of the path with no intervening whitespace.
 
-The `$` sigil MUST be immediately followed by the path expression with no intervening whitespace.
+**Composed form** (`@Id$PathExpression`) expresses cross-document addressing. The `@Id` portion resolves to a starting element by scope walk (per Core Specification §6.5.16), and the `$PathExpression` portion is then evaluated rooted at that starting element. No whitespace is permitted between `@`, `Id`, `$`, and the path. The boundary between the identifier portion and the path portion is unambiguous because `$` is not a member of `IdContChar` (§6).
+
+When a reference literal appears as the Resource of a `@KIND` reference element (Core Specification §6.5.16), it MUST resolve to exactly one element of the matching role. See `GDX-Path.md` §7 for the normative address-mode singularity rule.
 
 
 ---
@@ -382,12 +388,14 @@ A single identifier grammar applies to all identifier-bearing positions: the `Id
 ```ebnf
 Id              ::= IdStartChar IdContChar*
 
-IdStartChar     ::= ALPHA | "_" | "/"
+IdStartChar     ::= ALPHA | "_"
 
 IdContChar      ::= ALPHA | DIGIT | "_" | "-" | "." | "/" | ":"
 ```
 
-An identifier MUST begin with a letter, an underscore, or a forward slash. It MAY continue with any combination of letters, digits, underscores, hyphens, periods, forward slashes, and colons.
+An identifier MUST begin with a letter or an underscore. It MAY continue with any combination of letters, digits, underscores, hyphens, periods, forward slashes, and colons.
+
+The forward slash (`/`) is admitted as a continuation character so that IRIs (e.g., `https://acme.com/people/alice`) remain valid identifiers. It is NOT admitted as a start character; identifiers may not begin with `/`. The leading-`/` syntactic slot is reserved for path-mode reference literals (§5.6 and `GDX-Path.md`). This restriction (introduced in v0.7) is a breaking change from v0.6 and earlier; see `GDX-Path.md` Appendix C for migration patterns.
 
 Identifiers MUST NOT begin with a digit (which would be lexically ambiguous with numeric literals). Identifiers MUST NOT contain whitespace, brackets, sigil characters (other than as listed above), or other punctuation.
 
@@ -701,7 +709,7 @@ Base64Char      ::= ALPHA | DIGIT | "+" | "/"
 
 // ===== Identifiers =====
 
-IdStartChar     ::= ALPHA | "_" | "/"
+IdStartChar     ::= ALPHA | "_"
 IdContChar      ::= ALPHA | DIGIT | "_" | "-" | "." | "/" | ":"
 Id              ::= IdStartChar IdContChar*
 
@@ -858,10 +866,11 @@ HexBytes        ::= "0x" HexDigit+
 Base64Bytes     ::= "0z" Base64Char+ "="*
 BytesLiteral    ::= HexBytes | Base64Bytes
 
-ReferenceLiteral ::= IdentifierReference | PathReference
+ReferenceLiteral    ::= IdentifierReference | PathReference | IdPathReference
 IdentifierReference ::= "@" Id
-PathReference    ::= "$" PathExpression
-PathExpression   ::= /* reserved; grammar deferred to future revision */
+PathReference       ::= "$" PathExpression
+IdPathReference     ::= "@" Id "$" PathExpression
+PathExpression      ::= /* specified in GDX-Path.md §3-§4 */
 
 Resource        ::= StringLiteral
                   | IntLiteral

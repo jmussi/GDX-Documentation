@@ -1,8 +1,8 @@
 # GDX Compact Form — Grammar Specification
 
-- **Status:** Draft v0.3 (working draft)
-- **Date:** 2026-05-19
-- **Companion to:** GDX Core Specification v0.10.0, GDX Standard Grammar v0.6
+- **Status:** Draft v0.4 (working draft)
+- **Date:** 2026-05-20
+- **Companion to:** GDX Core Specification v0.11.0, GDX Standard Grammar v0.7, GDX Path Expressions v0.1
 - **Authors:** Julian Mussi
 
 
@@ -22,6 +22,8 @@ This is the v0.3 working draft. The grammar, indentation model, and Standard For
 Changes from v0.1 to v0.2: conformance with Core Specification v0.9.10. Cross-references updated to current section numbering: §8.2 rule 1 (root rule) → §7.2 rule 1; §5.10 (REM Annotation) → §6.3.6; §4.2 (Resource Literals) → §5.2; §3.3.4 (Null Forms) → §5.1.3; §3.1, §4.1 (field order/sigils) → §5.1 and §5.1.1; "§4" in the intro (Standard Form definition) → §5. Example fixes: the §1.1 opening example, the §6.2 standard-to-compact example, and the §7.1 Simple Configuration example were updated to use an Object root (`O config`) rather than a bare Record (`R config`), which is non-conformant per §7.2 rule 1. The §7.4 example was updated from the legacy `TDR Customer` Template form to the current `DEFOBJ Customer`. The §7.6 Transport Wrappers example was updated from `PACKAGE`/`BLOCK` (legacy names) to `PKG`/`GRP` (current names); Block is a data-layer construct, while Group is the transport-layer partition. Companion-version line updated to GDX Core Specification v0.9.10 and GDX Standard Grammar v0.5.
 
 Changes from v0.2 to v0.3: conformance with Core Specification v0.10.0 and Standard Grammar v0.6. (1) The Set marker `*` migrated from prefix to suffix throughout examples: `*S tags` becomes `S* tags`; `*R contacts` becomes `R* contacts`. (2) The `@` reference operator and `@KIND` reference elements are introduced; §4.1 adds an example showing `@OBJ employer : @com.acme` in Compact Form. (3) The `$` reference-literal sigil is reserved for future path-mode references; identifier-mode `@id` is normatively specified. (4) The Appendix A grammar reframes the Prefix production around the composition pattern `[@?][refinement-modifier?][base][*?]`, inheriting the sub-prefix vocabulary from the Standard Grammar. Cross-reference to REM Annotation updated to §6.5.6 (its new location in Core v0.10.0). Companion-version line updated to GDX Core Specification v0.10.0 and GDX Standard Grammar v0.6.
+
+Changes from v0.3 to v0.4: conformance with Core Specification v0.11.0, Standard Grammar v0.7, and the new GDX Path Expressions Specification v0.1. (1) The `$`-introduced path-mode reference literal is now normatively specified by `GDX-Path.md`; the §4.4 prose updates from "reserved" to a forward reference to the companion specification. The composed form `@id$path` is recognized in reference-literal positions. (2) The identifier grammar narrows in line with Core Spec §5.4.1: identifiers may not begin with `/`. Examples in this document that used leading-slash identifiers are migrated accordingly. (3) Companion-version line updated to GDX Core Specification v0.11.0, GDX Standard Grammar v0.7, and GDX Path Expressions v0.1.
 
 
 ## Table of Contents
@@ -333,11 +335,17 @@ E #knows : @bob
 
 The lexical productions for each literal type are inherited from the Standard Grammar. Compact Form does not modify them.
 
-**Reference literals.** The `@` sigil introduces an identifier-mode reference (`@target-id`). Compact Form also recognizes `$` as a reserved introducer for path-mode references (`$path/expression`); path-mode is syntactically reserved but its grammar is deferred to a future revision (Core Spec §11.4). Both forms appear in Resource position:
+**Reference literals.** Three forms are recognized in Resource position, all carried over from Standard Form:
+
+- Identifier-mode: `@target-id` (Core Spec §5.2.6).
+- Path-mode: `$/path/segments` (specified in `GDX-Path.md`).
+- Composed: `@target-id$/path/segments` for cross-document addressing.
 
 ```
-E #knows : @bob               // identifier-mode (normative)
-@OBJ employer : @com.acme     // identifier-mode on a @KIND reference element
+E #knows : @bob                          // identifier-mode
+@OBJ employer : @com.acme                // identifier-mode on a @KIND reference element
+@REC mailing : $/people/alice/address    // path-mode
+@REC home : @people/bob$/contacts/[1]    // composed (cross-document)
 ```
 
 `@KIND` reference elements (Core Spec §6.5.16) appear in Compact Form with the prefix in the usual position:

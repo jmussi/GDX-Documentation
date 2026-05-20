@@ -1,7 +1,7 @@
 # GDX — Quick Start
 
-- **Status:** Draft v0.10.0 (companion to GDX Core Specification v0.10.0, working draft, pre-1.0)
-- **Date:** 2026-05-19
+- **Status:** Draft v0.11.0 (companion to GDX Core Specification v0.11.0, working draft, pre-1.0)
+- **Date:** 2026-05-20
 - **Editors:** 
 - **Authors:** Julian Mussi
 
@@ -15,7 +15,7 @@ A reader who finishes this document should understand enough GDX to recognize th
 
 ## Status of This Document
 
-This is the v0.10.0 working draft of the Quick Start, companion to the GDX Core Specification v0.10.0. It was previously published as Appendix D of the Core Specification through v0.10.0; it is now a separate companion document and is recommended as the entry-point for newcomers to GDX.
+This is the v0.11.0 working draft of the Quick Start, companion to the GDX Core Specification v0.11.0. It was previously published as Appendix D of the Core Specification through v0.10.0; it is now a separate companion document and is recommended as the entry-point for newcomers to GDX.
 
 ---
 
@@ -115,6 +115,21 @@ The Edge `EDGE #knows : @bob` says: from `alice`, there is a `knows` relationshi
 
 This is the graph dimension of GDX: tree-structured documents with explicit relationships between elements that aren't parent-child.
 
+For references to elements that don't have a global identifier — a Record inside an Object, a specific item in a list — GDX has a path syntax introduced by `$`:
+
+```
+<OBJ alice
+    <REC mailing
+        <STR street : "Main St">
+        <STR city : "Oakland">
+    >
+>
+
+<@REC residence : $/alice/mailing>
+```
+
+The `$/alice/mailing` traverses the document tree: into `alice`, then into `mailing`. Path-mode and identifier-mode compose with `$` for cross-document targets — `@bob$/contacts/[1]` resolves the Object `bob` and then takes its first contact. Path expressions are defined in the companion GDX Path Expressions Specification.
+
 ## 6. Cross-System Semantic Alignment with Predicates
 
 The `#rel` predicate also works on Properties to identify what concept the property represents:
@@ -205,6 +220,7 @@ The Quick Start above shows about 80% of what you'll use day to day. For the res
 - The GDX Cookbook (companion specification) shows worked patterns for common needs
 - The Companion Vocabulary specification defines standardized identifiers (Templates, predicates, validation extensions) you can use across applications
 - The Compact Form Grammar specification defines the human-friendly serialization shown in §8
+- The GDX Path Expressions specification defines the `$path` syntax shown in §5, including the address-mode singularity rules for path-based references
 - The Implementer's Guide provides practical guidance for building parsers, validators, and tools
 
 The full specification is more rigorous than a tutorial can be — it defines what every implementation must agree on. The Quick Start above is a friendly door; the rest of the spec is the building.

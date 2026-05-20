@@ -1,7 +1,7 @@
 # GDX — Format Comparison
 
-- **Status:** Draft v0.10.0 (companion to GDX Core Specification v0.10.0, working draft, pre-1.0)
-- **Date:** 2026-05-19
+- **Status:** Draft v0.11.0 (companion to GDX Core Specification v0.11.0, working draft, pre-1.0)
+- **Date:** 2026-05-20
 - **Editors:** 
 - **Authors:** Julian Mussi
 
@@ -15,7 +15,7 @@ The comparisons are illustrative, not exhaustive. Where GDX's design overlaps wi
 
 ## Status of This Document
 
-This is the v0.10.0 working draft of the Format Comparison, companion to the GDX Core Specification v0.10.0. It was previously published as Appendix B of the Core Specification through v0.10.0; it is now a separate companion document for clearer separation of normative and non-normative content.
+This is the v0.11.0 working draft of the Format Comparison, companion to the GDX Core Specification v0.11.0. It was previously published as Appendix B of the Core Specification through v0.10.0; it is now a separate companion document for clearer separation of normative and non-normative content.
 
 ---
 

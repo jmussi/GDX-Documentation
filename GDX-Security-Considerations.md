@@ -1,7 +1,7 @@
 # GDX — Security Considerations
 
-- **Status:** Draft v0.10.0 (companion to GDX Core Specification v0.10.0, working draft, pre-1.0)
-- **Date:** 2026-05-19
+- **Status:** Draft v0.11.0 (companion to GDX Core Specification v0.11.0, working draft, pre-1.0)
+- **Date:** 2026-05-20
 - **Editors:** 
 - **Authors:** Julian Mussi
 
@@ -13,7 +13,9 @@ This document is a non-normative companion to the GDX Core Specification. It dis
 
 ## Status of This Document
 
-This is the v0.10.0 working draft of the Security Considerations, companion to the GDX Core Specification v0.10.0. It was previously published as Appendix C of the Core Specification through v0.10.0; it is now a separate companion document for clearer separation of normative and non-normative content.
+This is the v0.11.0 working draft of the Security Considerations, companion to the GDX Core Specification v0.11.0. It was previously published as Appendix C of the Core Specification through v0.10.0; it is now a separate companion document for clearer separation of normative and non-normative content.
+
+v0.11.0 introduces path-mode reference resolution (`$path` and `@id$path`). The threat surface for path-mode references is anticipated to be similar to that of identifier-mode references — cycles, unresolved targets, scope confusion — with one additional consideration: path expressions traverse the document tree by direct child match, and a maliciously-constructed document may exploit ordinal segments (`[N]`) to address arbitrary sub-elements. The mitigations enumerated in §2 (Reference Resolution) extend to path-mode references. A future revision SHOULD examine path-specific threats once implementations accumulate experience.
 
 ---
 

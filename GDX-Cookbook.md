@@ -1,7 +1,7 @@
 # GDX — Cookbook of Canonical Patterns
 
-- **Status:** Draft v0.10.0 (companion to GDX Core Specification v0.10.0, working draft, pre-1.0)
-- **Date:** 2026-05-19
+- **Status:** Draft v0.11.0 (companion to GDX Core Specification v0.11.0, working draft, pre-1.0)
+- **Date:** 2026-05-20
 - **Editors:** 
 - **Authors:** Julian Mussi
 
@@ -16,7 +16,7 @@ The vocabulary identifiers used in these examples (`gdx:`, `schema:`, `vocab:`, 
 
 ## Status of This Document
 
-This is the v0.10.0 working draft of the Cookbook, companion to the GDX Core Specification v0.10.0. The patterns documented here have stabilized alongside the core; future revisions will add patterns as common use cases emerge but will not remove existing entries except to merge or restructure them.
+This is the v0.11.0 working draft of the Cookbook, companion to the GDX Core Specification v0.11.0. The patterns documented here have stabilized alongside the core; future revisions will add patterns as common use cases emerge but will not remove existing entries except to merge or restructure them. v0.11.0 migrates leading-slash identifiers in examples to the new hierarchical-local form (no leading `/`) and adds patterns demonstrating path-mode references.
 
 Changes in v0.10.0 from v0.9.6 reflect Core Specification v0.10.0:
 
@@ -36,10 +36,10 @@ The Cookbook is organized by pattern type:
 - **Schema and Constraints** (10–14): Templates, semantic types, validation, refinement.
 - **Predicates and Vocabulary** (15–16): cross-document alignment, REL declarations.
 - **Node-Zone and Annotation** (17–18): semi-structured material and provenance.
-- **References** (19–22): identifier schemes, typed pointers, vocabulary metadata, version chains.
-- **Property State** (23): null, absent, and present.
-- **Transport** (24–26): packaging, grouping, vocabulary export.
-- **Use-Case Framings** (27–31): typed configuration through graph-structured data.
+- **References** (19–23): identifier schemes, typed pointers, path-mode addressing, vocabulary metadata, version chains.
+- **Property State** (24): null, absent, and present.
+- **Transport** (25–27): packaging, grouping, vocabulary export.
+- **Use-Case Framings** (28–32): typed configuration through graph-structured data.
 
 ---
 
@@ -350,7 +350,7 @@ Object identifiers are not constrained to any particular scheme. Use whatever fi
 
 ```
 <OBJ Alice ...>
-<OBJ /people/alice ...>
+<OBJ people/alice ...>
 <OBJ 7f3a2b9c-4e21-4f88-91d5-abcdef012345 ...>
 <OBJ gdx:Person ...>
 <OBJ https://acme.com/people/alice ...>
@@ -360,12 +360,12 @@ References to these Objects use the `@` prefix:
 
 ```
 <EDGE #knows : @Alice>
-<EDGE #references : @/people/alice>
+<EDGE #references : @people/alice>
 <EDGE #describes : @7f3a2b9c-4e21-4f88-91d5-abcdef012345>
 <EDGE #cites : @https://acme.com/people/alice>
 ```
 
-The resolver determines how each reference resolves; the format does not constrain the scheme.
+The resolver determines how each reference resolves; the format does not constrain the scheme. Identifiers may not begin with `/` (Core Spec §5.4.1, narrowed in v0.11.0); the leading-slash form is the path-mode reference syntax (see Pattern 21).
 
 ## 20. Typed Reference to an Addressable Element
 
@@ -374,8 +374,8 @@ When you want a pointer to another element — an Object, a REL declaration, a T
 ```
 <OBJ ServerConfig
     <STR name : "web-01">
-    <@OBJ owner : @/teams/platform>
-    <@OBJ fallback : @/servers/web-02>
+    <@OBJ owner : @teams/platform>
+    <@OBJ fallback : @servers/web-02>
 >
 ```
 
@@ -391,7 +391,47 @@ Qualifiers may refine a reference's meaning:
 
 The Qualifier annotates the reference itself: "this pointer is the read-write database."
 
-## 21. Vocabulary Metadata Link
+## 21. Reference to a Non-Identified Element via Path
+
+When the target of a reference is not a globally identifiable Object — when it's a Record inside an Object, a specific item in a list, or a Qualifier hanging off a Property — the identifier-mode reference cannot reach it. Path-mode references address elements by their structural location.
+
+```
+<OBJ orders/2026
+    <REC shipping
+        <STR street : "123 Main St">
+        <STR city : "Oakland">
+    >
+    <REC billing
+        <STR street : "PO Box 9">
+        <STR city : "Berkeley">
+    >
+>
+
+<OBJ orders/2026/preferences
+    <@REC defaultShippingTo : $/orders/2026/shipping>
+>
+```
+
+The Resource `$/orders/2026/shipping` is a path-mode reference literal. The `$` introduces path mode; the `/orders/2026/shipping` traverses from the document root into the Object `orders/2026` and then into its `shipping` Record. The reference resolves to that Record element.
+
+Cross-document targets compose path-mode with identifier-mode:
+
+```
+<@REC alicesPreferredAddress : @people/alice$/addresses/[1]>
+```
+
+The `@people/alice` portion resolves the Object by name (per the resolver's scope walk); the `$/addresses/[1]` portion then traverses from that Object to its `addresses` child and then to that child's first element by document order.
+
+Path segments select by different fields depending on the segment's first character:
+
+- A bareword (`shipping`, `addresses`) matches by `Id`.
+- An `&`-prefixed token (`&2`, `&street`) matches by `Key`.
+- A `#`-prefixed token (`#gdx:knows`) matches by `Rel`.
+- A bracketed numeral (`[1]`, `[3]`) matches the *N*-th child in document order, 1-based.
+
+A path used as a reference Resource MUST resolve to exactly one element of the matching role; zero matches, multiple matches, and matches of the wrong role all yield an unresolved reference. The GDX Path Expressions Specification (`GDX-Path.md`) gives the full grammar and resolution rules.
+
+## 22. Vocabulary Metadata Link
 
 REL declarations may reference other RELs to express vocabulary relationships — inverse, sameAs, subPropertyOf, and similar predicates that describe how predicates relate to each other.
 
@@ -419,7 +459,7 @@ Schema cross-references between predicates and Templates use the same mechanism:
 
 The `@DEFOBJ` child of `gdx:hasAuthor` declares that the predicate's range is the `Person` Template — instances reached through `gdx:hasAuthor` edges should conform to the `Person` contract.
 
-## 22. Template Version Chain
+## 23. Template Version Chain
 
 Templates can reference other Templates to declare version succession, supersession, or compatibility. This makes vocabulary evolution self-describing.
 
@@ -451,7 +491,7 @@ The same mechanism works for marking deprecation:
 
 These are vocabulary patterns — the specific predicates (`gdx:supersedes`, `gdx:supersededBy`) are defined by the GDX Common Vocabulary or application-specific vocabularies, not by the core specification. What the core specification provides is the `@DEFOBJ` mechanism for typed Template references; the vocabulary provides the predicates that give the references meaning.
 
-## 23. Null, Absent, and Present
+## 24. Null, Absent, and Present
 
 A Property may exist in three distinct states with different meanings.
 
@@ -523,7 +563,7 @@ For string-typed Properties only, there is a fourth conceptual state — present
 
 The empty string is a legitimate string value, distinct from null. A consumer reading this form knows that middleName was considered and is known to be empty (the customer has no middle name, or has an empty middle name in their record). This empty state applies only to strings; for integers, floats, bools, bytes, and references, there is no "empty value" concept — `<INT count : 0>` is the integer zero (a value), not "empty integer".
 
-## 24. Transport Wrapper for Multiple Objects
+## 25. Transport Wrapper for Multiple Objects
 
 When transporting multiple Objects together with metadata about the transport, wrap them in a Package.
 
@@ -550,7 +590,7 @@ When transporting multiple Objects together with metadata about the transport, w
 
 The Package metadata (source, contentType, count) describes the transport; the contained Objects are extracted and stored individually by the receiver. The Package itself is discarded after unpacking.
 
-## 25. Transport Partitioning with Groups
+## 26. Transport Partitioning with Groups
 
 When a Package conveys multiple distinct collections, partition them with named Groups.
 
@@ -581,7 +621,7 @@ When a Package conveys multiple distinct collections, partition them with named 
 
 Each Group carries its own metadata (libraryName, version) describing the partition. Groups are unpacked alongside the Package; the contained Objects retain their independent identity and lifecycle.
 
-## 26. Vocabulary Export with Groups
+## 27. Vocabulary Export with Groups
 
 Vocabularies that contain many Templates and RELs can use Groups to organize related declarations.
 
@@ -610,7 +650,7 @@ Vocabularies that contain many Templates and RELs can use Groups to organize rel
 
 The receiver imports the vocabulary by extracting all contained Templates and RELs; the Group organization is informational and does not affect how the receiver stores or uses the imported items.
 
-## 27. Use as Typed Configuration
+## 28. Use as Typed Configuration
 
 GDX at its simplest is typed key-value configuration. Use Properties as direct top-level elements; no composition, no schema, no predicates. Comparable in shape to YAML or TOML configuration but with explicit types and no inference traps.
 
@@ -626,7 +666,7 @@ A team using GDX at this level gets explicit typing (no inference about whether 
 
 The Compact Form (§11.2) is line-oriented and indentation-based, similar in shape to YAML, and serves the same role with even less syntactic noise.
 
-## 28. Use as Structured Application Data
+## 29. Use as Structured Application Data
 
 Adding Records and Sets to Properties yields nested structured data, comparable in shape to JSON.
 
@@ -647,7 +687,7 @@ Adding Records and Sets to Properties yields nested structured data, comparable 
 
 This level uses Objects, Records, and Sets but nothing beyond the structural data-layer kinds. No predicates, no schemas, no graphs. Familiar nested-object shape with explicit types throughout.
 
-## 29. Use as Semantically-Aligned Interchange
+## 30. Use as Semantically-Aligned Interchange
 
 Adding `#rel` predicates to Properties enables cross-system semantic alignment without committing to a triple model.
 
@@ -661,7 +701,7 @@ Adding `#rel` predicates to Properties enables cross-system semantic alignment w
 
 Two systems can exchange data even when they use different local field names because the predicate identifies the shared meaning. This is RDF-style semantics layered onto a document-friendly format — no separate triple store, no SPARQL, no ontology stack required.
 
-## 30. Use as Schema-Validated Contracts
+## 31. Use as Schema-Validated Contracts
 
 Adding Templates declares the shape an instance is expected to satisfy. Templates are themselves GDX elements, with the same syntax and parsing as data.
 
@@ -681,7 +721,7 @@ Adding Templates declares the shape an instance is expected to satisfy. Template
 
 Templates declare the contract; instances claim to satisfy it; validators check. The Template can travel in the same document as the instances it describes, or in a separate vocabulary file that consumers resolve via reference.
 
-## 31. Use as Graph-Structured Data
+## 32. Use as Graph-Structured Data
 
 Adding Edges and IRI-based Object identifiers yields fully graph-structured data with relationships, attributes on relationships, and external resolvability.
 
