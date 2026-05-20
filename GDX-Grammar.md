@@ -20,7 +20,7 @@ Changes from v0.4 (this revision, v0.5): conformance with Core Specification v0.
 
 Changes from v0.5 (revision v0.6): conformance with Core Specification v0.10.0. The prefix vocabulary is reframed around the composition pattern `[@?][refinement-modifier?][base][*?]`. (1) The Set marker `*` is now a suffix rather than a prefix; the EBNF `SetPrefix` production is replaced by `SetSuffix`, which composes after a base or refinement-modifier-base. (2) A new `ReferencePrefix` (`@`) is added as the reference operator; the `@KIND` family composes with any `ModifierBase`, optionally followed by `SetSuffix`. The composition pattern is described rather than enumerated; valid `@KIND` prefixes are derived from the pattern. (3) The Reference operator MUST NOT compose with itself (`@@`-prefixed compositions are malformed). (4) The reference literal grammar (§5.6) is extended: identifier-mode `@Id` is normatively specified; path-mode `$PathExpression` is syntactically reserved with grammar deferred to a future revision (Core Specification §11.4). (5) The §3.1 element-variations table is reorganized by role category (instance, refinement, declaration, transport) and includes `ReferenceElement` and `SetElement` as derived forms. Cross-references to the Core Specification updated for §6.5.x renumbering (REM Annotation §6.3.6 → §6.5.6). No changes to literal grammars (strings, numerics, booleans, bytes), identifier grammar, field grammars, or whitespace rules.
 
-Changes from v0.6 (this revision, v0.7): conformance with Core Specification v0.11.0. (1) **§5.6 reference literal grammar normatively specifies path-mode.** The placeholder `PathExpression ::= (* reserved; grammar deferred *)` is replaced by a forward reference to the companion GDX Path Expressions Specification (`GDX-Path.md`). A new `IdPathReference` production `"@" Id "$" PathExpression` is added to express the composed cross-document addressing form. (2) **§6 identifier grammar narrows.** `IdStartChar` no longer admits `/`. Identifiers may continue to contain `/` (`IdContChar` unchanged); only the leading-`/` form is removed. This change is a breaking change for documents conforming to v0.6 or earlier; the migration is mechanical (drop the leading `/` or move to a path-mode reference). (3) Appendix A updated to reflect the new reference-literal productions and the narrowed identifier grammar. (4) Cross-references to Core Specification updated to v0.11.0.
+Changes from v0.6 (this revision, v0.7): conformance with Core Specification v0.11.0. (1) **§5.6 reference literal grammar normatively specifies path-mode and key-mode.** The placeholder `PathExpression ::= (* reserved; grammar deferred *)` is replaced by a forward reference to the companion GDX Path Expressions Specification (`GDX-Path.md`). Five `ReferenceLiteral` productions are recognized: `IdentifierReference` (`@Id`), `PathReference` (`$PathExpression`), `KeyReference` (`&KeyToken`), `IdPathReference` (`@Id$PathExpression`), and `IdKeyReference` (`@Id&KeyToken`). The `KeyReference` and `IdKeyReference` forms address an element by its location-stable `Key` anchor, scoped per Core Specification §5.4.5. (2) **§6 identifier grammar narrows.** `IdStartChar` no longer admits `/`. Identifiers may continue to contain `/` (`IdContChar` unchanged); only the leading-`/` form is removed. This change is a breaking change for documents conforming to v0.6 or earlier; the migration is mechanical (drop the leading `/` or move to a path-mode reference). (3) Appendix A updated to reflect the new reference-literal productions and the narrowed identifier grammar. (4) Cross-references to Core Specification updated to v0.11.0.
 
 
 ## Table of Contents
@@ -356,25 +356,36 @@ Base64Char      ::= ALPHA | DIGIT | "+" | "/"
 
 ### 5.6 Reference Literals
 
-Reference literals designate addressable elements. Three forms are recognized: identifier-mode (`@Id`), path-mode (`$PathExpression`), and composed (`@Id$PathExpression`).
+Reference literals designate addressable elements. Five forms are recognized, combining the three operations of name resolution (`@`), structural traversal (`$`), and key lookup (`&`):
 
 ```ebnf
-ReferenceLiteral    ::= IdentifierReference | PathReference | IdPathReference
+ReferenceLiteral    ::= IdentifierReference
+                      | PathReference
+                      | KeyReference
+                      | IdPathReference
+                      | IdKeyReference
 
 IdentifierReference ::= "@" Id
-
 PathReference       ::= "$" PathExpression
-
+KeyReference        ::= "&" KeyToken
 IdPathReference     ::= "@" Id "$" PathExpression
+IdKeyReference      ::= "@" Id "&" KeyToken
 
 PathExpression      ::= (* specified in GDX-Path.md §3-§4 *)
+KeyToken            ::= (* specified in GDX-Path.md §5 *)
 ```
 
 **Identifier-mode** (`@Id`) is normatively defined. The `@` sigil MUST be immediately followed by an identifier with no intervening whitespace. The identifier may be in any of the forms permitted by §6 (CURIEs, GUIDs, IRIs, local names, or hierarchical local names).
 
-**Path-mode** (`$PathExpression`) is normatively defined by the companion GDX Path Expressions Specification (`GDX-Path.md`). The `$` sigil introduces a path expression addressing an element by its structural location in the document tree. The path-expression grammar and resolution algorithm are specified in `GDX-Path.md` §3–§6. The `$` sigil MUST be immediately followed by the `/` of the path with no intervening whitespace.
+**Path-mode** (`$PathExpression`) is normatively defined by the companion GDX Path Expressions Specification (`GDX-Path.md`). The `$` sigil introduces a path expression addressing an element by its structural location in the document tree. The `$` sigil MUST be immediately followed by the `/` of the path with no intervening whitespace.
 
-**Composed form** (`@Id$PathExpression`) expresses cross-document addressing. The `@Id` portion resolves to a starting element by scope walk (per Core Specification §6.5.16), and the `$PathExpression` portion is then evaluated rooted at that starting element. No whitespace is permitted between `@`, `Id`, `$`, and the path. The boundary between the identifier portion and the path portion is unambiguous because `$` is not a member of `IdContChar` (§6).
+**Key-mode** (`&KeyToken`) is normatively defined by `GDX-Path.md`. The `&` sigil introduces a key lookup; the Key is resolved within the scope of the reference (the enclosing Object, or the document at transport-layer position; see Core Specification §5.4.5). The `&` sigil MUST be immediately followed by the Key token with no intervening whitespace.
+
+**Composed name + path** (`@Id$PathExpression`) expresses cross-document addressing by structural traversal. The `@Id` portion resolves to a starting element by scope walk (per Core Specification §6.5.16), and the `$PathExpression` portion is then evaluated rooted at that starting element. No whitespace is permitted between `@`, `Id`, `$`, and the path. The boundary is unambiguous because `$` is not a member of `IdContChar` (§6).
+
+**Composed name + key** (`@Id&KeyToken`) expresses cross-document addressing by key anchor. The `@Id` portion resolves to a starting Object, and the `&KeyToken` portion is then looked up within that Object's scope. No whitespace is permitted; the boundary is unambiguous because `&` is not a member of `IdContChar`.
+
+The `$` and `&` operators do not combine within a single reference literal. The form `@Id$PathExpression&KeyToken` is malformed; an author chooses one of `IdPathReference` or `IdKeyReference` for the composed reference.
 
 When a reference literal appears as the Resource of a `@KIND` reference element (Core Specification §6.5.16), it MUST resolve to exactly one element of the matching role. See `GDX-Path.md` §7 for the normative address-mode singularity rule.
 
@@ -866,11 +877,18 @@ HexBytes        ::= "0x" HexDigit+
 Base64Bytes     ::= "0z" Base64Char+ "="*
 BytesLiteral    ::= HexBytes | Base64Bytes
 
-ReferenceLiteral    ::= IdentifierReference | PathReference | IdPathReference
+ReferenceLiteral    ::= IdentifierReference
+                      | PathReference
+                      | KeyReference
+                      | IdPathReference
+                      | IdKeyReference
 IdentifierReference ::= "@" Id
 PathReference       ::= "$" PathExpression
+KeyReference        ::= "&" KeyToken
 IdPathReference     ::= "@" Id "$" PathExpression
+IdKeyReference      ::= "@" Id "&" KeyToken
 PathExpression      ::= /* specified in GDX-Path.md §3-§4 */
+KeyToken            ::= /* specified in GDX-Path.md §5 */
 
 Resource        ::= StringLiteral
                   | IntLiteral
