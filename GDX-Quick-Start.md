@@ -1,0 +1,210 @@
+# GDX — Quick Start
+
+- **Status:** Draft v0.10.0 (companion to GDX Core Specification v0.10.0, working draft, pre-1.0)
+- **Date:** 2026-05-19
+- **Editors:** 
+- **Authors:** Julian Mussi
+
+
+## Abstract
+
+This document is a non-normative companion to the GDX Core Specification. It introduces GDX through a progression of small examples for readers who want a fast on-ramp before reading the specification proper. The examples are deliberately minimal; the Core Specification is the authority on what's valid.
+
+A reader who finishes this document should understand enough GDX to recognize the basic shapes, choose between primitive types, and know where to look in the specification for deeper detail.
+
+
+## Status of This Document
+
+This is the v0.10.0 working draft of the Quick Start, companion to the GDX Core Specification v0.10.0. It was previously published as Appendix D of the Core Specification through v0.10.0; it is now a separate companion document and is recommended as the entry-point for newcomers to GDX.
+
+---
+
+
+## 1. The Simplest GDX Document
+
+An Object with one Property:
+
+```
+<OBJ Person
+    <STR name : "Alice">
+>
+```
+
+Read this as: an Object named `Person` containing a string-valued Property named `name` with the value `"Alice"`. The `<` and `>` delimit each element; the `STR` prefix declares the inner element is a string; the `:` separates the Property's identifier from its value; the outer `OBJ` declares the document's root entity.
+
+A GDX document's root must be an Object, Template, Relation Declaration, or Package (§7) — the Object here plays that role. Inside it, the `STR` Property carries the typed value.
+
+If you've used JSON, the equivalent is `{"Person": {"name": "Alice"}}` — but with one important difference: GDX states explicitly that `name` is a string. There's no ambiguity about whether `42` means the integer 42 or the string "42"; in GDX you write `<INT age : 42>` for the integer or `<STR age : "42">` for the string.
+
+## 2. Several Typed Values
+
+An Object holding a short configuration:
+
+```
+<OBJ DatabaseConfig
+    <STR databaseHost : "db.internal">
+    <INT databasePort : 5432>
+    <BOOL tlsEnabled : true>
+    <FLOAT timeoutSeconds : 30.0>
+>
+```
+
+Each inner line is a typed Property. The prefix says what type the value is: `STR` for string, `INT` for integer, `BOOL` for boolean, `FLOAT` for float. No type inference, no surprises — `<INT port : 5432>` is unambiguously an integer; `<STR port : "5432">` is unambiguously a string.
+
+## 3. Composing Values into Records
+
+A Record groups properties into a structured composite. Records appear as children of an Object (or another structural element); a Record cannot be a document root on its own.
+
+```
+<OBJ Customer
+    <REC address
+        <STR street : "Main St">
+        <INT number : 100>
+        <STR city : "Oakland">
+    >
+>
+```
+
+The Record `address` has three child Properties. The whole Record is one logical thing — an address — with parts. Records are like JSON objects, but the composite itself is named (`address`) rather than just being a value.
+
+Records can nest within Objects alongside other Properties:
+
+```
+<OBJ Customer
+    <STR firstName : "Alice">
+    <REC address
+        <STR street : "Main St">
+        <INT number : 100>
+    >
+>
+```
+
+The Object `Customer` contains a Property and a nested Record.
+
+## 4. Multiple Values with Sets
+
+A Set holds multiple values of the same role:
+
+```
+<OBJ CorsConfig
+    <STR* allowedOrigins
+        <STR : "https://app.example.com">
+        <STR : "https://admin.example.com">
+    >
+>
+```
+
+The `*` suffix on the prefix turns it into a Set. `STR*` is "Set of strings." The members carry the same prefix (`STR`) but no identifier — they identify themselves by position and value.
+
+## 5. References Between Objects
+
+Objects can reference other Objects, forming graph relationships:
+
+```
+<OBJ alice
+    <STR firstName : "Alice">
+    <EDGE #knows : @bob>
+>
+
+<OBJ bob
+    <STR firstName : "Bob">
+>
+```
+
+The Edge `EDGE #knows : @bob` says: from `alice`, there is a `knows` relationship to `bob`. The `#` introduces the predicate (`knows`); the `@` introduces a reference to another Object's identifier.
+
+This is the graph dimension of GDX: tree-structured documents with explicit relationships between elements that aren't parent-child.
+
+## 6. Cross-System Semantic Alignment with Predicates
+
+The `#rel` predicate also works on Properties to identify what concept the property represents:
+
+```
+<OBJ Person
+    <STR #schema:givenName firstName : "Alice">
+>
+```
+
+The Property is locally called `firstName` but semantically aligned with `schema:givenName` (a well-known predicate from schema.org). Two systems using different local names (`firstName` vs `givenName` vs `prenom`) can recognize the same concept by matching the predicate.
+
+This is why GDX is described as a "graph format with semantic alignment" — predicates carry shared meaning across documents and systems.
+
+## 7. Validation with Templates
+
+A Template declares the expected shape of conforming instances:
+
+```
+<DEFOBJ Customer
+    <STR firstName>
+    <STR lastName>
+    <INT age>
+>
+
+<OBJ alice --Customer
+    <STR firstName : "Alice">
+    <STR lastName : "Smith">
+    <INT age : 24>
+>
+```
+
+The Template `DEFOBJ Customer` declares that a Customer Object has `firstName`, `lastName`, and `age` fields. The instance Object `alice` claims `--Customer` (it conforms to the Customer Template). A validator checks that the instance has all the declared fields.
+
+Templates are themselves GDX. They use the same syntax as the data they describe. There's no separate schema language.
+
+## 8. The Compact Form
+
+For human authoring, GDX has a Compact Form using indentation instead of brackets:
+
+```
+OBJ config
+  STR databaseHost : "db.internal"
+  INT databasePort : 5432
+  BOOL tlsEnabled : true
+  STR* allowedOrigins
+    STR : "https://app.example.com"
+    STR : "https://admin.example.com"
+```
+
+Each element is one line. Children are indented under their parents. The same data, the same prefixes, the same semantics — just less visual weight. The Compact Form is defined in a companion specification.
+
+The same content in the minified single-letter form (for comparison):
+
+```
+O config
+  S databaseHost : "db.internal"
+  I databasePort : 5432
+  L tlsEnabled : true
+  S* allowedOrigins
+    S : "https://app.example.com"
+    S : "https://admin.example.com"
+```
+
+Both forms are equivalent; canonical (above) is the default for authoring, and minified is available for transport-efficiency contexts.
+
+## 9. Why Use GDX
+
+Three things GDX gives you that JSON or YAML don't:
+
+**1. Explicit types.** No more "is this a string or a number?" The prefix tells you. `<INT age : 42>` is unambiguously an integer; `<STR version : "1.10">` doesn't accidentally become the float `1.1`.
+
+**2. Semantic alignment.** The `#rel` predicate carries shared meaning across systems. Your `firstName` can be aligned to `schema:givenName` without renaming your fields.
+
+**3. Schema is data.** Templates are GDX elements. The same parser reads them. There's no second format to learn for validation; there's no separate schema file to keep in sync with the data.
+
+What it costs: a few characters per element (the prefix and brackets). For data that crosses system boundaries or persists over time, the cost pays for itself in fewer surprises.
+
+## 10. Where to Go Next
+
+The Quick Start above shows about 80% of what you'll use day to day. For the rest:
+
+- §1 (Introduction) explains the problem space and design philosophy
+- §3 (The GDX Element) is the conceptual centerpiece: how the element form works and why it's shaped that way
+- §4 (Core Data Model) and §5 (Canonical Text Form) are the foundational definitions
+- §6 (Roles) is the complete reference for every role of element and its prefix
+- §9 (Transport) covers how Packages and Groups behave during exchange
+- The GDX Cookbook (companion specification) shows worked patterns for common needs
+- The Companion Vocabulary specification defines standardized identifiers (Templates, predicates, validation extensions) you can use across applications
+- The Compact Form Grammar specification defines the human-friendly serialization shown in §8
+- The Implementer's Guide provides practical guidance for building parsers, validators, and tools
+
+The full specification is more rigorous than a tutorial can be — it defines what every implementation must agree on. The Quick Start above is a friendly door; the rest of the spec is the building.

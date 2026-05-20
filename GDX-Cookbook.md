@@ -1,0 +1,701 @@
+# GDX — Cookbook of Canonical Patterns
+
+- **Status:** Draft v0.10.0 (companion to GDX Core Specification v0.10.0, working draft, pre-1.0)
+- **Date:** 2026-05-19
+- **Editors:** 
+- **Authors:** Julian Mussi
+
+
+## Abstract
+
+This document is a companion to the GDX Core Specification. It is non-normative: it documents idiomatic GDX shapes for common modeling tasks. The patterns demonstrate the structural and schema mechanisms defined by the core specification (§4 through §8); they do not introduce new semantics.
+
+Section references of the form §4, §6, §8 etc. refer to the GDX Core Specification.
+
+The vocabulary identifiers used in these examples (`gdx:`, `schema:`, `vocab:`, etc.) are illustrative. Specific vocabulary content is defined by the relevant vocabulary specification, not by this document.
+
+## Status of This Document
+
+This is the v0.10.0 working draft of the Cookbook, companion to the GDX Core Specification v0.10.0. The patterns documented here have stabilized alongside the core; future revisions will add patterns as common use cases emerge but will not remove existing entries except to merge or restructure them.
+
+Changes in v0.10.0 from v0.9.6 reflect Core Specification v0.10.0:
+
+- **Set notation migration.** All `*PREFIX` Set notation has been migrated to `PREFIX*` suffix form (`*STR` → `STR*`, `*REC` → `REC*`). Examples in §3, §4, and §28 (formerly §25) are updated.
+- **New `@KIND` reference patterns.** Three new patterns added: §20 (Typed Reference to an Addressable Element), §21 (Vocabulary Metadata Link), §22 (Template Version Chain). These cover the typed-reference primitive added in Core v0.10.0.
+- **EDGE-vs-`@OBJ` clarification.** §7 (Edge Between Entities) now distinguishes EDGE's graph-statement role from the `@OBJ` typed-pointer role and cross-references §20.
+- **Renumbering.** Former §20–§28 renumbered to §23–§31 to accommodate the inserted reference patterns. Internal cross-references updated.
+- **Cross-references.** Compact Form section reference updated from §11.1 to §11.2 (its new location in Core v0.10.0).
+
+---
+
+## Table of Contents
+
+The Cookbook is organized by pattern type:
+
+- **Basic Shapes** (1–9): named Objects, composites, sets, edges, embedded values, qualifiers.
+- **Schema and Constraints** (10–14): Templates, semantic types, validation, refinement.
+- **Predicates and Vocabulary** (15–16): cross-document alignment, REL declarations.
+- **Node-Zone and Annotation** (17–18): semi-structured material and provenance.
+- **References** (19–22): identifier schemes, typed pointers, vocabulary metadata, version chains.
+- **Property State** (23): null, absent, and present.
+- **Transport** (24–26): packaging, grouping, vocabulary export.
+- **Use-Case Framings** (27–31): typed configuration through graph-structured data.
+
+---
+
+## 1. Named Object with Properties
+
+The most common shape: an Object as the root, with Properties as direct children.
+
+```
+<OBJ Alice
+    <STR name : "Alice">
+    <INT age : 24>
+    <BOOL active : true>
+>
+```
+
+## 2. Composite Property (Record)
+
+When an Object has substructure that should be treated as a composite value, use a Record.
+
+```
+<OBJ Order123
+    <REC shipping
+        <STR carrier : "UPS">
+        <STR tracking : "1Z999AA10123456784">
+    >
+    <FLOAT total : 1250.00>
+>
+```
+
+The Record contains its children — `shipping` is not a separately addressable entity; it's a structured value belonging to the order.
+
+## 3. Multi-Valued Attribute
+
+Use a Set when an attribute has multiple values of the same type.
+
+```
+<OBJ Post42
+    <STR title : "GDX is interesting">
+    <STR* tags
+        <STR : "blue">
+        <STR : "red">
+        <STR : "green">
+    >
+>
+```
+
+Set members carry their prefix but may omit identifiers — they identify themselves by position and value within the Set.
+
+## 4. Multi-Valued Records
+
+Sets may also carry Records as members. Record members within a Set typically carry meaningful identifiers.
+
+```
+<OBJ AddressBook
+    <REC* contacts
+        <REC alice
+            <STR name : "Alice">
+            <STR email : "a@example.com">
+        >
+        <REC bob
+            <STR name : "Bob">
+            <STR email : "b@example.com">
+        >
+    >
+>
+```
+
+## 5. Predicate-Aligned Property
+
+When a property has a shared semantic identity across documents, attach a `#rel`.
+
+```
+<STR #schema:givenName fname : "Alice">
+```
+
+Two documents using `#schema:givenName` are talking about the same attribute regardless of how they locally name it. The element above is semantically equivalent to one written elsewhere as:
+
+```
+<STR #schema:givenName firstName : "Alice">
+```
+
+## 6. Schema-Aligned Slot
+
+When a property fills a Template slot, set its `&key` to the slot identifier.
+
+```
+<DEFREC schema:address
+    <STR &1 #schema:streetName street>
+    <STR &2 #schema:city city>
+    <STR &3 #schema:usStateCode state>
+    <INT &4 #schema:extendedUSZip zip>
+>
+
+<REC MyAddress --schema:address
+    <STR &1 : "Broadway">
+    <STR &2 : "Oakland">
+    <STR &3 : "CA">
+    <INT &4 : 94610>
+>
+```
+
+The instance binds its values to the Template's declared slots. Slot keys are document-internal references to the Template's structure.
+
+## 7. Edge Between Entities
+
+Edges express directed relationships between Objects.
+
+```
+<OBJ Alice
+    <EDGE #knows : @Bob>
+>
+```
+
+This reads as: alice — knows → bob.
+
+Edges with attributes carry them as Record-like children:
+
+```
+<OBJ Alice
+    <EDGE #knows : @Bob
+        <STR since : "2024-01-15">
+        <FLOAT weight : 0.8>
+    >
+>
+```
+
+The edge attributes describe the *relationship*, not either endpoint.
+
+EDGE asserts a labeled graph relationship — the link itself is a structural participant with its own attributes. When you want a typed pointer instead (a reference without the graph-statement framing or edge attributes), use the `@KIND` family (§20). Use EDGE when the relationship matters; use `@OBJ` when the link is just an identifier.
+
+## 8. Refining a Property with Constraints
+
+Qualifiers attach metadata to a Property without changing its value.
+
+```
+<FLOAT temperature : 21.5
+    <.STR unit : "celsius">
+    <.BOOL observed : true>
+>
+```
+
+Qualifiers refine the meaning of their parent and travel with the data. A consumer reading the temperature should consider the unit Qualifier when interpreting the value.
+
+## 9. Schema Definition
+
+Templates define the shape; instances reference them via `--type`.
+
+```
+<DEFREC com.acme.Address
+    <STR street>
+    <INT number>
+>
+
+<REC address --com.acme.Address
+    <STR street : "Main St">
+    <INT number : 100>
+>
+```
+
+Templates declare what is expected; instances assert that they conform.
+
+## 10. Embedded Structured Value
+
+When a structured value must occupy a property-value position, use the Embedded modifier.
+
+```
+<STR contact
+    <%REC details
+        <STR email : "a@example.com">
+        <STR phone : "555-0100">
+    >
+>
+```
+
+The `%R` form lets a Record sit where a scalar would normally appear, without losing its structured nature.
+
+## 11. Embedded Alternative Representations
+
+A common case for Embedded is when an entity has multiple equivalent representations that should travel together.
+
+```
+<REC colorReading
+    <%OBJ lab
+        <FLOAT l : 50.0>
+        <FLOAT a : 25.3>
+        <FLOAT b : -12.7>
+    >
+    <%OBJ rgb
+        <INT r : 124>
+        <INT g : 89>
+        <INT b : 200>
+    >
+>
+```
+
+Each embedded Object is itself a structured entity with its own type identity. Wrapping them in Embedded form keeps each representation intact while letting both belong to a single colorReading record.
+
+## 12. Width-Bounded Numeric Values
+
+When a numeric value must commit to a specific representation width, use a representation suffix.
+
+```
+<INT packetSize : 1500u16>
+<INT temperature : 25i8>
+<FLOAT angle : 1.5708f32>
+<INT largeBalance : 9999999999999999999bigint>
+```
+
+The suffix is a Layer 1 (representation) assertion. The value MUST fit the suffix's range; the implementation MUST preserve the representation through round-trip.
+
+## 13. Decimal Precision for Real Numbers
+
+When a real number requires exact decimal representation, use a decimal suffix.
+
+```
+<FLOAT price : 25.50d>
+<FLOAT taxRate : 0.0875d>
+<FLOAT coordinate : 37.7749295d128>
+```
+
+Without a suffix, the implementation chooses a representation. With a decimal suffix, the value is committed to decimal arithmetic semantics — exact for any finite decimal literal.
+
+## 14. Bytes-Typed Properties
+
+Use the `BYTE` prefix and the `0x...` literal form for opaque binary data.
+
+```
+<OBJ Contract2024
+    <STR title : "Service Agreement">
+    <BYTE contentHash : 0xe3b0c44298fc1c149afbf4c8996fb92427ae41e4>
+    <BYTE signature : 0x4a3f8c2b9d1e7f0a5c8b6d4e2f1a9c7b8d3e5f0a>
+>
+```
+
+Hex is the canonical form. For larger byte sequences where compactness matters, the `0z` base64 form is available:
+
+```
+<BYTE compactBlob : 0zSGVsbG8sIHdvcmxkIQ==>
+```
+
+## 15. Combining Layer 1 and Layer 2 Assertions
+
+A single property can carry both a representation suffix (Layer 1) and a Template reference (Layer 2).
+
+```
+<INT count : 25i8 --vocab:positive-i8>
+```
+
+The suffix asserts representation (`i8` width). The Template reference asserts schema conformance (the value satisfies the `vocab:positive-i8` Template, which might constrain the value to be greater than zero).
+
+The two layers operate independently and are validated separately.
+
+## 16. Predicate Declaration
+
+Use `REL` to declare a predicate as a first-class entity.
+
+```
+<REL gdx:knows>
+
+<REL gdx:manages
+    <_STR vocab:inverse : "gdx:reportsTo">
+>
+```
+
+The bare REL declares a predicate with no semantic refinements. The second form declares that `gdx:manages` has an inverse predicate `gdx:reportsTo` — a vocabulary-defined refinement that consumers may use to compute inverse-direction queries.
+
+REL declarations may appear at the document root or within vocabulary documents.
+
+## 17. Schema-Less Subtree
+
+Use Nodes when material does not fit GDX's structured kinds — imported audit data, ad-hoc payloads, or schema-less metadata.
+
+```
+<OBJ Import427
+    <STR source : "legacy-system-v3">
+    <INT recordCount : 4521>
+    <NREC rawAuditData
+        <NSTR originalFormat : "csv">
+        <NINT columnCount : 12>
+        <NREC row1
+            <NSTR field1 : "value">
+            <NINT field2 : 42>
+        >
+    >
+>
+```
+
+Once a Node appears, its subtree is uniformly Node-typed. Structured kinds cannot mix in. Use this pattern when you need to carry data whose shape is not known in advance or not worth modeling.
+
+## 18. Annotation for Provenance
+
+Use `REM` to attach human-readable notes that should travel with the data.
+
+```
+<OBJ Order123
+    <REM : "Imported from legacy system 2026-04-27">
+    <REM : "Reviewed by jmussi 2026-04-28">
+    <STR customer : "ACME Corp">
+    <FLOAT total : 1250.00d>
+>
+```
+
+Annotations carry no semantic weight in the data model but survive round-trip serialization. They are appropriate for provenance, audit trails, and editorial notes.
+
+## 19. Reference with Custom Identifier Scheme
+
+Object identifiers are not constrained to any particular scheme. Use whatever fits your system.
+
+```
+<OBJ Alice ...>
+<OBJ /people/alice ...>
+<OBJ 7f3a2b9c-4e21-4f88-91d5-abcdef012345 ...>
+<OBJ gdx:Person ...>
+<OBJ https://acme.com/people/alice ...>
+```
+
+References to these Objects use the `@` prefix:
+
+```
+<EDGE #knows : @Alice>
+<EDGE #references : @/people/alice>
+<EDGE #describes : @7f3a2b9c-4e21-4f88-91d5-abcdef012345>
+<EDGE #cites : @https://acme.com/people/alice>
+```
+
+The resolver determines how each reference resolves; the format does not constrain the scheme.
+
+## 20. Typed Reference to an Addressable Element
+
+When you want a pointer to another element — an Object, a REL declaration, a Template — without making a graph statement about it, use the `@KIND` reference family. The prefix names what is being referenced; the Resource carries the target's identifier.
+
+```
+<OBJ ServerConfig
+    <STR name : "web-01">
+    <@OBJ owner : @/teams/platform>
+    <@OBJ fallback : @/servers/web-02>
+>
+```
+
+Each `@OBJ` element is a typed pointer. Unlike an EDGE, a typed reference is leaf-like — it doesn't carry edge metadata like weight or timestamp. It identifies a target and stops there. The reader (and validator) knows the target's kind from the prefix: `@OBJ` resolves to an Object, `@REL` to a REL declaration, `@DEFOBJ` to an Object Template, and so on.
+
+Qualifiers may refine a reference's meaning:
+
+```
+<@OBJ database : @primary-db
+    <.STR role : "read-write">
+>
+```
+
+The Qualifier annotates the reference itself: "this pointer is the read-write database."
+
+## 21. Vocabulary Metadata Link
+
+REL declarations may reference other RELs to express vocabulary relationships — inverse, sameAs, subPropertyOf, and similar predicates that describe how predicates relate to each other.
+
+```
+<REL gdx:manages
+    <@REL #gdx:inverse : @gdx:reportsTo>
+>
+
+<REL gdx:reportsTo>
+```
+
+The `@REL` child of `gdx:manages` declares that its inverse predicate is `gdx:reportsTo`. A consumer that understands the `gdx:inverse` vocabulary can traverse a "manages" edge in reverse by following this link.
+
+Schema cross-references between predicates and Templates use the same mechanism:
+
+```
+<REL gdx:hasAuthor
+    <@DEFOBJ #gdx:range : @Person>
+>
+
+<DEFOBJ Person
+    <STR name>
+>
+```
+
+The `@DEFOBJ` child of `gdx:hasAuthor` declares that the predicate's range is the `Person` Template — instances reached through `gdx:hasAuthor` edges should conform to the `Person` contract.
+
+## 22. Template Version Chain
+
+Templates can reference other Templates to declare version succession, supersession, or compatibility. This makes vocabulary evolution self-describing.
+
+```
+<DEFOBJ CustomerV1
+    <STR firstName>
+    <STR lastName>
+>
+
+<DEFOBJ CustomerV2
+    <STR firstName>
+    <STR lastName>
+    <STR email>
+    <@DEFOBJ #gdx:supersedes : @CustomerV1>
+>
+```
+
+The `@DEFOBJ` element inside `CustomerV2` declares that this Template supersedes `CustomerV1`. A migration tool consuming both documents can follow the chain to understand which Templates are predecessors and which are successors.
+
+The same mechanism works for marking deprecation:
+
+```
+<DEFOBJ Customer
+    <@DEFOBJ #gdx:supersededBy : @CustomerV2>
+    <STR firstName>
+    <STR lastName>
+>
+```
+
+These are vocabulary patterns — the specific predicates (`gdx:supersedes`, `gdx:supersededBy`) are defined by the GDX Common Vocabulary or application-specific vocabularies, not by the core specification. What the core specification provides is the `@DEFOBJ` mechanism for typed Template references; the vocabulary provides the predicates that give the references meaning.
+
+## 23. Null, Absent, and Present
+
+A Property may exist in three distinct states with different meanings.
+
+**Property absent** — not part of this instance:
+
+```
+<OBJ Customer
+    <STR firstName : "Alice">
+    <STR lastName : "Smith">
+>
+```
+
+**Property null** — present but no value (analogous to SQL `NULL`):
+
+```
+<OBJ Customer
+    <STR firstName : "Alice">
+    <STR middleName>
+    <STR lastName : "Smith">
+>
+```
+
+The empty-value form is equivalent and accepted on input:
+
+```
+<OBJ Customer
+    <STR firstName : "Alice">
+    <STR middleName : >
+    <STR lastName : "Smith">
+>
+```
+
+Both forms denote null. The bare form (no `:`) is canonical for serialization; the empty-value form (`: ` with no value) is supported because it arises naturally during editing — when a user removes a value from a present element by deleting the literal but leaving the separator. Conforming serializers normalize the empty-value form to the bare form on output.
+
+**Property present with value** — has an explicit value:
+
+```
+<OBJ Customer
+    <STR firstName : "Alice">
+    <STR middleName : "Marie">
+    <STR lastName : "Smith">
+>
+```
+
+A consumer reading the absent form knows nothing about middleName — it may not apply, may not have been collected, or may not exist in the source data.
+
+A consumer reading the null form knows that middleName was *considered* and is *unknown*.
+
+A consumer reading the present form knows the value of middleName.
+
+The three-state distinction applies to all Resource-bearing kinds. For an integer:
+
+```
+// Absent
+<OBJ Order123 <STR customer : "ACME">>
+
+// Null - quantity is unknown
+<OBJ Order123 <STR customer : "ACME"> <INT quantity>>
+
+// Present with value (zero is a value, not empty)
+<OBJ Order123 <STR customer : "ACME"> <INT quantity : 0>>
+```
+
+For string-typed Properties only, there is a fourth conceptual state — present with empty value:
+
+```
+<STR middleName : "">
+```
+
+The empty string is a legitimate string value, distinct from null. A consumer reading this form knows that middleName was considered and is known to be empty (the customer has no middle name, or has an empty middle name in their record). This empty state applies only to strings; for integers, floats, bools, bytes, and references, there is no "empty value" concept — `<INT count : 0>` is the integer zero (a value), not "empty integer".
+
+## 24. Transport Wrapper for Multiple Objects
+
+When transporting multiple Objects together with metadata about the transport, wrap them in a Package.
+
+```
+<PKG customer-import-2026-04-29
+    <STR source : "crm-v3">
+    <STR contentType : "customer-batch">
+    <INT count : 3>
+    
+    <OBJ Alice
+        <STR name : "Alice">
+        <STR email : "alice@example.com">
+    >
+    <OBJ Bob
+        <STR name : "Bob">
+        <STR email : "bob@example.com">
+    >
+    <OBJ Carol
+        <STR name : "Carol">
+        <STR email : "carol@example.com">
+    >
+>
+```
+
+The Package metadata (source, contentType, count) describes the transport; the contained Objects are extracted and stored individually by the receiver. The Package itself is discarded after unpacking.
+
+## 25. Transport Partitioning with Groups
+
+When a Package conveys multiple distinct collections, partition them with named Groups.
+
+```
+<PKG color-libraries-2026-04-29
+    <STR source : "color-management-system">
+    <STR exportType : "full">
+    
+    <GRP pantone
+        <STR libraryName : "Pantone Solid Coated">
+        <STR version : "2023">
+        <OBJ Pantone-485-C
+            <FLOAT l : 47.2>
+            <FLOAT a : 67.8>
+            <FLOAT b : 54.1>
+        >
+        <OBJ Pantone-186-C ...>
+    >
+    
+    <GRP ral
+        <STR libraryName : "RAL Classic">
+        <STR version : "2022">
+        <OBJ RAL-3020 ...>
+        <OBJ RAL-9010 ...>
+    >
+>
+```
+
+Each Group carries its own metadata (libraryName, version) describing the partition. Groups are unpacked alongside the Package; the contained Objects retain their independent identity and lifecycle.
+
+## 26. Vocabulary Export with Groups
+
+Vocabularies that contain many Templates and RELs can use Groups to organize related declarations.
+
+```
+<PKG gdx-standard-vocab-v1
+    <STR vocabName : "gdx-standard">
+    <STR version : "1.0.0">
+    <REM : "GDX Common Vocabulary export">
+    
+    <GRP numerics
+        <REM : "Width-bounded numeric types">
+        <DEFINT gdx:i8 ...>
+        <DEFINT gdx:i16 ...>
+        <DEFFLOAT gdx:f64 ...>
+    >
+    
+    <GRP predicates
+        <REM : "Common relational predicates">
+        <REL gdx:knows>
+        <REL gdx:manages
+            <_STR inverse : "gdx:reportsTo">
+        >
+    >
+>
+```
+
+The receiver imports the vocabulary by extracting all contained Templates and RELs; the Group organization is informational and does not affect how the receiver stores or uses the imported items.
+
+## 27. Use as Typed Configuration
+
+GDX at its simplest is typed key-value configuration. Use Properties as direct top-level elements; no composition, no schema, no predicates. Comparable in shape to YAML or TOML configuration but with explicit types and no inference traps.
+
+```
+<STR databaseHost : "db.internal">
+<INT databasePort : 5432>
+<BOOL tlsEnabled : true>
+<STR logLevel : "info">
+<FLOAT timeoutSeconds : 30.0>
+```
+
+A team using GDX at this level gets explicit typing (no inference about whether `5432` is an integer or a string) and round-trip stability without learning anything beyond the primitive Property prefixes.
+
+The Compact Form (§11.2) is line-oriented and indentation-based, similar in shape to YAML, and serves the same role with even less syntactic noise.
+
+## 28. Use as Structured Application Data
+
+Adding Records and Sets to Properties yields nested structured data, comparable in shape to JSON.
+
+```
+<OBJ Server
+    <STR name : "web-01">
+    <REC network
+        <STR host : "10.0.1.42">
+        <INT port : 8080>
+        <BOOL tlsEnabled : true>
+    >
+    <STR* allowedOrigins
+        <STR : "https://app.example.com">
+        <STR : "https://admin.example.com">
+    >
+>
+```
+
+This level uses Objects, Records, and Sets but nothing beyond the structural data-layer kinds. No predicates, no schemas, no graphs. Familiar nested-object shape with explicit types throughout.
+
+## 29. Use as Semantically-Aligned Interchange
+
+Adding `#rel` predicates to Properties enables cross-system semantic alignment without committing to a triple model.
+
+```
+<OBJ Server
+    <STR #vocab:hostName name : "web-01">
+    <STR #vocab:ipAddress address : "10.0.1.42">
+    <INT #vocab:portNumber port : 8080>
+>
+```
+
+Two systems can exchange data even when they use different local field names because the predicate identifies the shared meaning. This is RDF-style semantics layered onto a document-friendly format — no separate triple store, no SPARQL, no ontology stack required.
+
+## 30. Use as Schema-Validated Contracts
+
+Adding Templates declares the shape an instance is expected to satisfy. Templates are themselves GDX elements, with the same syntax and parsing as data.
+
+```
+<DEFREC vocab:Server
+    <STR name>
+    <STR address>
+    <INT port>
+>
+
+<REC web01 --vocab:Server
+    <STR name : "web-01">
+    <STR address : "10.0.1.42">
+    <INT port : 8080>
+>
+```
+
+Templates declare the contract; instances claim to satisfy it; validators check. The Template can travel in the same document as the instances it describes, or in a separate vocabulary file that consumers resolve via reference.
+
+## 31. Use as Graph-Structured Data
+
+Adding Edges and IRI-based Object identifiers yields fully graph-structured data with relationships, attributes on relationships, and external resolvability.
+
+```
+<OBJ https://infra.acme.com/server/web01
+    <STR name : "web-01">
+    <EDGE #vocab:dependsOn : @https://infra.acme.com/db/primary
+        <STR since : "2024-01-15">
+    >
+    <EDGE #vocab:routesTo : @https://infra.acme.com/cache/edge>
+>
+```
+
+Relationships are explicit, traversable, and queryable. The Object identifiers are full IRIs — globally resolvable and interoperable with RDF-aware systems. The same document can be parsed as a tree, stored as relational rows, traversed as a graph, or exchanged with any RDF-aware system that resolves the IRIs.
+
+The progression across §27 through §31 demonstrates that the same format scales from typed configuration to graph-structured data without changing parsers, tooling, or syntax. Applications use the level of feature engagement that fits their problem.
+
