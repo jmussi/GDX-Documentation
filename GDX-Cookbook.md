@@ -16,7 +16,7 @@ The vocabulary identifiers used in these examples (`gdx:`, `schema:`, `vocab:`, 
 
 ## Status of This Document
 
-This is the v0.11.0 working draft of the Cookbook, companion to the GDX Core Specification v0.11.0. The patterns documented here have stabilized alongside the core; future revisions will add patterns as common use cases emerge but will not remove existing entries except to merge or restructure them. v0.11.0 migrates leading-slash identifiers in examples to the new hierarchical-local form (no leading `/`) and adds patterns demonstrating path-mode references.
+This is the v0.11.0 working draft of the Cookbook, companion to the GDX Core Specification v0.11.0. The patterns documented here have stabilized alongside the core; future revisions will add patterns as common use cases emerge but will not remove existing entries except to merge or restructure them. v0.11.0 migrates leading-slash identifiers in examples to the new hierarchical-local form (no leading `/`) and adds patterns demonstrating path-mode references (Pattern 21) and key-mode anchor references (Pattern 22).
 
 Changes in v0.10.0 from v0.9.6 reflect Core Specification v0.10.0:
 
@@ -36,10 +36,10 @@ The Cookbook is organized by pattern type:
 - **Schema and Constraints** (10–14): Templates, semantic types, validation, refinement.
 - **Predicates and Vocabulary** (15–16): cross-document alignment, REL declarations.
 - **Node-Zone and Annotation** (17–18): semi-structured material and provenance.
-- **References** (19–23): identifier schemes, typed pointers, path-mode addressing, vocabulary metadata, version chains.
-- **Property State** (24): null, absent, and present.
-- **Transport** (25–27): packaging, grouping, vocabulary export.
-- **Use-Case Framings** (28–32): typed configuration through graph-structured data.
+- **References** (19–24): identifier schemes, typed pointers, path-mode addressing, key-mode anchors, vocabulary metadata, version chains.
+- **Property State** (25): null, absent, and present.
+- **Transport** (26–28): packaging, grouping, vocabulary export.
+- **Use-Case Framings** (29–33): typed configuration through graph-structured data.
 
 ---
 
@@ -123,25 +123,36 @@ Two documents using `#schema:givenName` are talking about the same attribute reg
 
 ## 6. Schema-Aligned Slot
 
-When a property fills a Template slot, set its `&key` to the slot identifier.
+A Template declares slots with `Id` fields; an instance satisfies the Template by giving its children the same `Id` values. Cross-vocabulary alignment uses `#Rel` to bridge differing local names.
 
 ```
 <DEFREC schema:address
-    <STR &1 #schema:streetName street>
-    <STR &2 #schema:city city>
-    <STR &3 #schema:usStateCode state>
-    <INT &4 #schema:extendedUSZip zip>
+    <STR #schema:streetName street>
+    <STR #schema:city city>
+    <STR #schema:usStateCode state>
+    <INT #schema:extendedUSZip zip>
 >
 
 <REC MyAddress --schema:address
-    <STR &1 : "Broadway">
-    <STR &2 : "Oakland">
-    <STR &3 : "CA">
-    <INT &4 : 94610>
+    <STR street : "Broadway">
+    <STR city : "Oakland">
+    <STR state : "CA">
+    <INT zip : 94610>
 >
 ```
 
-The instance binds its values to the Template's declared slots. Slot keys are document-internal references to the Template's structure.
+Instance children align to Template slots by `Id` matching. When local names differ from Template slot names (for example, a localized instance using `prenom` where the Template declares `firstName`), the `#Rel` field provides the alignment bridge:
+
+```
+<REC ProfileFR --schema:Person
+    <STR #schema:givenName prenom : "Alice">
+    <STR #schema:familyName nom : "Smith">
+>
+```
+
+Here the instance children have local `Id`s `prenom` and `nom`, which do not match the Template's slot `Id`s. The shared `#Rel` values (`schema:givenName`, `schema:familyName`) align them to the corresponding slots.
+
+The `&Key` field is NOT used for Template-instance alignment; Keys are a separate location-stable anchor mechanism for references (see Pattern 22).
 
 ## 7. Edge Between Entities
 
@@ -425,13 +436,55 @@ The `@people/alice` portion resolves the Object by name (per the resolver's scop
 Path segments select by different fields depending on the segment's first character:
 
 - A bareword (`shipping`, `addresses`) matches by `Id`.
-- An `&`-prefixed token (`&2`, `&street`) matches by `Key`.
 - A `#`-prefixed token (`#gdx:knows`) matches by `Rel`.
 - A bracketed numeral (`[1]`, `[3]`) matches the *N*-th child in document order, 1-based.
 
 A path used as a reference Resource MUST resolve to exactly one element of the matching role; zero matches, multiple matches, and matches of the wrong role all yield an unresolved reference. The GDX Path Expressions Specification (`GDX-Path.md`) gives the full grammar and resolution rules.
 
-## 22. Vocabulary Metadata Link
+Key-based addressing — for elements that carry a `Key` field — is covered in Pattern 22; it provides location-stable references that survive document restructuring.
+
+## 22. Reference to a Keyed Element via Anchor
+
+When an element carries a `Key` field, it becomes a location-stable anchor — addressable independent of where it sits in the document tree. This is the recommended pattern for references that must survive document restructuring: long-lived archival references, cross-document audit links, and references into Sets of similar elements (log entries, transactions, events).
+
+```
+<OBJ system/audit-log
+    <REC* entries
+        <REC &entry-12345 #log:event
+            <STR severity : "warn">
+            <STR message : "auth failure">
+            <STR timestamp : "2026-05-20T08:14:33Z">
+        >
+        <REC &entry-12346 #log:event
+            <STR severity : "info">
+            <STR message : "session start">
+            <STR timestamp : "2026-05-20T08:15:01Z">
+        >
+    >
+>
+
+<OBJ compliance/incident-7
+    <@REC originatingEvent : @system/audit-log&entry-12345>
+>
+```
+
+The reference `@system/audit-log&entry-12345` is an `IdKeyRef`. The `@system/audit-log` portion resolves the audit-log Object by name; the `&entry-12345` portion then looks up the Keyed element within that Object's scope. The reference resolves to the Record with that Key.
+
+If the audit log is later restructured — entries archived into nested categories, reorganized by severity, etc. — the reference continues to resolve as long as the Key is preserved. A path-based equivalent like `$/system/audit-log/entries/[1]` would break under any such change.
+
+When the referencing element shares a document with the Keyed target, the `@Identifier` portion may be omitted; bare `&entry-12345` is a `KeyRef` that looks up within the document scope.
+
+```
+<OBJ compliance/internal-incident
+    <@REC originating : &entry-12345>
+>
+```
+
+Key uniqueness is scoped to the enclosing Object (or to the document for transport-layer elements); see Core Specification §5.4.5. Two different audit-log Objects MAY each have their own `&entry-12345` without collision, because Key resolution is scoped to one Object at a time.
+
+XML practitioners may recognize this pattern as the equivalent of `xml:id`. Convention: when converting GDX ↔ XML, GDX's `Key` corresponds to XML's `xml:id` attribute.
+
+## 23. Vocabulary Metadata Link
 
 REL declarations may reference other RELs to express vocabulary relationships — inverse, sameAs, subPropertyOf, and similar predicates that describe how predicates relate to each other.
 
@@ -459,7 +512,7 @@ Schema cross-references between predicates and Templates use the same mechanism:
 
 The `@DEFOBJ` child of `gdx:hasAuthor` declares that the predicate's range is the `Person` Template — instances reached through `gdx:hasAuthor` edges should conform to the `Person` contract.
 
-## 23. Template Version Chain
+## 24. Template Version Chain
 
 Templates can reference other Templates to declare version succession, supersession, or compatibility. This makes vocabulary evolution self-describing.
 
@@ -491,7 +544,7 @@ The same mechanism works for marking deprecation:
 
 These are vocabulary patterns — the specific predicates (`gdx:supersedes`, `gdx:supersededBy`) are defined by the GDX Common Vocabulary or application-specific vocabularies, not by the core specification. What the core specification provides is the `@DEFOBJ` mechanism for typed Template references; the vocabulary provides the predicates that give the references meaning.
 
-## 24. Null, Absent, and Present
+## 25. Null, Absent, and Present
 
 A Property may exist in three distinct states with different meanings.
 
@@ -563,7 +616,7 @@ For string-typed Properties only, there is a fourth conceptual state — present
 
 The empty string is a legitimate string value, distinct from null. A consumer reading this form knows that middleName was considered and is known to be empty (the customer has no middle name, or has an empty middle name in their record). This empty state applies only to strings; for integers, floats, bools, bytes, and references, there is no "empty value" concept — `<INT count : 0>` is the integer zero (a value), not "empty integer".
 
-## 25. Transport Wrapper for Multiple Objects
+## 26. Transport Wrapper for Multiple Objects
 
 When transporting multiple Objects together with metadata about the transport, wrap them in a Package.
 
@@ -590,7 +643,7 @@ When transporting multiple Objects together with metadata about the transport, w
 
 The Package metadata (source, contentType, count) describes the transport; the contained Objects are extracted and stored individually by the receiver. The Package itself is discarded after unpacking.
 
-## 26. Transport Partitioning with Groups
+## 27. Transport Partitioning with Groups
 
 When a Package conveys multiple distinct collections, partition them with named Groups.
 
@@ -621,7 +674,7 @@ When a Package conveys multiple distinct collections, partition them with named 
 
 Each Group carries its own metadata (libraryName, version) describing the partition. Groups are unpacked alongside the Package; the contained Objects retain their independent identity and lifecycle.
 
-## 27. Vocabulary Export with Groups
+## 28. Vocabulary Export with Groups
 
 Vocabularies that contain many Templates and RELs can use Groups to organize related declarations.
 
@@ -650,7 +703,7 @@ Vocabularies that contain many Templates and RELs can use Groups to organize rel
 
 The receiver imports the vocabulary by extracting all contained Templates and RELs; the Group organization is informational and does not affect how the receiver stores or uses the imported items.
 
-## 28. Use as Typed Configuration
+## 29. Use as Typed Configuration
 
 GDX at its simplest is typed key-value configuration. Use Properties as direct top-level elements; no composition, no schema, no predicates. Comparable in shape to YAML or TOML configuration but with explicit types and no inference traps.
 
@@ -666,7 +719,7 @@ A team using GDX at this level gets explicit typing (no inference about whether 
 
 The Compact Form (§11.2) is line-oriented and indentation-based, similar in shape to YAML, and serves the same role with even less syntactic noise.
 
-## 29. Use as Structured Application Data
+## 30. Use as Structured Application Data
 
 Adding Records and Sets to Properties yields nested structured data, comparable in shape to JSON.
 
@@ -687,7 +740,7 @@ Adding Records and Sets to Properties yields nested structured data, comparable 
 
 This level uses Objects, Records, and Sets but nothing beyond the structural data-layer kinds. No predicates, no schemas, no graphs. Familiar nested-object shape with explicit types throughout.
 
-## 30. Use as Semantically-Aligned Interchange
+## 31. Use as Semantically-Aligned Interchange
 
 Adding `#rel` predicates to Properties enables cross-system semantic alignment without committing to a triple model.
 
@@ -701,7 +754,7 @@ Adding `#rel` predicates to Properties enables cross-system semantic alignment w
 
 Two systems can exchange data even when they use different local field names because the predicate identifies the shared meaning. This is RDF-style semantics layered onto a document-friendly format — no separate triple store, no SPARQL, no ontology stack required.
 
-## 31. Use as Schema-Validated Contracts
+## 32. Use as Schema-Validated Contracts
 
 Adding Templates declares the shape an instance is expected to satisfy. Templates are themselves GDX elements, with the same syntax and parsing as data.
 
@@ -721,7 +774,7 @@ Adding Templates declares the shape an instance is expected to satisfy. Template
 
 Templates declare the contract; instances claim to satisfy it; validators check. The Template can travel in the same document as the instances it describes, or in a separate vocabulary file that consumers resolve via reference.
 
-## 32. Use as Graph-Structured Data
+## 33. Use as Graph-Structured Data
 
 Adding Edges and IRI-based Object identifiers yields fully graph-structured data with relationships, attributes on relationships, and external resolvability.
 

@@ -8,11 +8,11 @@
 
 ## Abstract
 
-This document defines the GDX Path Expression — a syntax and resolution model for addressing individual elements within a GDX document by their structural location. Path expressions complement the identifier-mode reference syntax (`@Identifier`) defined in the GDX Core Specification by providing access to elements that lack a globally addressable identifier, including Records, Blocks, value Properties, Qualifiers, and Extensions.
+This document defines the GDX Path Expression — a syntax and resolution model for addressing individual elements within a GDX document by their structural location. Path expressions complement the identifier-mode reference syntax (`@Identifier`) and the key-mode reference syntax (`&Key`) defined in the GDX Core Specification by providing access to elements that lack a globally addressable identifier, including Records, Blocks, value Properties, Qualifiers, and Extensions.
 
 The path grammar is uniform across all consuming contexts. This specification defines the syntax and per-segment selection semantics; the cardinality and failure semantics for any given consumer (references, delta operations, queries) are specified by the consuming layer. This document normatively defines address-mode behavior — the cardinality contract used by `@KIND` reference elements (Core Specification §6.5.16). Query-mode and delta-mode behaviors are reserved for future companion specifications.
 
-This specification resolves the `$PathExpression` reservation in Core Specification §11.4 (Path-Mode Reference Resolution). It also defines the composed reference form `@Identifier$PathExpression`, which expresses cross-document addressing.
+This specification resolves the `$PathExpression` reservation in Core Specification §11.4 (Path-Mode Reference Resolution). It defines the five reference-literal forms recognized in `@KIND` reference resources: `IdRef` (`@Identifier`), `PathRef` (`$PathExpression`), `KeyRef` (`&Key`), `IdPathRef` (`@Identifier$PathExpression`), and `IdKeyRef` (`@Identifier&Key`). The composed forms `IdPathRef` and `IdKeyRef` express cross-document addressing by structural path or by Key-based anchor respectively.
 
 This document does not address query-mode semantics (wildcards, filters, descendant axis, projections), delta/patch operations, or filter expression languages. The syntactic territory those features require is enumerated as reserved (§9) so that v1 path expressions remain forward-compatible.
 
@@ -23,7 +23,7 @@ This document does not address query-mode semantics (wildcards, filters, descend
 2. [Scope and Modes](#2-scope-and-modes)
 3. [Path Expression Syntax](#3-path-expression-syntax)
 4. [Segment Kinds](#4-segment-kinds)
-5. [Composition with Identifier References](#5-composition-with-identifier-references)
+5. [Composition with Identifier and Key References](#5-composition-with-identifier-and-key-references)
 6. [Resolution Algorithm](#6-resolution-algorithm)
 7. [Address-Mode Singularity](#7-address-mode-singularity)
 8. [Required Changes to GDX Core Specification](#8-required-changes-to-gdx-core-specification)
@@ -100,26 +100,27 @@ The leading slash of the `PathExpression` is the path-mode marker, not a segment
 
 ### 3.2 Segments
 
-Each segment is exactly one of four selector forms:
+Each segment is exactly one of three selector forms:
 
 ```ebnf
-Segment         ::= IdSegment | KeySegment | RelSegment | OrdinalSegment
+Segment         ::= IdSegment | RelSegment | OrdinalSegment
 ```
 
 Segment kind is determined by the segment's first character:
 
 | First character    | Segment kind     |
 |--------------------|------------------|
-| `&`                | `KeySegment`     |
 | `#`                | `RelSegment`     |
 | `[`                | `OrdinalSegment` |
 | otherwise (letter or `_`) | `IdSegment` |
 
 A v1 segment carries exactly one selector. Compound segments — those combining more than one selector form within a single step (for example, an Id combined with a Rel constraint) — are reserved for a future revision (§9).
 
+Key-based addressing does not appear as a path segment. The `Key` field is a document-anchor mechanism (Core Spec §3.2, §5.4.3) and is addressed via the `&Key` reference literal forms (§5.3, §5.4) rather than by path traversal. A path expression that walks structurally to a Keyed element is permissible (matching the element by Id, Rel, or position) but inefficient compared to the direct Key reference; the path syntax intentionally does not provide a Key-matching segment kind.
+
 ### 3.3 Lexical Alphabet
 
-The character set within an `IdSegment`, the named form of a `KeySegment`, and a `RelSegment` is governed by the `SegmentName` production (§4.1). The `SegContChar` alphabet is a narrowing of the Core Spec §5.4.1 `IdContChar` alphabet: within a path segment, the `/` character is **not** a valid continuation character. This narrowing applies only inside a path expression; in other identifier-bearing positions, identifiers continue to admit `/` as a continuation character so that IRIs remain valid identifiers.
+The character set within an `IdSegment` and a `RelSegment` is governed by the `SegmentName` production (§4.1). The `SegContChar` alphabet is a narrowing of the Core Spec §5.4.1 `IdContChar` alphabet: within a path segment, the `/` character is **not** a valid continuation character. This narrowing applies only inside a path expression; in other identifier-bearing positions, identifiers continue to admit `/` as a continuation character so that IRIs remain valid identifiers.
 
 A `PathExpression` terminates when the lexer encounters a character outside the segment-internal alphabet. In practice, this is typically a whitespace character, a `>` closing-bracket, or another sigil character.
 
@@ -158,27 +159,9 @@ Examples:
 - `gdx:Person` matches a child with `Id` `gdx:Person` (a CURIE; `:` is in `SegContChar`).
 - `com.acme.Address` matches a child with that dotted Id.
 
-The `SegContChar` alphabet excludes `/` (cf. Core Spec §5.4.1 `IdContChar`). To address an element whose `Id` itself contains `/`, use a `KeySegment` if the element carries a Key field, or address the element directly via an identifier-mode reference (`@Identifier`).
+The `SegContChar` alphabet excludes `/` (cf. Core Spec §5.4.1 `IdContChar`). To address an element whose `Id` itself contains `/`, give the element a Key (Core Spec §3.2, §5.4.3) and reference it via the `&Key` reference literal (§5.3), or address the element directly via an identifier-mode reference (`@Identifier`).
 
-### 4.2 KeySegment
-
-```ebnf
-KeySegment      ::= "&" KeyToken
-KeyToken        ::= SegmentName | DIGIT+
-```
-
-A `KeySegment` matches a child element whose `Key` field is string-equal to `KeyToken`. The Key may be named (a `SegmentName`) or numeric (a sequence of digits, designating a Template-slot position per Core Spec §5.4.3).
-
-Examples:
-
-- `&2` matches the child whose Key field is `2`.
-- `&street` matches the child whose Key field is `street`.
-
-The `&` sigil MUST be immediately followed by the Key token with no intervening whitespace. The `KeyToken` MUST be non-empty: `&` alone followed by `/` or any other delimiter is malformed.
-
-A `KeySegment` matches by the literal contents of the Key field. Numeric Keys are compared as strings; `&01` and `&1` are not equivalent.
-
-### 4.3 RelSegment
+### 4.2 RelSegment
 
 ```ebnf
 RelSegment      ::= "#" SegmentName
@@ -193,9 +176,9 @@ Examples:
 
 The Rel field is not constrained to be unique among the children of an element. Multiple Properties, Edges, or other elements MAY share the same Rel value (Core Spec §6.5.4 explicitly allows multiple Edges of the same Rel between the same source/target pair). A `RelSegment` therefore may match zero, one, or many child elements at the data layer.
 
-Address-mode consumers (§7) require exactly one match. Authors writing paths in address-mode contexts SHOULD select segments such that the terminal step matches a single child; this typically means using an `IdSegment`, `KeySegment`, or `OrdinalSegment` at any step where multiple siblings could share a Rel.
+Address-mode consumers (§7) require exactly one match. Authors writing paths in address-mode contexts SHOULD select segments such that the terminal step matches a single child; this typically means using an `IdSegment` or `OrdinalSegment` at any step where multiple siblings could share a Rel. Alternatively, when the target element carries a `Key`, the `&Key` reference literal (§5.3) addresses it directly without requiring path traversal at all.
 
-### 4.4 OrdinalSegment
+### 4.3 OrdinalSegment
 
 ```ebnf
 OrdinalSegment  ::= "[" Ordinal "]"
@@ -213,80 +196,97 @@ The following forms are malformed:
 - `[]` — empty brackets.
 - `[ 3 ]`, `[3 ]` — no whitespace inside brackets.
 
-The ordinal counts all child elements of the parent in document order, regardless of role or modifier. It is a positional selector based purely on document order; it does not consult the Template-slot semantics of `&` (Core Spec §5.4.3), the `Key` field, or Set-membership ordering.
+The ordinal counts all child elements of the parent in document order, regardless of role or modifier. It is a positional selector based purely on document order; it does not consult the `Key` field or Set-membership ordering.
 
 The contents of `[ ]` are restricted to a base-10 numeral in v1. Wildcards (`[*]`), ranges (`[1:5]`, `[1..3]`), filter expressions (`[?(…)]`), unions (`[1,3]`), and named subscripts (`[name]`) are reserved (§9).
 
-### 4.5 Selector Semantics Summary
+### 4.4 Selector Semantics Summary
 
-| Selector              | Matches against         | Uniqueness guarantee at data layer                                            |
-|-----------------------|-------------------------|-------------------------------------------------------------------------------|
-| `IdSegment` (bareword)| `Id` field              | Unique within parent scope (Core Spec §4.2: collisions are malformed)         |
-| `KeySegment` (`&K`)   | `Key` field             | Unique by Template-slot semantics or by named-Key convention                  |
-| `RelSegment` (`#R`)   | `Rel` field             | Not unique — multiple siblings may share a Rel                                 |
-| `OrdinalSegment` (`[N]`) | Position in document order | Unique by construction                                                     |
+| Selector              | Matches against         | Uniqueness guarantee at data layer                                  |
+|-----------------------|-------------------------|---------------------------------------------------------------------|
+| `IdSegment` (bareword)| `Id` field              | Unique within parent scope (Core Spec §4.2: collisions are malformed) |
+| `RelSegment` (`#R`)   | `Rel` field             | Not unique — multiple siblings may share a Rel                       |
+| `OrdinalSegment` (`[N]`) | Position in document order | Unique by construction                                          |
 
 The uniqueness column indicates the data-layer guarantee per Core Specification. The grammar does not require an `IdSegment` to match exactly one child if the data is malformed; resolution behavior in the presence of duplicate Ids is implementation-defined. Conforming documents do not produce such collisions (Core Spec §4.2).
+
+Key-based addressing — matching an element by its `Key` field — is not a path segment kind in v1. Keys are addressed directly via the `&Key` and `@Identifier&Key` reference literal forms (§5.3, §5.4). The rationale is that Keys provide location-stable anchors (Core Spec §3.2); folding Key matching into path segments would couple Keys to the very location they are designed to be independent of. A path expression that matches by Id, Rel, or ordinal at each step composes naturally with a Key reference at the start; a path that uses Key matching mid-way is redundant with the direct reference form.
 
 
 ---
 
-## 5. Composition with Identifier References
+## 5. Composition with Identifier and Key References
 
-The `$PathExpression` syntax composes with the identifier-mode reference (`@Identifier`, Core Spec §5.2.6) to express references that combine name resolution with structural traversal. Three reference-literal forms are recognized:
+The `$PathExpression` syntax composes with the identifier-mode reference (`@Identifier`, Core Spec §5.2.6) and the key-mode reference (`&Key`, Core Spec §5.2.6) to express references that combine name resolution, structural traversal, and key-based anchoring. Five reference-literal forms are recognized:
 
 ```ebnf
-ReferenceLiteral  ::= IdRef | PathRef | IdPathRef
+ReferenceLiteral  ::= IdRef | PathRef | KeyRef | IdPathRef | IdKeyRef
 
 IdRef             ::= "@" Identifier
 PathRef           ::= "$" PathExpression
+KeyRef            ::= "&" KeyToken
 IdPathRef         ::= "@" Identifier "$" PathExpression
+IdKeyRef          ::= "@" Identifier "&" KeyToken
+
+KeyToken          ::= SegmentName | DIGIT+
 ```
 
 ### 5.1 Form Semantics
 
-- **`IdRef`** — name-mode resolution alone. The `@Identifier` is resolved per the scope walk of Core Spec §6.5.16 (local → namespace → IRI). The reference designates the resolved element directly. This is the form normatively specified in Core Spec §5.2.6 (current revision).
+- **`IdRef`** — name-mode resolution alone. The `@Identifier` is resolved per the scope walk of Core Spec §6.5.16 (local → namespace → IRI). The reference designates the resolved element directly.
 - **`PathRef`** — structural traversal alone, rooted at the root of the document containing the reference literal. The reference designates the element reached by following the `PathExpression` from the document root.
-- **`IdPathRef`** — composed form. The `@Identifier` portion resolves by name-mode to a starting element; the `$PathExpression` portion is then evaluated rooted at that starting element. The reference designates the element reached at the end of the traversal.
+- **`KeyRef`** — key-mode lookup alone. The `&Key` form looks up an element by its `Key` field within the scope of the reference (the enclosing Object, or the document if at transport-layer position). See Core Spec §5.4.5 for Key scoping rules. The reference designates the element with the matching Key.
+- **`IdPathRef`** — composed name + path. The `@Identifier` portion resolves by name-mode to a starting element; the `$PathExpression` portion is then evaluated rooted at that starting element. The reference designates the element reached at the end of the traversal.
+- **`IdKeyRef`** — composed name + key. The `@Identifier` portion resolves by name-mode to a starting Object; the `&Key` portion is then looked up within that Object's scope. The reference designates the Keyed element within the resolved Object's subtree. This is the canonical form for cross-document Key-based addressing.
 
-The two sigils retain their independent meanings under composition. The `@` operator performs name resolution; the `$` operator performs structural traversal; the composition reads as "resolve, then traverse."
+Each sigil retains its independent meaning under composition. The `@` operator performs name resolution; the `$` operator performs structural traversal; the `&` operator performs key lookup. Composition reads left-to-right.
 
 ### 5.2 Whitespace and Boundaries
 
-No whitespace is permitted between `@`, `Identifier`, `$`, and the path segments. The entire `ReferenceLiteral` is one contiguous token.
+No whitespace is permitted between `@`, `Identifier`, `$`, `&`, the path segments, and the Key token. The entire `ReferenceLiteral` is one contiguous token.
 
 In an `IdPathRef`, the `Identifier` following `@` is consumed greedily per Core Spec §5.4.1 until a character outside `IdContChar` is encountered. Because `$` is not a member of `IdContChar`, the boundary between the identifier portion and the path portion is unambiguous; no escaping is required.
 
+In an `IdKeyRef`, the `Identifier` following `@` is consumed up to the first `&` for the same reason; `&` is not a member of `IdContChar`, so the boundary is lexically clean.
+
+The `$` and `&` operators do not combine within a single reference literal. The form `@Identifier$PathExpression&Key` is malformed; pick one of `IdPathRef` or `IdKeyRef`.
+
 ### 5.3 Cross-Document Addressing
 
-`IdPathRef` is the canonical form for cross-document addressing. The `@Identifier` portion may resolve to an element in any scope:
+`IdPathRef` and `IdKeyRef` are the canonical forms for cross-document addressing. The `@Identifier` portion may resolve to an element in any scope:
 
 - Local-document (the identifier matches an Object Id within the same document).
 - Namespace-relative (the identifier matches a name registered in a vocabulary or package scope).
 - Remote IRI (the identifier is a fully qualified IRI; implementations MAY perform network resolution per Core Spec §6.5.16 rule 3).
 
-In all cases, the `$PathExpression` is rooted at the resolved element. The path traverses the element subtree of the resolved target regardless of which document physically contains it.
+The path or key portion is then evaluated within the resolved Object's scope:
 
 ```
-@gdx:bob$/contact/address              // namespace-relative + intra-target path
+@gdx:bob$/contact/address              // path within a named Object
+@gdx:bob&shippingAddress               // Key lookup within a named Object
 @https://acme.com/people/alice$/photo  // IRI-resolved + intra-target path
+@https://example.com/audit-log&entry-12345  // IRI-resolved + Key lookup
 ```
 
-A `PathRef` with no `@Identifier` portion is always rooted at the current document and cannot address elements in other documents.
+A `PathRef` or `KeyRef` with no `@Identifier` portion is rooted at (or scoped within) the current document. These forms cannot address elements in other documents directly.
 
 ### 5.4 Empty Composition
 
-The composed form `@Identifier$` (trailing `$` with no path segments) is malformed. If the resolved element itself is the desired target, omit the `$` entirely and use the plain `@Identifier` form.
+The forms `@Identifier$` (trailing `$` with no path segments), `@Identifier&` (trailing `&` with no key token), `$` alone, and `&` alone are all malformed. If the resolved element itself is the desired target, omit the trailing operator and use the plain `@Identifier` form.
 
 ### 5.5 Reference-Element Composition
 
-A `@KIND` reference element (Core Spec §6.5.16) MAY use any of the three reference literal forms as its Resource. The choice of form is governed by what the reference is addressing:
+A `@KIND` reference element (Core Spec §6.5.16) MAY use any of the five reference literal forms as its Resource. The choice of form is governed by what the reference is addressing and how the target is most stably identified:
 
-| Use                                                  | Form         |
-|------------------------------------------------------|--------------|
-| Reference to an identifiable Object                  | `IdRef`      |
-| Reference to a non-Id-bearing element in this document | `PathRef`  |
-| Reference to a non-Id-bearing element in another document, or any element within a named target | `IdPathRef` |
+| Use                                                                                            | Form          |
+|------------------------------------------------------------------------------------------------|---------------|
+| Reference to an identifiable Object                                                            | `IdRef`       |
+| Reference to a non-Id-bearing element in this document by structural location                  | `PathRef`     |
+| Reference to a Keyed element anywhere in this document                                         | `KeyRef`      |
+| Reference to a non-Id-bearing element in another document by structural location                | `IdPathRef`   |
+| Reference to a Keyed element in another document, or to a Keyed element scoped within a named Object | `IdKeyRef` |
+
+When both a Key and a structural path could address the target, prefer the Key form. Keys are location-stable; paths break when intervening structure changes.
 
 
 ---
@@ -306,7 +306,6 @@ For each segment in order, the resolver computes the **match set** — the set o
 | Segment kind             | Matches                                                                                       |
 |--------------------------|-----------------------------------------------------------------------------------------------|
 | `IdSegment(name)`        | Each child whose `Id` field is string-equal to `name` (case-sensitive ordinal comparison).   |
-| `KeySegment(k)`          | Each child whose `Key` field is string-equal to `k`. Numeric Keys are compared as strings.   |
 | `RelSegment(rel)`        | Each child whose `Rel` field is string-equal to `rel`.                                       |
 | `OrdinalSegment(n)`      | The *n*-th child by document order (1-based). Match set is empty if the parent has fewer than *n* children. |
 
@@ -362,8 +361,9 @@ The grammar admits paths that may resolve ambiguously against some data shapes (
 When a Rel-bearing terminal step may have multiple matching siblings, authors SHOULD use a more specific terminal selector:
 
 - An `IdSegment` if the target carries an Id.
-- A `KeySegment` if the target carries a Key.
 - An `OrdinalSegment` if the target is identified by its position among children.
+
+Alternatively, when the target element carries a `Key`, switch from a `PathRef`/`IdPathRef` to a `KeyRef`/`IdKeyRef` (§5.3, §5.4). Key-based addressing avoids path traversal entirely and is location-stable.
 
 ### 7.3 Resolution Determinism
 
@@ -397,36 +397,46 @@ The "Path" row of the conventional identifier-forms table is removed. Path-style
 - For local naming, identifiers may continue to embed `/` as a continuation character; only the leading `/` is invalid.
 - For references that were path-like in spirit, use a `PathRef` or `IdPathRef`.
 
-### 8.3 Numeric Keys (Core Spec §5.4.3)
+### 8.3 Key Field (Core Spec §3.2, §5.4.3)
 
-No semantic change. The numeric Key form (`<STR &1 : ...>`) continues to designate Template-slot positions. Numeric-Key matching in path expressions (`&1`, `&2`) compares the Key field as a string for ordinal equality. The §5.4.3 description should be cross-referenced from this specification.
+The `Key` field is reframed from a Template-slot alignment mechanism to a document-anchor mechanism:
+
+- The §3.2 description of `Key` is replaced. Keys are an opt-in named-anchor mechanism providing location-stable reference targets for elements that lack global identifiers. Keys play no role in Template-instance alignment.
+- A new normative subsection (Core Spec §5.4.5) defines Key uniqueness: Keys MUST be unique within the enclosing Object's scope. Elements at transport-layer position (direct children of a Package, Group, or document root) MUST have Keys unique within the document.
+- The numeric Key form (`<STR &1 : ...>`) is retained as a lexical alternative; numeric Keys are valid anchor values but no longer carry Template-slot semantics. A numeric Key is just a Key whose value happens to be a numeral.
 
 ### 8.4 Reference Literals (Core Spec §5.2.6)
 
 The reference-literal grammar in Core Spec §5.2.6 is replaced by the production from §5 of this specification:
 
 ```ebnf
-ReferenceLiteral  ::= IdRef | PathRef | IdPathRef
+ReferenceLiteral  ::= IdRef | PathRef | KeyRef | IdPathRef | IdKeyRef
 IdRef             ::= "@" Identifier
 PathRef           ::= "$" PathExpression
+KeyRef            ::= "&" KeyToken
 IdPathRef         ::= "@" Identifier "$" PathExpression
+IdKeyRef          ::= "@" Identifier "&" KeyToken
 ```
 
 The address-mode singularity requirement (§7 of this specification) is added as a normative paragraph following the production. The "reserved, grammar deferred" language for `$PathExpression` is removed.
 
-### 8.5 Composition Matrix (Core Spec §7.1)
+### 8.5 Template-Instance Alignment (Core Spec §8.2)
+
+Core Spec §8.2 is amended with an explicit alignment rule: an instance child satisfies a Template slot by matching the slot's `Id` field (case-sensitive ordinal comparison). When a Template slot declares a `Rel`, an instance child carrying the same `Rel` MAY align to the slot even if its local `Id` differs; in that case the `Rel` is the alignment key. The `Key` field plays no role in Template-instance alignment.
+
+### 8.6 Composition Matrix (Core Spec §7.1)
 
 `@KIND` reference elements become resolvable against targets that were previously not addressable by the identifier-mode grammar. The composition matrix expands as follows:
 
-- `@REC`, `@BLK` — resolvable when the Resource is a `PathRef` or `IdPathRef` whose terminal element is a Record or Block, respectively.
-- `@.STR`, `@.INT`, `@.FLOAT`, `@.BOOL`, `@.BYTE` — resolvable when the path terminal is a Qualifier of the corresponding value-kind.
-- `@_BOOL`, `@_INT`, `@_STR`, `@_FLOAT`, `@_BYTE` — resolvable when the path terminal is an Extension of the corresponding value-kind (Extensions are valid only under Templates; the path must traverse into a Template subtree).
-- `@%REC`, `@%OBJ`, `@%STR`, `@%INT`, etc. — resolvable when the path terminal is an Embedded element.
-- `@STR`, `@INT`, `@FLOAT`, `@BOOL`, `@BYTE` to value Properties — resolvable when the path terminal is a value Property of the corresponding value-kind. (Distinct from references to Objects of those names, which is not a legal composition; `@STR` to an Object is malformed.)
+- `@REC`, `@BLK` — resolvable when the Resource is a `PathRef`, `KeyRef`, `IdPathRef`, or `IdKeyRef` whose terminal element is a Record or Block, respectively.
+- `@.STR`, `@.INT`, `@.FLOAT`, `@.BOOL`, `@.BYTE` — resolvable when the path or key terminal is a Qualifier of the corresponding value-kind.
+- `@_BOOL`, `@_INT`, `@_STR`, `@_FLOAT`, `@_BYTE` — resolvable when the path or key terminal is an Extension of the corresponding value-kind (Extensions are valid only under Templates; the reference must resolve within a Template subtree).
+- `@%REC`, `@%OBJ`, `@%STR`, `@%INT`, etc. — resolvable when the path or key terminal is an Embedded element.
+- `@STR`, `@INT`, `@FLOAT`, `@BOOL`, `@BYTE` to value Properties — resolvable when the path or key terminal is a value Property of the corresponding value-kind. (Distinct from references to Objects of those names, which is not a legal composition; `@STR` to an Object is malformed.)
 
 Parent-context restrictions on where `@KIND` references may appear (Core Spec §7.1) are unchanged. Only the addressability of the **target** expands; the rules for where a reference element may sit in its parent's children are governed by the existing composition matrix.
 
-### 8.6 Closure of Open Item §11.4
+### 8.7 Closure of Open Item §11.4
 
 Core Spec §11.4 (Path-Mode Reference Resolution) closes upon publication of this specification. Its forward reference is satisfied here; the open issue is resolved.
 
@@ -453,8 +463,9 @@ The following syntactic forms are reserved by this specification. They MUST NOT 
 | `$./PathExpression`                        | Relative path rooted at the referencing element (future revision).        |
 | `$../PathExpression`                       | Relative path rooted at the parent of the referencing element (future).   |
 | Compound segments — multiple selectors per step | Within-segment combinator (future revision).                         |
+| `&Key` as a path segment                   | Key-based addressing is provided as a reference-literal form (`KeyRef`, `IdKeyRef`; §5), not as a path segment. The `&` sigil is reserved against use inside `PathExpression` so that a future revision MAY reintroduce Key matching as a path segment if implementer experience demonstrates a need. |
 
-A v1 path expression that uses only the four segment kinds defined in §4 with the `/` separator is a strict syntactic subset of any future query-mode or delta-mode extension. Such a path expression will continue to parse and resolve identically when those extensions are introduced.
+A v1 path expression that uses only the three segment kinds defined in §4 with the `/` separator is a strict syntactic subset of any future query-mode or delta-mode extension. Such a path expression will continue to parse and resolve identically when those extensions are introduced.
 
 
 ---
@@ -492,7 +503,7 @@ A path expression's terminal element is always an element, not a Resource value.
 
 ### 10.6 Identifier Normalization
 
-Per Core Spec §A.2, identifier comparison is case-sensitive ordinal. The path expression inherits this comparison rule for `IdSegment`, `KeySegment`, and `RelSegment` matching. Unicode normalization (NFC, NFD, etc.) is not specified; conforming documents MUST use a single normalization form throughout. A future revision MAY normatively specify a Unicode normalization profile.
+Per Core Spec §A.2, identifier comparison is case-sensitive ordinal. The path expression inherits this comparison rule for `IdSegment` and `RelSegment` matching; the `KeyRef` and `IdKeyRef` reference literals inherit the same comparison rule for `KeyToken` matching. Unicode normalization (NFC, NFD, etc.) is not specified; conforming documents MUST use a single normalization form throughout. A future revision MAY normatively specify a Unicode normalization profile.
 
 
 ---
@@ -501,23 +512,23 @@ Per Core Spec §A.2, identifier comparison is case-sensitive ordinal. The path e
 
 ```ebnf
 // Reference literals (§5; replaces Core Spec §5.2.6)
-ReferenceLiteral  ::= IdRef | PathRef | IdPathRef
+ReferenceLiteral  ::= IdRef | PathRef | KeyRef | IdPathRef | IdKeyRef
 
 IdRef             ::= "@" Identifier
 PathRef           ::= "$" PathExpression
+KeyRef            ::= "&" KeyToken
 IdPathRef         ::= "@" Identifier "$" PathExpression
+IdKeyRef          ::= "@" Identifier "&" KeyToken
 
 
 // Path expression (§3, §4)
 PathExpression    ::= "/" Segment ("/" Segment)*
 
 Segment           ::= IdSegment
-                    | KeySegment
                     | RelSegment
                     | OrdinalSegment
 
 IdSegment         ::= SegmentName
-KeySegment        ::= "&" KeyToken
 RelSegment        ::= "#" SegmentName
 OrdinalSegment    ::= "[" Ordinal "]"
 
@@ -574,10 +585,10 @@ The `@gdx:bob` portion resolves the Object whose Id is `gdx:bob` by scope walk. 
 ### B.3 Cross-Document Reference (IRI-Resolved Start)
 
 ```
-<@.STR street : @https://acme.com/people/alice$/address/&2>
+<@.STR street : @https://acme.com/people/alice$/address/[2]>
 ```
 
-The IRI `https://acme.com/people/alice` resolves (if the implementation supports network resolution) to a remote Object. The path `/address/&2` traverses from that Object to its `address` child (by Id), and then to the child whose Key field is `2` (Template-slot 2). The reference resolves to a string Qualifier, satisfying the `@.STR` prefix.
+The IRI `https://acme.com/people/alice` resolves (if the implementation supports network resolution) to a remote Object. The path `/address/[2]` traverses from that Object to its `address` child (by Id), and then to the second child of `address` by document order. The reference resolves to a string Qualifier, satisfying the `@.STR` prefix.
 
 ### B.4 Rel-Based Selection Within Current Document
 
@@ -653,6 +664,49 @@ The path traverses Object → Property → Qualifier. The terminal element is th
 ```
 
 The path resolves to the Embedded Record. The `@%REC` prefix matches the role (Embedded Record). Resolution succeeds.
+
+### B.9 Key-Based Reference to a Non-Identified Element
+
+```
+<OBJ system/audit-log
+    <REC* entries
+        <REC &entry-12345 #log:event
+            <STR severity : "warn">
+            <STR message : "auth failure">
+        >
+        <REC &entry-12346 #log:event
+            <STR severity : "info">
+            <STR message : "session start">
+        >
+    >
+>
+
+<OBJ compliance/incident-7
+    <@REC originating : @system/audit-log&entry-12345>
+>
+```
+
+The reference `@system/audit-log&entry-12345` is an `IdKeyRef`. The `@system/audit-log` portion name-resolves the audit-log Object; the `&entry-12345` portion then looks up the Keyed element within that Object's scope. The reference resolves to the `<REC &entry-12345>` element regardless of its position within the Object's subtree.
+
+The Key-based form is location-stable: if the log document is restructured (entries reorganized into nested categories, archived sections moved, etc.), the reference continues to resolve as long as the Key is preserved. A path-based equivalent such as `$/system/audit-log/entries/[1]` would break under any such restructuring.
+
+### B.10 Key Lookup Within the Current Document
+
+```
+<OBJ system/audit-log
+    <REC* entries
+        <REC &entry-12345 #log:event
+            <STR severity : "warn">
+        >
+    >
+>
+
+<OBJ compliance/internal-incident
+    <@REC originating : &entry-12345>
+>
+```
+
+When the referencing element and the Keyed target share a document, the `@Identifier` portion may be omitted. The bare `&entry-12345` form (a `KeyRef`) looks up the Key within the document, walking scopes per Core Spec §5.4.5. This form is shorter but requires that the consuming context know the document boundary; for cross-document references, use `IdKeyRef`.
 
 
 ---

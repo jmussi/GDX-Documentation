@@ -51,7 +51,7 @@ Changes in v0.10.0 from v0.9.10 are substantial:
 
 Changes in v0.11.0 from v0.10.0:
 
-(1) **Path-mode reference resolution is now normative.** The `$PathExpression` form reserved in v0.10.0 §11.4 is fully specified in a new companion document, the GDX Path Expressions Specification (`GDX-Path.md`). The path grammar supports four segment kinds — `IdSegment` (bareword, matches `Id`), `KeySegment` (`&K`, matches `Key`), `RelSegment` (`#R`, matches `Rel`), and `OrdinalSegment` (`[N]`, matches by 1-based document order). The composed form `@Identifier$PathExpression` (`IdPathRef`) expresses cross-document addressing: the `@Identifier` portion resolves a starting element by scope walk, and the `$PathExpression` portion traverses structurally from there. The `$` and `@` sigils retain their independent meanings under composition.
+(1) **Path-mode and key-mode reference resolution are now normative.** The `$PathExpression` form reserved in v0.10.0 §11.4 is fully specified in a new companion document, the GDX Path Expressions Specification (`GDX-Path.md`). The path grammar supports three segment kinds — `IdSegment` (bareword, matches `Id`), `RelSegment` (`#R`, matches `Rel`), and `OrdinalSegment` (`[N]`, matches by 1-based document order). The `&Key` reference literal provides key-based addressing through the location-stable `Key` anchor. Five reference-literal forms are recognized: `IdRef` (`@Identifier`), `PathRef` (`$PathExpression`), `KeyRef` (`&Key`), `IdPathRef` (`@Identifier$PathExpression`), and `IdKeyRef` (`@Identifier&Key`). The composed forms express cross-document addressing.
 
 (2) **§11.4 closes.** Path-mode reference resolution is no longer an open issue. References to §11.4 in earlier revisions are satisfied by the companion specification.
 
@@ -59,15 +59,17 @@ Changes in v0.11.0 from v0.10.0:
 
 (4) **§5.4.2 identifier-forms table updated.** The "Path" row is removed; path-style local naming is replaced by path-mode reference resolution. The remaining identifier forms (Local name, Single letter, CURIE, Dotted CURIE local, GUID/opaque, IRI) are unchanged.
 
-(5) **§5.2.6 reference literal grammar updated.** The placeholder for `$PathExpression` is replaced with the three-form `ReferenceLiteral` production from `GDX-Path.md` §5: `IdRef`, `PathRef`, `IdPathRef`. The "reserved, grammar deferred" language is removed. Address-mode singularity (the requirement that a path used as a reference literal MUST resolve to exactly one element of the matching role) is incorporated by reference.
+(5) **§5.2.6 reference literal grammar updated.** The five-form `ReferenceLiteral` production replaces the placeholder. Address-mode singularity is incorporated by reference to `GDX-Path.md` §7.
 
-(6) **§7.1 composition matrix expands the resolvable target set.** `@KIND` references composed with a `PathRef` or `IdPathRef` resource may now resolve against Records, Blocks, value Properties, Qualifiers, Extensions, and Embedded elements. Parent-context restrictions on where `@KIND` reference elements may appear are unchanged; only the addressability of the target expands.
+(6) **§7.1 composition matrix expands the resolvable target set.** `@KIND` references composed with a `PathRef`, `KeyRef`, `IdPathRef`, or `IdKeyRef` resource may now resolve against Records, Blocks, value Properties, Qualifiers, Extensions, and Embedded elements. Parent-context restrictions on where `@KIND` reference elements may appear are unchanged; only the addressability of the target expands.
 
-(7) **§6.5.16 updates.** The paragraph deferring path-mode resolution is replaced with a forward reference to `GDX-Path.md` §5. The cross-document addressing pattern using `@Identifier$PathExpression` is documented.
+(7) **`Key` field reframed from Template-slot identifier to location-stable anchor.** The §3.2 description of `Key` is rewritten: Keys are an opt-in named-anchor mechanism providing stable reference targets for elements that lack global identifiers. The Template-alignment justification is removed. A new §5.4.5 defines Key uniqueness rules (scoped to the enclosing Object, or to the document at transport-layer position). The numeric Key form is retained as a lexical convenience but no longer carries Template-slot semantics.
 
-(8) **§5.1.1 sigils table updated.** The `$` row is updated from "reserved, grammar deferred" to "introduces a path-mode reference literal (§5.2.6, GDX-Path.md)."
+(8) **§8.2 Template-instance alignment pinned.** A new normative paragraph specifies that alignment is by `Id` matching (case-sensitive ordinal), with `Rel` matching as a cross-vocabulary fallback. The `Key` field plays no role in alignment.
 
-(9) **Migration impact.** Existing documents using leading-slash identifiers MUST be migrated (drop the leading slash, retaining any interior `/`). Existing documents using only `@Identifier` references are unaffected. Existing documents that used a non-normative `$`-prefixed literal under v0.10.0 §11.4's implementation-defined window MUST conform to the v0.11.0 grammar.
+(9) **§5.1.1 sigils table updated.** The `$` row is updated from "reserved, grammar deferred" to "introduces a path-mode reference literal (§5.2.6, `GDX-Path.md`)."
+
+(10) **Migration impact.** Existing documents using leading-slash identifiers MUST be migrated (drop the leading slash, retaining any interior `/`). Existing documents using only `@Identifier` references are unaffected. Existing documents that used `&K` numeric Keys for Template-slot alignment MUST be migrated to named-Id Template slots; the `Key` field continues to be lexically valid but no longer carries slot-alignment semantics. Templates that previously used `&1`, `&2` positional slots are migrated to named slots (`firstName`, `lastName`, etc.). Existing documents that used a non-normative `$`-prefixed literal under v0.10.0 §11.4's implementation-defined window MUST conform to the v0.11.0 grammar.
 
 
 ## Table of Contents
@@ -327,14 +329,14 @@ None of these dissolutions requires an external interpretation layer. The elemen
 An element has six defined positions: Prefix, Key, Rel, Id, Resource, Type. A richly-fielded example showing all six:
 
 ```
-<STR &1 #gdx:givenName fname : "Alice" --gdx:string>
+<STR &given-name #gdx:givenName fname : "Alice" --gdx:string>
 ```
 
 This example is contrived to show all six fields together; in practice an element typically carries a subset. Each field plays a distinct conceptual role:
 
 **Prefix** declares the element's role. It is the only required field. The Prefix tells consumers what kind of structural entity this element is — a Property, Record, Edge, Set, Object, and so on — and from the Prefix alone, a consumer knows the element's structural position, the value-kind of any Resource it carries, and what compositions are allowed. Prefixes are drawn from a closed vocabulary defined in §6.
 
-**Key** identifies the element's position within a Template. When an element claims to satisfy a Template, the Key field names the slot it fills. Keys may be numeric (positional) or named (field-aligned). Without the Key, instances could not unambiguously claim conformance to typed shapes that have multiple slots of the same role.
+**Key** is an optional named anchor on an element. When present, it identifies the element within its enclosing Object's scope (or within the document for elements at transport-layer position), independent of the element's path within that scope. Keys provide location-stable reference targets for elements that lack global identifiers — particularly non-Object elements whose tree position may change. References to a Keyed element use the `&Key` reference literal (§5.2.6) or the composed `@Identifier&Key` form for cross-Object addressing. Keys MAY be numeric or named identifiers; Key uniqueness rules are stated in §5.4.5. Keys play no role in Template-instance alignment (§8.2).
 
 **Rel** names the predicate that aligns this element to a shared vocabulary. The Rel field is GDX's mechanism for cross-document semantic alignment. Two documents using the same Rel are asserting the same conceptual attribute, even when their local identifiers differ. The alignment travels with the data, not in a separate mapping layer.
 
@@ -415,7 +417,7 @@ An element has six defined fields. The Prefix is required; the others are option
 | Field      | Purpose |
 |------------|---------|
 | `Prefix`   | Declares the element's role. Required. Drawn from the closed vocabulary in §6. |
-| `Key`      | A schema-aligned slot name identifying the element's position within a Template. |
+| `Key`      | An optional named anchor identifying the element within its enclosing Object's scope, independent of its tree position. Used as a target for `&Key` reference literals (§5.2.6). |
 | `Rel`      | A predicate-style label naming the relationship between this element and its parent. |
 | `Id`       | A local or resource identifier — the element's name in the document. |
 | `Resource` | The element's typed scalar value. |
@@ -759,18 +761,20 @@ A bytes literal with no following digits (`0x` alone) is malformed. A hex litera
 
 #### 5.2.6 Reference Literals
 
-A reference literal designates another addressable element. Three forms are recognized: identifier-mode (`@Identifier`), path-mode (`$PathExpression`), and composed (`@Identifier$PathExpression`).
+A reference literal designates another addressable element. Five forms are recognized, combining the three operations of name resolution (`@`), structural traversal (`$`), and key lookup (`&`):
 
 ```ebnf
-ReferenceLiteral  ::= IdRef | PathRef | IdPathRef
+ReferenceLiteral  ::= IdRef | PathRef | KeyRef | IdPathRef | IdKeyRef
 IdRef             ::= "@" Identifier
 PathRef           ::= "$" PathExpression
+KeyRef            ::= "&" KeyToken
 IdPathRef         ::= "@" Identifier "$" PathExpression
+IdKeyRef          ::= "@" Identifier "&" KeyToken
 ```
 
-The `PathExpression` grammar and resolution algorithm are specified in the companion GDX Path Expressions Specification (`GDX-Path.md`). Implementations MUST conform to that specification for the contents of any `$`-introduced literal.
+The `PathExpression` and `KeyToken` grammars and the resolution algorithms are specified in the companion GDX Path Expressions Specification (`GDX-Path.md`). Implementations MUST conform to that specification for the contents of any `$`- or `&`-introduced literal.
 
-**Identifier-mode** is an `@` sigil followed by an identifier:
+**Identifier-mode** (`IdRef`) is an `@` sigil followed by an identifier:
 
 ```
 @people/bob
@@ -781,7 +785,7 @@ The `PathExpression` grammar and resolution algorithm are specified in the compa
 
 The identifier following `@` follows the lexical rules in §5.4. The reference is resolved by the implementation's reference resolver; the parser validates only that the literal is well-formed. The `@` sigil MUST be immediately followed by the identifier with no intervening whitespace.
 
-**Path-mode** is a `$` sigil followed by a path expression. The path traverses the structural tree of the current document, starting at the document root, addressing an element by its location:
+**Path-mode** (`PathRef`) is a `$` sigil followed by a path expression. The path traverses the structural tree of the current document, starting at the document root, addressing an element by its location:
 
 ```
 $/people/alice/mailing
@@ -790,14 +794,33 @@ $/orders/[3]/#gdx:postalAddress
 
 The `$` sigil MUST be immediately followed by the path expression with no intervening whitespace.
 
-**Composed** form concatenates identifier-mode and path-mode with no intervening whitespace. The `@Identifier` portion resolves to a starting element by scope walk; the `$PathExpression` portion is then evaluated rooted at that starting element. The composed form is the canonical mechanism for cross-document addressing:
+**Key-mode** (`KeyRef`) is an `&` sigil followed by a Key token. The Key is looked up within the scope of the reference (the enclosing Object, or the document for transport-layer positions; see §5.4.5):
+
+```
+&entry-12345
+&shippingAddress
+&7f3a2b9c-4e21-4f88-91d5-abcdef012345
+```
+
+The `&` sigil MUST be immediately followed by the Key token with no intervening whitespace.
+
+**Composed name + path** (`IdPathRef`) concatenates identifier-mode with path-mode. The `@Identifier` portion resolves to a starting element by scope walk; the `$PathExpression` portion is then evaluated rooted at that starting element:
 
 ```
 @gdx:bob$/contacts/[1]
-@https://acme.com/people/alice$/address/&2
+@https://acme.com/people/alice$/address/[2]
 ```
 
-Because `$` is not a member of `IdContChar`, the boundary between the identifier portion and the path portion is lexically unambiguous.
+**Composed name + key** (`IdKeyRef`) concatenates identifier-mode with key-mode. The `@Identifier` portion resolves to a starting Object; the `&Key` portion is then looked up within that Object's scope:
+
+```
+@gdx:bob&shippingAddress
+@system/audit-log&entry-12345
+```
+
+The two composed forms are the canonical mechanisms for cross-document addressing. The `$` and `&` operators do not combine within a single reference literal; pick `IdPathRef` for structural traversal or `IdKeyRef` for key-based anchoring.
+
+Because `$` and `&` are not members of `IdContChar`, the boundary between the identifier portion and the path or key portion is lexically unambiguous.
 
 References are commonly used as the Resource of Edge elements (§6.5.4) or of `@KIND` reference elements (§6.5.16):
 
@@ -806,12 +829,13 @@ References are commonly used as the Resource of Edge elements (§6.5.4) or of `@
     <EDGE #knows : @people/bob>
     <@OBJ employer : @com.acme>
     <@REC mailing : $/addresses/[1]>
+    <@REC home    : &homeAddress>
 >
 ```
 
-**Address-mode singularity.** A reference literal whose Resource is a `PathRef` or `IdPathRef` resolves to a single element. The reference is resolved if and only if path evaluation yields exactly one element whose role matches the enclosing prefix; zero matches, multiple matches, and a single match of non-matching role all yield an unresolved reference. Resolvers MUST NOT silently select a first match in the multi-match case. See `GDX-Path.md` §7 for the normative definition.
+**Address-mode singularity.** A reference literal whose Resource is a `PathRef`, `KeyRef`, `IdPathRef`, or `IdKeyRef` resolves to a single element. The reference is resolved if and only if path or key evaluation yields exactly one element whose role matches the enclosing prefix; zero matches, multiple matches, and a single match of non-matching role all yield an unresolved reference. Resolvers MUST NOT silently select a first match in the multi-match case. See `GDX-Path.md` §7 for the normative definition.
 
-The three reference forms serve different addressing strategies. Identifier-mode looks up a target by name in the appropriate scope. Path-mode traverses a structural path to reach an element that may not have a global identifier within the current document. The composed form combines both: name-resolve to land at a starting element, then traverse structurally from there. The choice among them is the author's, based on what the target is and how it is addressable.
+The five reference forms serve different addressing strategies. Identifier-mode looks up a target by name in the appropriate scope. Path-mode traverses a structural path to reach an element that may not have a global identifier. Key-mode looks up an element by its location-stable Key anchor. The composed forms combine name resolution with one of structural traversal or key lookup. The choice among them is the author's, based on what the target is, where it lives, and how stably it is identified. When both a Key and a path could address the target, prefer the Key form — Keys are location-stable, paths break under restructuring.
 
 ### 5.3 Type References
 
@@ -824,8 +848,8 @@ A Type reference attaches to an element via the `--` sigil and follows the Resou
 >
 
 <DEFOBJ MyAddress --schema:address
-    <STR &1 : "Broadway">
-    <STR &2 : "Oakland">
+    <STR street : "Broadway">
+    <STR city : "Oakland">
 >
 ```
 
@@ -882,16 +906,21 @@ This identity model parallels RDF's: globally resolvable identifiers are the can
 
 When an IRI appears in `Rel` position, the lexer recognizes it by the `://` scheme separator and parses it as a URI reference following RFC 3986 syntax. In other identifier positions, the same input is parsed as a maximal identifier (which incidentally captures the URI-like form because all its characters are valid IdContChars). Either way, the value carried is the same identifier; the distinction is lexical.
 
-#### 5.4.3 Numeric Keys
+#### 5.4.3 Key Field Values
 
-The `Key` field, when introduced by `&`, MAY take a purely numeric form in addition to the standard identifier form. Numeric keys designate ordered slot positions in Templates:
+The `Key` field, when introduced by `&`, MAY take a purely numeric form in addition to the standard identifier form. Both forms are valid anchor values:
 
 ```
 <STR &1 : "Broadway">
-<STR &2 : "Oakland">
+<REC &shippingAddress
+    <STR street : "Main St">
+>
+<REC &7f3a2b9c-4e21-4f88-91d5-abcdef012345 #log:event ...>
 ```
 
-A numeric key is one or more decimal digits. It is distinguished from an identifier by being all-digits; an identifier may not begin with a digit, so the two forms are unambiguous.
+A numeric Key is one or more decimal digits. It is distinguished from an identifier by being all-digits; an identifier may not begin with a digit, so the two forms are unambiguous.
+
+The Key field provides a location-stable anchor for references (§5.2.6, §3.2). The choice between numeric and named Keys is the author's; numeric Keys are convenient for sequential identifiers (log entries, append-only records) while named Keys are convenient for semantic anchors (named addresses, designated child records). Keys are NOT slot positions for Template-instance alignment; that alignment uses the `Id` field (§8.2).
 
 #### 5.4.4 Identifier Length and Collisions
 
@@ -905,6 +934,23 @@ Practical guidance:
 - Implementations SHOULD impose an upper limit on identifier length (a reasonable default is 1024 characters) to bound memory use and prevent denial-of-service via pathologically long identifiers in untrusted documents.
 
 Identifier collisions across documents are an application concern, not a parser concern. Two documents using `gdx:Person` are referencing the same conceptual identifier; whether they refer to the same Template depends on the resolver's vocabulary mapping (§8.5.2). Within a single document, identifiers in the same scope MUST be unique among elements that compete for resolution (e.g., two top-level Objects with the same Id is malformed); identifiers in different scopes (different parents) are independent.
+
+#### 5.4.5 Key Uniqueness and Scope
+
+When an element carries a `Key` field, the Key value participates in a scope-local namespace used for `KeyRef` and `IdKeyRef` reference resolution (§5.2.6).
+
+Key scope is determined by the element's position in the document:
+
+- **Object-scoped.** An element whose nearest enclosing addressable container is an Object has its Key scoped within that Object. Two elements inside the same Object MUST NOT share a Key value.
+- **Document-scoped.** An element at transport-layer position — a direct child of a Package, Group, or document root — has its Key scoped within the document. Two elements at this level MUST NOT share a Key value.
+
+The enclosing-Object rule means that two different Objects MAY each contain an element with the same Key (`&entry-12345` in two different log Objects is permitted), because Key resolution within each Object is independent. The composed `IdKeyRef` form (`@object-id&key`) pins the scope explicitly when addressing across Object boundaries.
+
+Key collisions within the same scope make the document malformed; conforming parsers SHOULD emit a diagnostic, and conforming resolvers MUST NOT silently pick one matching element over another.
+
+The numeric Key form (§5.4.3) participates in the same scope rules as the named Key form. Numeric Keys are compared as strings (ordinal equality); `&01` and `&1` are distinct Keys.
+
+Keys are OPTIONAL. An element MAY omit the Key field entirely; in that case the element is addressable only by `Id` (if present) or by structural path. The decision to carry a Key is the author's, based on whether the element needs to be a stable reference target.
 
 ### 5.5 Whitespace Between Elements
 
@@ -1582,7 +1628,7 @@ This produces references like `@OBJ`, `@REL`, `@DEFSTR`, `@.STR`, `@_BOOL`, `@%R
 
 **Resolution.** A reference's Resource is a reference literal (`@identifier`) naming the target. The resolver uses the target-kind declared by the prefix to scope the search: a `@REL` reference resolves against the REL declaration scope; a `@DEFOBJ` reference resolves against the Template scope; a `@OBJ` reference resolves against the Object scope. The resolution algorithm parallels Edge Reference Resolution (§6.5.4.1) but is scoped by target-kind.
 
-Identifier-based reference resolution (`@id`) is normative in this specification. Path-based reference resolution (`$path` and the composed `@id$path` form) is specified in the companion GDX Path Expressions Specification (`GDX-Path.md`). The composed `@Identifier$PathExpression` form expresses cross-document addressing: the identifier portion resolves a starting element by scope walk, and the path portion traverses structurally from there. A reference whose Resource is a path or composed literal MUST resolve to exactly one element of the matching role (see `GDX-Path.md` §7).
+Identifier-based reference resolution (`@id`) is normative in this specification. Path-based reference resolution (`$path`, `@id$path`) and key-based reference resolution (`&key`, `@id&key`) are specified in the companion GDX Path Expressions Specification (`GDX-Path.md`). The composed forms `@Identifier$PathExpression` and `@Identifier&Key` express cross-document addressing: the identifier portion resolves a starting element by scope walk, and the path or key portion locates the target within that element's scope. A reference whose Resource is any non-`IdRef` literal MUST resolve to exactly one element of the matching role (see `GDX-Path.md` §7).
 
 **Distinguishing `@OBJ` from EDGE.** Both `@OBJ` and EDGE carry an Object reference, but they are structurally distinct. An `@OBJ` element is a leaf-like typed pointer — it identifies a target without having its own substructure beyond Qualifiers. An EDGE element is a graph-statement element with its own children, including Properties that express edge metadata (weight, confidence, timestamp). Use `@OBJ` when the link is just an identifier; use EDGE when the link itself is a structural participant in the graph with attributes of its own. The full comparison is in §3.6.
 
@@ -1795,6 +1841,10 @@ An instance element references a Template by name in its `--type` field. The val
 ```
 
 The `--type` reference is a Layer 2 (schema) assertion (§2.2). Resolving the reference and validating the instance against the Template are operations performed after parsing and structural validation. An instance may be representation-conforming (Layer 1) without being schema-conforming (Layer 2): the structure is well-formed, but the contents may not satisfy the claimed Template.
+
+**Slot alignment.** An instance child satisfies a Template slot by matching the slot's `Id` field, using case-sensitive ordinal comparison (§4.2). When a Template slot declares a `Rel`, an instance child carrying the same `Rel` MAY align to the slot even if its local `Id` differs; in that case the `Rel` is the alignment key, supporting cross-vocabulary instances whose local names differ from the Template's slot names.
+
+The `Key` field plays no role in Template-instance alignment. Keys are an independent named-anchor mechanism (§3.2, §5.4.5) used by `KeyRef` and `IdKeyRef` reference literals; they are not consulted during schema validation.
 
 A `--type` reference MUST resolve to a Template whose base role matches the instance's role:
 
@@ -2152,7 +2202,7 @@ The introduction of distinct absent/null/present states implies three independen
 
 Path-mode reference resolution is normatively specified by the companion GDX Path Expressions Specification (`GDX-Path.md`). All sub-items previously open under this issue are addressed:
 
-- **The path expression grammar.** Specified in `GDX-Path.md` §3 and §4. Four segment kinds — `IdSegment`, `KeySegment`, `RelSegment`, `OrdinalSegment` — separated by `/`.
+- **The path expression grammar.** Specified in `GDX-Path.md` §3 and §4. Three segment kinds — `IdSegment`, `RelSegment`, `OrdinalSegment` — separated by `/`. Key-based addressing is provided through the `KeyRef` and `IdKeyRef` reference-literal forms rather than as a path segment.
 - **The resolution algorithm.** Specified in `GDX-Path.md` §6. Left-to-right segment traversal from a defined starting element, with per-segment match semantics and explicit handling of zero, one, and multi-match outcomes.
 - **The composition matrix expansion.** Specified in `GDX-Path.md` §8.5 (changes required of this specification). `@REC`, `@BLK`, `@.STR`, `@_INT`, `@%REC`, value-Property targets, and other previously-unresolvable `@KIND` forms become resolvable when the resource is a `PathRef` or `IdPathRef`. Parent-context restrictions are unchanged; only target-addressability expands.
 - **Modifier-stacking interaction.** The `@`-with-modifier-bases pattern (`@.STR`, `@_INT`) now resolves through path-mode references.

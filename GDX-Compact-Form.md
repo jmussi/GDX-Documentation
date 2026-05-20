@@ -23,7 +23,7 @@ Changes from v0.1 to v0.2: conformance with Core Specification v0.9.10. Cross-re
 
 Changes from v0.2 to v0.3: conformance with Core Specification v0.10.0 and Standard Grammar v0.6. (1) The Set marker `*` migrated from prefix to suffix throughout examples: `*S tags` becomes `S* tags`; `*R contacts` becomes `R* contacts`. (2) The `@` reference operator and `@KIND` reference elements are introduced; §4.1 adds an example showing `@OBJ employer : @com.acme` in Compact Form. (3) The `$` reference-literal sigil is reserved for future path-mode references; identifier-mode `@id` is normatively specified. (4) The Appendix A grammar reframes the Prefix production around the composition pattern `[@?][refinement-modifier?][base][*?]`, inheriting the sub-prefix vocabulary from the Standard Grammar. Cross-reference to REM Annotation updated to §6.5.6 (its new location in Core v0.10.0). Companion-version line updated to GDX Core Specification v0.10.0 and GDX Standard Grammar v0.6.
 
-Changes from v0.3 to v0.4: conformance with Core Specification v0.11.0, Standard Grammar v0.7, and the new GDX Path Expressions Specification v0.1. (1) The `$`-introduced path-mode reference literal is now normatively specified by `GDX-Path.md`; the §4.4 prose updates from "reserved" to a forward reference to the companion specification. The composed form `@id$path` is recognized in reference-literal positions. (2) The identifier grammar narrows in line with Core Spec §5.4.1: identifiers may not begin with `/`. Examples in this document that used leading-slash identifiers are migrated accordingly. (3) Companion-version line updated to GDX Core Specification v0.11.0, GDX Standard Grammar v0.7, and GDX Path Expressions v0.1.
+Changes from v0.3 to v0.4: conformance with Core Specification v0.11.0, Standard Grammar v0.7, and the new GDX Path Expressions Specification v0.1. (1) The `$`-introduced path-mode reference literal and the `&`-introduced key-mode reference literal are now normatively specified by `GDX-Path.md`; the §4 prose updates to recognize five reference-literal forms (`@id`, `$path`, `&key`, `@id$path`, `@id&key`). The composed forms express cross-document addressing by path or by key. (2) The identifier grammar narrows in line with Core Spec §5.4.1: identifiers may not begin with `/`. Examples in this document that used leading-slash identifiers are migrated accordingly. (3) Companion-version line updated to GDX Core Specification v0.11.0, GDX Standard Grammar v0.7, and GDX Path Expressions v0.1.
 
 
 ## Table of Contents
@@ -335,17 +335,21 @@ E #knows : @bob
 
 The lexical productions for each literal type are inherited from the Standard Grammar. Compact Form does not modify them.
 
-**Reference literals.** Three forms are recognized in Resource position, all carried over from Standard Form:
+**Reference literals.** Five forms are recognized in Resource position, all carried over from Standard Form:
 
 - Identifier-mode: `@target-id` (Core Spec §5.2.6).
 - Path-mode: `$/path/segments` (specified in `GDX-Path.md`).
-- Composed: `@target-id$/path/segments` for cross-document addressing.
+- Key-mode: `&target-key` (specified in `GDX-Path.md`; Key uniqueness rules in Core Spec §5.4.5).
+- Composed name + path: `@target-id$/path/segments` for cross-document path addressing.
+- Composed name + key: `@target-id&target-key` for cross-document key addressing.
 
 ```
 E #knows : @bob                          // identifier-mode
 @OBJ employer : @com.acme                // identifier-mode on a @KIND reference element
 @REC mailing : $/people/alice/address    // path-mode
-@REC home : @people/bob$/contacts/[1]    // composed (cross-document)
+@REC home : @people/bob$/contacts/[1]    // composed name + path
+@REC shipping : &shippingAddress         // key-mode (current document)
+@REC origEvent : @system/log&entry-12345 // composed name + key (cross-document)
 ```
 
 `@KIND` reference elements (Core Spec §6.5.16) appear in Compact Form with the prefix in the usual position:
