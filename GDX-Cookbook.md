@@ -482,6 +482,20 @@ When the referencing element shares a document with the Keyed target, the `@Iden
 
 Key uniqueness is scoped to the enclosing Object (or to the document for transport-layer elements); see Core Specification §5.4.5. Two different audit-log Objects MAY each have their own `&entry-12345` without collision, because Key resolution is scoped to one Object at a time.
 
+When the anchor is not an Object — for example, a Keyed annotation on a REL declaration or a Keyed slot-documentation inside a Template — use an explicit anchor role marker. The marker is one of the closed prefix-vocabulary keywords (`OBJ`, `REL`, `DEFOBJ`, `PKG`, `GRP`, etc.) followed by `:`:
+
+```
+<REL gdx:knows
+    <STR &description : "Asserts that the subject knows the object.">
+>
+
+<OBJ vocabulary/docs
+    <@STR knowsDoc : @REL:gdx:knows&description>
+>
+```
+
+The `@REL:gdx:knows` anchor explicitly resolves as a REL rather than an Object. The default anchor role in composed references is `OBJ`, so the marker is only needed when the target lives inside something else.
+
 XML practitioners may recognize this pattern as the equivalent of `xml:id`. Convention: when converting GDX ↔ XML, GDX's `Key` corresponds to XML's `xml:id` attribute.
 
 ## 23. Vocabulary Metadata Link

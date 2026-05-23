@@ -51,7 +51,7 @@ Changes in v0.10.0 from v0.9.10 are substantial:
 
 Changes in v0.11.0 from v0.10.0:
 
-(1) **Path-mode and key-mode reference resolution are now normative.** The `$PathExpression` form reserved in v0.10.0 §11.4 is fully specified in a new companion document, the GDX Path Expressions Specification (`GDX-Path.md`). The path grammar supports three segment kinds — `IdSegment` (bareword, matches `Id`), `RelSegment` (`#R`, matches `Rel`), and `OrdinalSegment` (`[N]`, matches by 1-based document order). The `&Key` reference literal provides key-based addressing through the location-stable `Key` anchor. Five reference-literal forms are recognized: `IdRef` (`@Identifier`), `PathRef` (`$PathExpression`), `KeyRef` (`&Key`), `IdPathRef` (`@Identifier$PathExpression`), and `IdKeyRef` (`@Identifier&Key`). The composed forms express cross-document addressing.
+(1) **Path-mode and key-mode reference resolution are now normative.** The `$PathExpression` form reserved in v0.10.0 §11.4 is fully specified in a new companion document, the GDX Path Expressions Specification (`GDX-Path.md`). The path grammar supports three segment kinds — `IdSegment` (bareword, matches `Id`), `RelSegment` (`#R`, matches `Rel`), and `OrdinalSegment` (`[N]`, matches by 1-based document order). The `&Key` reference literal provides key-based addressing through the location-stable `Key` anchor. Five reference-literal forms are recognized: `IdRef` (`@Anchor`), `PathRef` (`$PathExpression`), `KeyRef` (`&Key`), `IdPathRef` (`@Anchor$PathExpression`), and `IdKeyRef` (`@Anchor&Key`). The composed forms express cross-document addressing. The `@Anchor` production carries an optional role marker (`@OBJ:id`, `@REL:id`, `@DEFOBJ:id`, etc.) drawn from the closed prefix vocabulary; when omitted, composed references default to an Object anchor. The marker enables composed references to non-Object anchors (RELs, Templates, transport-layer containers) without requiring resolver inference.
 
 (2) **§11.4 closes.** Path-mode reference resolution is no longer an open issue. References to §11.4 in earlier revisions are satisfied by the companion specification.
 
@@ -765,14 +765,21 @@ A reference literal designates another addressable element. Five forms are recog
 
 ```ebnf
 ReferenceLiteral  ::= IdRef | PathRef | KeyRef | IdPathRef | IdKeyRef
-IdRef             ::= "@" Identifier
+IdRef             ::= "@" Anchor
 PathRef           ::= "$" PathExpression
 KeyRef            ::= "&" KeyToken
-IdPathRef         ::= "@" Identifier "$" PathExpression
-IdKeyRef          ::= "@" Identifier "&" KeyToken
+IdPathRef         ::= "@" Anchor "$" PathExpression
+IdKeyRef          ::= "@" Anchor "&" KeyToken
+
+Anchor            ::= (AnchorRole ":")? Identifier
+AnchorRole        ::= "OBJ"  | "REL"  | "PKG"  | "GRP"
+                    | "DEFOBJ" | "DEFREC" | "DEFSTR"
+                    | "DEFINT" | "DEFFLOAT" | "DEFBOOL" | "DEFBYTE"
 ```
 
-The `PathExpression` and `KeyToken` grammars and the resolution algorithms are specified in the companion GDX Path Expressions Specification (`GDX-Path.md`). Implementations MUST conform to that specification for the contents of any `$`- or `&`-introduced literal.
+The `Anchor` production carries an optional role marker — a closed-vocabulary keyword drawn from §6.2 followed by `:` — that disambiguates the role of the resolved element. The marker is most useful in composed references where the anchor's role differs from the terminal target's role; in plain `@id` references and in composed references with Object anchors, the marker is optional. When omitted in a composed reference, the anchor defaults to an Object (the most common case).
+
+The `PathExpression` and `KeyToken` grammars and the resolution algorithms are specified in the companion GDX Path Expressions Specification (`GDX-Path.md`). Implementations MUST conform to that specification for the contents of any `$`- or `&`-introduced literal and for the resolution semantics of role markers.
 
 **Identifier-mode** (`IdRef`) is an `@` sigil followed by an identifier:
 
@@ -811,16 +818,20 @@ The `&` sigil MUST be immediately followed by the Key token with no intervening 
 @https://acme.com/people/alice$/address/[2]
 ```
 
-**Composed name + key** (`IdKeyRef`) concatenates identifier-mode with key-mode. The `@Identifier` portion resolves to a starting Object; the `&Key` portion is then looked up within that Object's scope:
+**Composed name + key** (`IdKeyRef`) concatenates identifier-mode with key-mode. The `@Anchor` portion resolves to a starting element; the `&Key` portion is then looked up within that element's scope. When the anchor carries no role marker, the starting element defaults to an Object:
 
 ```
-@gdx:bob&shippingAddress
-@system/audit-log&entry-12345
+@gdx:bob&shippingAddress                 // Object anchor (default)
+@system/audit-log&entry-12345            // Object anchor (default)
+@REL:gdx:knows&annotation-3              // REL anchor (explicit)
+@DEFOBJ:com.acme.Customer&firstName-doc  // Template anchor (explicit)
 ```
 
 The two composed forms are the canonical mechanisms for cross-document addressing. The `$` and `&` operators do not combine within a single reference literal; pick `IdPathRef` for structural traversal or `IdKeyRef` for key-based anchoring.
 
-Because `$` and `&` are not members of `IdContChar`, the boundary between the identifier portion and the path or key portion is lexically unambiguous.
+Because `$` and `&` are not members of `IdContChar`, the boundary between the identifier portion and the path or key portion is lexically unambiguous. The optional `AnchorRole` keyword before `:` is distinguished from a CURIE prefix (`gdx:`, `schema:`) by lookup against the closed `AnchorRole` set: only `OBJ`, `REL`, `PKG`, `GRP`, `DEFOBJ`, `DEFREC`, `DEFSTR`, `DEFINT`, `DEFFLOAT`, `DEFBOOL`, `DEFBYTE` are recognized as role markers.
+
+**Parse-time vs. resolution-time validation of role markers.** The parser MUST reject an unknown role keyword (one not in the closed set). At resolution time, the resolver MUST verify that the named element actually has the claimed role; mismatch yields an unresolved reference.
 
 References are commonly used as the Resource of Edge elements (§6.5.4) or of `@KIND` reference elements (§6.5.16):
 
@@ -944,7 +955,9 @@ Key scope is determined by the element's position in the document:
 - **Object-scoped.** An element whose nearest enclosing addressable container is an Object has its Key scoped within that Object. Two elements inside the same Object MUST NOT share a Key value.
 - **Document-scoped.** An element at transport-layer position — a direct child of a Package, Group, or document root — has its Key scoped within the document. Two elements at this level MUST NOT share a Key value.
 
-The enclosing-Object rule means that two different Objects MAY each contain an element with the same Key (`&entry-12345` in two different log Objects is permitted), because Key resolution within each Object is independent. The composed `IdKeyRef` form (`@object-id&key`) pins the scope explicitly when addressing across Object boundaries.
+The enclosing-Object rule means that two different Objects MAY each contain an element with the same Key (`&entry-12345` in two different log Objects is permitted), because Key resolution within each Object is independent. The composed `IdKeyRef` form (`@anchor-id&key`) pins the scope explicitly when addressing across Object boundaries.
+
+**Default anchor role in composed references.** In a composed reference (`IdPathRef`, `IdKeyRef`), if the `@Anchor` portion carries no role marker, the resolved element MUST be of role Object. This default reflects the common case for cross-document addressing. To anchor a composed reference at a non-Object element (a REL, a Template, a Package, or a Group), the author MUST use an explicit role marker (§5.2.6).
 
 Key collisions within the same scope make the document malformed; conforming parsers SHOULD emit a diagnostic, and conforming resolvers MUST NOT silently pick one matching element over another.
 
@@ -1628,7 +1641,11 @@ This produces references like `@OBJ`, `@REL`, `@DEFSTR`, `@.STR`, `@_BOOL`, `@%R
 
 **Resolution.** A reference's Resource is a reference literal (`@identifier`) naming the target. The resolver uses the target-kind declared by the prefix to scope the search: a `@REL` reference resolves against the REL declaration scope; a `@DEFOBJ` reference resolves against the Template scope; a `@OBJ` reference resolves against the Object scope. The resolution algorithm parallels Edge Reference Resolution (§6.5.4.1) but is scoped by target-kind.
 
-Identifier-based reference resolution (`@id`) is normative in this specification. Path-based reference resolution (`$path`, `@id$path`) and key-based reference resolution (`&key`, `@id&key`) are specified in the companion GDX Path Expressions Specification (`GDX-Path.md`). The composed forms `@Identifier$PathExpression` and `@Identifier&Key` express cross-document addressing: the identifier portion resolves a starting element by scope walk, and the path or key portion locates the target within that element's scope. A reference whose Resource is any non-`IdRef` literal MUST resolve to exactly one element of the matching role (see `GDX-Path.md` §7).
+Identifier-based reference resolution (`@id`) is normative in this specification. Path-based reference resolution (`$path`, `@anchor$path`) and key-based reference resolution (`&key`, `@anchor&key`) are specified in the companion GDX Path Expressions Specification (`GDX-Path.md`). The composed forms `@Anchor$PathExpression` and `@Anchor&Key` express cross-document addressing: the anchor portion resolves a starting element by scope walk, and the path or key portion locates the target within that element's scope.
+
+The `Anchor` production carries an optional role marker (`@OBJ:id`, `@REL:id`, `@DEFOBJ:id`, etc.) that disambiguates the role of the resolved element. When the marker is present, the scope walk is restricted to elements of the claimed role. When the marker is absent, the role is inferred from the enclosing `@KIND` reference element's prefix (for plain `@id` references) or defaults to `OBJ` (for composed references). The resolver MUST verify that the resolved element actually has the inferred or claimed role; mismatch yields an unresolved reference.
+
+A reference whose Resource is any non-`IdRef` literal MUST resolve to exactly one element of the matching role (see `GDX-Path.md` §7).
 
 **Distinguishing `@OBJ` from EDGE.** Both `@OBJ` and EDGE carry an Object reference, but they are structurally distinct. An `@OBJ` element is a leaf-like typed pointer — it identifies a target without having its own substructure beyond Qualifiers. An EDGE element is a graph-statement element with its own children, including Properties that express edge metadata (weight, confidence, timestamp). Use `@OBJ` when the link is just an identifier; use EDGE when the link itself is a structural participant in the graph with attributes of its own. The full comparison is in §3.6.
 
