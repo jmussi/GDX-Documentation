@@ -16,7 +16,7 @@ The vocabulary identifiers used in these examples (`gdx:`, `schema:`, `vocab:`, 
 
 ## Status of This Document
 
-This is the v0.11.0 working draft of the Cookbook, companion to the GDX Core Specification v0.11.0. The patterns documented here have stabilized alongside the core; future revisions will add patterns as common use cases emerge but will not remove existing entries except to merge or restructure them. v0.11.0 migrates leading-slash identifiers in examples to the new hierarchical-local form (no leading `/`) and adds patterns demonstrating path-mode references (Pattern 21) and key-mode anchor references (Pattern 22).
+This is the v0.11.0 working draft of the Cookbook, companion to the GDX Core Specification v0.11.0. The patterns documented here have stabilized alongside the core; future revisions will add patterns as common use cases emerge but will not remove existing entries except to merge or restructure them. v0.11.0 migrates leading-slash identifiers in examples to the new hierarchical-local form (no leading `/`); adds Pattern 16 (Parallel Constraint Vocabularies on One Template) demonstrating Layer 2b vocabulary pluralism; and adds patterns demonstrating path-mode references (Pattern 22) and key-mode anchor references (Pattern 23).
 
 Changes in v0.10.0 from v0.9.6 reflect Core Specification v0.10.0:
 
@@ -33,13 +33,13 @@ Changes in v0.10.0 from v0.9.6 reflect Core Specification v0.10.0:
 The Cookbook is organized by pattern type:
 
 - **Basic Shapes** (1–9): named Objects, composites, sets, edges, embedded values, qualifiers.
-- **Schema and Constraints** (10–14): Templates, semantic types, validation, refinement.
-- **Predicates and Vocabulary** (15–16): cross-document alignment, REL declarations.
-- **Node-Zone and Annotation** (17–18): semi-structured material and provenance.
-- **References** (19–24): identifier schemes, typed pointers, path-mode addressing, key-mode anchors, vocabulary metadata, version chains.
-- **Property State** (25): null, absent, and present.
-- **Transport** (26–28): packaging, grouping, vocabulary export.
-- **Use-Case Framings** (29–33): typed configuration through graph-structured data.
+- **Schema and Constraints** (10–16): Templates, semantic types, validation, refinement, layered conformance, parallel constraint vocabularies.
+- **Predicates and Vocabulary** (17): REL declarations.
+- **Node-Zone and Annotation** (18–19): semi-structured material and provenance.
+- **References** (20–25): identifier schemes, typed pointers, path-mode addressing, key-mode anchors, vocabulary metadata, version chains.
+- **Property State** (26): null, absent, and present.
+- **Transport** (27–29): packaging, grouping, vocabulary export.
+- **Use-Case Framings** (30–34): typed configuration through graph-structured data.
 
 ---
 
@@ -179,7 +179,7 @@ Edges with attributes carry them as Record-like children:
 
 The edge attributes describe the *relationship*, not either endpoint.
 
-EDGE asserts a labeled graph relationship — the link itself is a structural participant with its own attributes. When you want a typed pointer instead (a reference without the graph-statement framing or edge attributes), use the `@KIND` family (§20). Use EDGE when the relationship matters; use `@OBJ` when the link is just an identifier.
+EDGE asserts a labeled graph relationship — the link itself is a structural participant with its own attributes. When you want a typed pointer instead (a reference without the graph-statement framing or edge attributes), use the `@KIND` family (§21). Use EDGE when the relationship matters; use `@OBJ` when the link is just an identifier.
 
 ## 8. Refining a Property with Constraints
 
@@ -301,9 +301,39 @@ A single property can carry both a representation suffix (Layer 1) and a Templat
 
 The suffix asserts representation (`i8` width). The Template reference asserts schema conformance (the value satisfies the `vocab:positive-i8` Template, which might constrain the value to be greater than zero).
 
-The two layers operate independently and are validated separately.
+The two layers operate independently and are validated separately. Per Core Spec §2.2, conformance is further decomposed: Layer 2 splits into Layer 2a (Template structural conformance — owned by GDX) and Layer 2b (constraint-vocabulary conformance — owned by external vocabularies). The next pattern shows how Layer 2b admits multiple constraint vocabularies on a single Template.
 
-## 16. Predicate Declaration
+## 16. Parallel Constraint Vocabularies on One Template
+
+A single Template MAY carry constraints expressed in multiple constraint vocabularies simultaneously. Each vocabulary's identifiers are opaque to GDX (Core Spec §8.4); GDX records them as well-formed Extensions and assigns no meaning. Consumers each read the vocabularies they understand and ignore the rest.
+
+```
+<DEFSTR UserHandle
+    <_STR xsd:pattern : "^[a-z0-9_]+$">
+    <_INT xsd:minLength : 3>
+    <_INT xsd:maxLength : 32>
+
+    <_STR json:pattern : "^[a-z0-9_]+$">
+    <_INT json:minLength : 3>
+    <_INT json:maxLength : 32>
+
+    <_STR acme:semantic-class : "account-identifier">
+>
+```
+
+The Template carries seven Constraint Extensions drawn from three vocabularies (`xsd:`, `json:`, `acme:`). GDX validates that all seven are well-formed Extension carriers structurally attached to the `DEFSTR` Template. It does not interpret any of the constraint identifiers.
+
+Three classes of consumer process this Template:
+
+- An **XSD-aware consumer** reads the `xsd:` constraints, applies XSD validation semantics, and ignores the rest.
+- A **JSON-Schema-aware consumer** reads the `json:` constraints, applies JSON-Schema semantics, and ignores the rest.
+- A **vendor-specific consumer** reads `acme:semantic-class` to drive domain behavior; it ignores the validation vocabularies entirely.
+
+None of the consumers conflict; all coexist on the same data. This is the parallel-schemas property: GDX is the substrate, the constraint vocabularies ride on top, and pluralism falls out for free.
+
+This pattern is useful when a single document needs to satisfy reviewers in different ecosystems — for example, an integration that ships data into both an XSD-validated pipeline and a JSON-Schema-validated pipeline without forking the document. It is also useful for migrations: a Template may carry both an old constraint vocabulary and a new one during a transition period, with consumers reading whichever they support.
+
+## 17. Predicate Declaration
 
 Use `REL` to declare a predicate as a first-class entity.
 
@@ -319,7 +349,7 @@ The bare REL declares a predicate with no semantic refinements. The second form 
 
 REL declarations may appear at the document root or within vocabulary documents.
 
-## 17. Schema-Less Subtree
+## 18. Schema-Less Subtree
 
 Use Nodes when material does not fit GDX's structured kinds — imported audit data, ad-hoc payloads, or schema-less metadata.
 
@@ -340,7 +370,7 @@ Use Nodes when material does not fit GDX's structured kinds — imported audit d
 
 Once a Node appears, its subtree is uniformly Node-typed. Structured kinds cannot mix in. Use this pattern when you need to carry data whose shape is not known in advance or not worth modeling.
 
-## 18. Annotation for Provenance
+## 19. Annotation for Provenance
 
 Use `REM` to attach human-readable notes that should travel with the data.
 
@@ -355,7 +385,7 @@ Use `REM` to attach human-readable notes that should travel with the data.
 
 Annotations carry no semantic weight in the data model but survive round-trip serialization. They are appropriate for provenance, audit trails, and editorial notes.
 
-## 19. Reference with Custom Identifier Scheme
+## 20. Reference with Custom Identifier Scheme
 
 Object identifiers are not constrained to any particular scheme. Use whatever fits your system.
 
@@ -378,7 +408,7 @@ References to these Objects use the `@` prefix:
 
 The resolver determines how each reference resolves; the format does not constrain the scheme. Identifiers may not begin with `/` (Core Spec §5.4.1, narrowed in v0.11.0); the leading-slash form is the path-mode reference syntax (see Pattern 21).
 
-## 20. Typed Reference to an Addressable Element
+## 21. Typed Reference to an Addressable Element
 
 When you want a pointer to another element — an Object, a REL declaration, a Template — without making a graph statement about it, use the `@KIND` reference family. The prefix names what is being referenced; the Resource carries the target's identifier.
 
@@ -402,7 +432,7 @@ Qualifiers may refine a reference's meaning:
 
 The Qualifier annotates the reference itself: "this pointer is the read-write database."
 
-## 21. Reference to a Non-Identified Element via Path
+## 22. Reference to a Non-Identified Element via Path
 
 When the target of a reference is not a globally identifiable Object — when it's a Record inside an Object, a specific item in a list, or a Qualifier hanging off a Property — the identifier-mode reference cannot reach it. Path-mode references address elements by their structural location.
 
@@ -443,7 +473,7 @@ A path used as a reference Resource MUST resolve to exactly one element of the m
 
 Key-based addressing — for elements that carry a `Key` field — is covered in Pattern 22; it provides location-stable references that survive document restructuring.
 
-## 22. Reference to a Keyed Element via Anchor
+## 23. Reference to a Keyed Element via Anchor
 
 When an element carries a `Key` field, it becomes a location-stable anchor — addressable independent of where it sits in the document tree. This is the recommended pattern for references that must survive document restructuring: long-lived archival references, cross-document audit links, and references into Sets of similar elements (log entries, transactions, events).
 
@@ -498,7 +528,7 @@ The `@REL:gdx:knows` anchor explicitly resolves as a REL rather than an Object. 
 
 XML practitioners may recognize this pattern as the equivalent of `xml:id`. Convention: when converting GDX ↔ XML, GDX's `Key` corresponds to XML's `xml:id` attribute.
 
-## 23. Vocabulary Metadata Link
+## 24. Vocabulary Metadata Link
 
 REL declarations may reference other RELs to express vocabulary relationships — inverse, sameAs, subPropertyOf, and similar predicates that describe how predicates relate to each other.
 
@@ -526,7 +556,7 @@ Schema cross-references between predicates and Templates use the same mechanism:
 
 The `@DEFOBJ` child of `gdx:hasAuthor` declares that the predicate's range is the `Person` Template — instances reached through `gdx:hasAuthor` edges should conform to the `Person` contract.
 
-## 24. Template Version Chain
+## 25. Template Version Chain
 
 Templates can reference other Templates to declare version succession, supersession, or compatibility. This makes vocabulary evolution self-describing.
 
@@ -558,7 +588,7 @@ The same mechanism works for marking deprecation:
 
 These are vocabulary patterns — the specific predicates (`gdx:supersedes`, `gdx:supersededBy`) are defined by the GDX Common Vocabulary or application-specific vocabularies, not by the core specification. What the core specification provides is the `@DEFOBJ` mechanism for typed Template references; the vocabulary provides the predicates that give the references meaning.
 
-## 25. Null, Absent, and Present
+## 26. Null, Absent, and Present
 
 A Property may exist in three distinct states with different meanings.
 
@@ -630,7 +660,7 @@ For string-typed Properties only, there is a fourth conceptual state — present
 
 The empty string is a legitimate string value, distinct from null. A consumer reading this form knows that middleName was considered and is known to be empty (the customer has no middle name, or has an empty middle name in their record). This empty state applies only to strings; for integers, floats, bools, bytes, and references, there is no "empty value" concept — `<INT count : 0>` is the integer zero (a value), not "empty integer".
 
-## 26. Transport Wrapper for Multiple Objects
+## 27. Transport Wrapper for Multiple Objects
 
 When transporting multiple Objects together with metadata about the transport, wrap them in a Package.
 
@@ -657,7 +687,7 @@ When transporting multiple Objects together with metadata about the transport, w
 
 The Package metadata (source, contentType, count) describes the transport; the contained Objects are extracted and stored individually by the receiver. The Package itself is discarded after unpacking.
 
-## 27. Transport Partitioning with Groups
+## 28. Transport Partitioning with Groups
 
 When a Package conveys multiple distinct collections, partition them with named Groups.
 
@@ -688,7 +718,7 @@ When a Package conveys multiple distinct collections, partition them with named 
 
 Each Group carries its own metadata (libraryName, version) describing the partition. Groups are unpacked alongside the Package; the contained Objects retain their independent identity and lifecycle.
 
-## 28. Vocabulary Export with Groups
+## 29. Vocabulary Export with Groups
 
 Vocabularies that contain many Templates and RELs can use Groups to organize related declarations.
 
@@ -717,7 +747,7 @@ Vocabularies that contain many Templates and RELs can use Groups to organize rel
 
 The receiver imports the vocabulary by extracting all contained Templates and RELs; the Group organization is informational and does not affect how the receiver stores or uses the imported items.
 
-## 29. Use as Typed Configuration
+## 30. Use as Typed Configuration
 
 GDX at its simplest is typed key-value configuration. Use Properties as direct top-level elements; no composition, no schema, no predicates. Comparable in shape to YAML or TOML configuration but with explicit types and no inference traps.
 
@@ -733,7 +763,7 @@ A team using GDX at this level gets explicit typing (no inference about whether 
 
 The Compact Form (§11.2) is line-oriented and indentation-based, similar in shape to YAML, and serves the same role with even less syntactic noise.
 
-## 30. Use as Structured Application Data
+## 31. Use as Structured Application Data
 
 Adding Records and Sets to Properties yields nested structured data, comparable in shape to JSON.
 
@@ -754,7 +784,7 @@ Adding Records and Sets to Properties yields nested structured data, comparable 
 
 This level uses Objects, Records, and Sets but nothing beyond the structural data-layer kinds. No predicates, no schemas, no graphs. Familiar nested-object shape with explicit types throughout.
 
-## 31. Use as Semantically-Aligned Interchange
+## 32. Use as Semantically-Aligned Interchange
 
 Adding `#rel` predicates to Properties enables cross-system semantic alignment without committing to a triple model.
 
@@ -768,7 +798,7 @@ Adding `#rel` predicates to Properties enables cross-system semantic alignment w
 
 Two systems can exchange data even when they use different local field names because the predicate identifies the shared meaning. This is RDF-style semantics layered onto a document-friendly format — no separate triple store, no SPARQL, no ontology stack required.
 
-## 32. Use as Schema-Validated Contracts
+## 33. Use as Schema-Validated Contracts
 
 Adding Templates declares the shape an instance is expected to satisfy. Templates are themselves GDX elements, with the same syntax and parsing as data.
 
@@ -788,7 +818,7 @@ Adding Templates declares the shape an instance is expected to satisfy. Template
 
 Templates declare the contract; instances claim to satisfy it; validators check. The Template can travel in the same document as the instances it describes, or in a separate vocabulary file that consumers resolve via reference.
 
-## 33. Use as Graph-Structured Data
+## 34. Use as Graph-Structured Data
 
 Adding Edges and IRI-based Object identifiers yields fully graph-structured data with relationships, attributes on relationships, and external resolvability.
 

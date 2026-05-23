@@ -71,6 +71,18 @@ Changes in v0.11.0 from v0.10.0:
 
 (10) **Migration impact.** Existing documents using leading-slash identifiers MUST be migrated (drop the leading slash, retaining any interior `/`). Existing documents using only `@Identifier` references are unaffected. Existing documents that used `&K` numeric Keys for Template-slot alignment MUST be migrated to named-Id Template slots; the `Key` field continues to be lexically valid but no longer carries slot-alignment semantics. Templates that previously used `&1`, `&2` positional slots are migrated to named slots (`firstName`, `lastName`, etc.). Existing documents that used a non-normative `$`-prefixed literal under v0.10.0 §11.4's implementation-defined window MUST conform to the v0.11.0 grammar.
 
+(11) **§1.3 adds the substrate-with-pluggable-constraints positioning.** A new design-goal paragraph names GDX as a structural schema (the prefix vocabulary, element model, Template structure, composition axioms) with no constraint implementation. Constraint vocabularies layer on top as Constraint Extensions whose identifiers GDX records but never interprets.
+
+(12) **§2.2 decomposes Layer 2 conformance.** The single "Schema Conformance" layer splits into Layer 2a (Template structural conformance, owned by GDX) and Layer 2b (constraint-vocabulary conformance, owned by the constraint vocabulary). The decomposition makes explicit that an instance may be Layer 2a-conforming while Layer 2b-non-conforming for one vocabulary and Layer 2b-conforming for another; verdicts are vocabulary-relative above the primitive floor. Appendix A is updated to mirror the split.
+
+(13) **§7.5 closes with a primitive-axioms statement.** A new closing paragraph names the §7.5 validation requirements as the GDX-native floor (Layer 1) and points to §8 for the schema layer.
+
+(14) **§8 gains a layered-intro paragraph.** A new paragraph at the top of §8 frames the section in three layers — Template structure, Template-instance alignment, and Constraint Extensions — and ties each to the §2.2 conformance layers.
+
+(15) **§8.4 renamed and rewritten.** Previous title "Validation Extensions" becomes "Constraint Extensions" to reflect that GDX hosts, vocabularies validate. New normative MUST: GDX implementations MUST NOT interpret constraint semantics; constraint identifiers are opaque to GDX. A new §8.4.1 "Parallel Constraint Vocabularies" formalizes the multi-vocabulary coexistence property and gives a worked example showing XSD, JSON Schema, and a vendor vocabulary on the same Template. §8.4.2 covers validator behavior on recognized vs unrecognized identifiers.
+
+(16) **§8.6 updates Common Vocabulary framing.** The Common Vocabulary is positioned as one vocabulary among many — it ships with GDX as a convenience and reference but has no privileged status at the GDX layer. `gdx:` constraint identifiers are opaque to GDX in the same way as `xsd:`, `json:`, or any other.
+
 
 ## Table of Contents
 
@@ -145,6 +157,8 @@ GDX's design choices are responses to the problems named in §1.2 and the gaps l
 **Inline semantic layer.** The optional `#rel` field on any element names a shared predicate that aligns the element's local identity to a cross-document vocabulary. A property `<STR #schema:givenName firstName : "Alice">` is locally named `firstName` but semantically identifies as `schema:givenName`. Two systems using different local names can recognize the same concept by matching the predicate. The alignment travels with the data. This functionality allows data and and semantic layers to be constructed in parallel.
 
 **Simple schemas.** Schemas in GDX are GDX. A Template is an element with a `DEF[type]` prefix that declares the expected shape of conforming instances. The same parser reads Templates and instances; the same syntax expresses both. There is no separate schema language, and a Template can travel in the same document as the instances it describes. 
+
+**Structural schema with pluggable constraint vocabularies.** GDX defines a complete structural schema — the prefix vocabulary, the element model with its identity and value fields, Template-based slot declarations, and composition axioms. This structural schema is what GDX *is*, and it is fixed by this specification. What GDX deliberately does *not* define is constraint implementation: numeric bounds, string patterns, regex matches, semantic types, and similar value-level constraints have no normative semantics at the GDX layer. Constraint vocabularies (XSD, JSON Schema, OWL profiles, bespoke domain vocabularies) are expressed *on top of* GDX as Extension elements whose role identifiers GDX records but never interprets. This separation lets GDX serve as an interchange substrate for constraint vocabularies: multiple vocabularies can coexist on the same Template, each interpreted by its own consumer, without GDX taking a side on what any constraint means. The layered validity model that follows from this stance is defined in §2.2 and §8.
 
 **Unified document and graph model.** A GDX document is a tree, but tree elements may carry Edges that reference other elements by identifier. Object identifiers can be local names, paths, GUIDs, or full IRIs. The same document can be read as a tree (for hierarchical access), traversed as a graph (for relationship navigation), or stored as relational rows (for operational systems). Each access pattern uses the same underlying data; no separate format is needed.
 
@@ -282,13 +296,19 @@ This section defines the terms used throughout the specification. The key words 
 
 ### 2.2 Conformance Layers
 
-GDX defines two distinct conformance layers, each addressing a different category of assertion.
+GDX defines a layered conformance model. Each layer is independent, evaluated by a different agent, and reports its own kind of error.
 
-- **Representation Conformance (Layer 1)** — assertions about how a value is encoded. Includes prefix-to-value-kind matching, literal grammar conformance, representation tags (§5.2), and the round-trip text equivalence requirement (Appendix A). Evaluable at parse time without external context. Errors at this layer are *malformed document* errors.
+- **Representation Conformance (Layer 1)** — assertions about how a value is encoded. Includes prefix-to-value-kind matching, literal grammar conformance, representation tags (§5.2), and the round-trip text equivalence requirement (Appendix A). Owned by GDX. Evaluable at parse time without external context. Errors at this layer are *malformed document* errors and are absolute.
 
-- **Schema Conformance (Layer 2)** — assertions about what a value is allowed to mean. Includes Template satisfaction, Extension constraints, and any vocabulary-defined predicate semantics. Evaluable after parsing, requires Template resolution. Errors at this layer are *schema violation* errors.
+- **Schema Conformance (Layer 2)** — assertions about how data aligns to declared shapes and constraints. Decomposes into two sub-layers with different ownership:
 
-The two layers are independent. A document may be representation-conforming without being schema-conforming, or vice versa. The two layers MUST be reported and handled distinctly by conforming implementations.
+  - **Layer 2a — Template structural conformance.** Whether an instance's children align to a referenced Template's declared slots (by `Id`, with `Rel` as cross-vocabulary bridge; see §8.2). Owned by GDX: the validation algorithm is part of this specification. Evaluable by any consumer that can resolve Templates. Errors at this layer are *schema violation* errors.
+
+  - **Layer 2b — Constraint-vocabulary conformance.** Whether the values within a structurally-conforming instance satisfy the constraints expressed by a particular constraint vocabulary (e.g., `xsd:`, `json:`, a domain-specific vocabulary). Owned by the constraint vocabulary, not by GDX. Evaluable only by a consumer that understands the specific vocabulary's role identifiers. GDX records Constraint Extension elements (§8.4) but renders no verdict on them.
+
+The layers are independent. A document may be Layer 1-conforming but Layer 2a-non-conforming (well-formed but does not satisfy its Template's structure). A document may be Layer 2a-conforming but Layer 2b-non-conforming for one vocabulary and Layer 2b-conforming for another (same data; one vocabulary's constraints pass, another's fail). All four verdicts MUST be reported and handled distinctly by conforming implementations.
+
+The decomposition reflects an intentional architectural stance: GDX defines a structural schema (§1.3) but no constraint implementation. Constraint semantics are external and vocabulary-relative. This stance is what allows multiple constraint vocabularies to coexist on the same data without GDX taking a side; see §8.4.
 
 ### 2.3 Vocabulary Terms
 
@@ -1818,13 +1838,23 @@ A conforming parser MUST reject any document containing:
 
 A conforming parser MUST accept any element with an identifier but no Resource section. Such elements are well-formed and represent null values (instance context) or slot declarations (Template context).
 
-The above are *structural* validation requirements (Layer 1, §2.2). Schema validation (Layer 2 — Template satisfaction, Extension-defined constraints) is described in §8.
+The above are the *primitive axioms* of GDX validity — Layer 1 (§2.2). They are owned by GDX, evaluated at parse time, and absolute. Constraint validity beyond these axioms (numeric bounds, string patterns, regex matches, semantic types) is vocabulary-defined and evaluated externally; GDX hosts those constraints as Extension elements but does not interpret them. See §8 for the schema-layer validation model (Layer 2a — Template structural conformance) and Constraint Extensions (Layer 2b — vocabulary-defined constraint conformance).
 
 ---
 
 ## 8. Schemas and Validation (Templates)
 
 > **Status:** Sections 9.1 through 9.5 are stable. Section 9.6 describes mechanisms that are committed in principle but require companion specifications for full normative treatment.
+
+Schemas in GDX are themselves GDX documents. This section defines the schema mechanism in three layers, mirroring the conformance model of §2.2.
+
+- **Template structure (§8.1, §8.3).** Templates are GDX elements with `DEF…` prefixes. They declare the structural shape an instance is expected to satisfy: which child slots exist, what role each carries, what Rel each aligns to, what Type each claims. Templates are GDX-native: this specification defines their grammar, their composition rules, and how they are resolved.
+
+- **Template-instance alignment (§8.2).** An instance carrying a `--type` reference asserts that its structure aligns to the referenced Template. The alignment algorithm (children matched by `Id`, with `Rel` as cross-vocabulary bridge) is GDX-native and normatively specified in §8.2. This is Layer 2a (§2.2).
+
+- **Constraint Extensions (§8.4).** Constraint vocabularies — XSD, JSON Schema, OWL profiles, bespoke domain vocabularies — are expressed as Extension elements on Template slots. The Extension carriers (`_STR`, `_INT`, etc.) are GDX-native. The constraint identifiers they carry (`xsd:minInclusive`, `json:pattern`, etc.) are vocabulary-defined and opaque to GDX. This is Layer 2b (§2.2). Multiple constraint vocabularies MAY coexist on the same Template; each is interpreted independently by consumers that understand its identifiers.
+
+This layered model is what makes GDX a structural schema with pluggable constraint vocabularies (§1.3). The structural surface — what Templates declare, how slots align, how Extensions attach — is fixed by this specification. The constraint surface is open: any vocabulary may define its own constraint identifiers and ride atop the GDX carrier mechanism without negotiating with GDX or with other vocabularies.
 
 ### 8.1 Templates
 
@@ -1879,7 +1909,7 @@ Transport-layer roles (Package, Group) are not subjects of Templates in the core
 
 ### 8.3 Property Templates and Semantic Types
 
-Property Templates (`DEFSTR`, `DEFINT`, `DEFFLOAT`, `DEFBOOL`, `DEFBYTE`) declare semantic types or representation refinements on top of a base value-kind. A Property Template does not change the underlying value-kind; it adds interpretation or validation rules that consumers may apply.
+Property Templates (`DEFSTR`, `DEFINT`, `DEFFLOAT`, `DEFBOOL`, `DEFBYTE`) declare semantic types or representation refinements on top of a base value-kind. A Property Template does not change the underlying value-kind; it carries vocabulary-defined constraint and interpretation rules that consumers process externally per §8.4.
 
 A typical Property Template uses Extensions to express constraints:
 
@@ -1898,42 +1928,67 @@ The interpretation rules are carried by Extensions on the Template. The Extensio
 
 The specific identifiers used in examples (`gdx:email`, `gdx:i8`, `gdx:csv`, `gdx:uuid`) are illustrative. Whether these specific Templates exist, and what their constraints are, is a vocabulary concern, not a core specification concern. The patterns are general; their realization in any particular vocabulary is documented by that vocabulary.
 
-### 8.4 Validation Extensions
+### 8.4 Constraint Extensions
 
-Extensions on Template properties express constraints that instances must satisfy. The structural carriers — the closed set of Extension prefixes (`_STR`/`_S`, `_INT`/`_I`, `_FLOAT`/`_F`, `_BOOL`/`_L`, `_BYTE`/`_B`) — are defined by this specification (§6.5.10). The *vocabulary* of named extensions (the identifiers like `gdx:pattern`, `gdx:min`, or any application-defined equivalents) is defined by the GDX Common Vocabulary or by other vocabularies, not by this core specification.
+Extensions on Template properties carry vocabulary-defined constraints that instances may be evaluated against. The structural carriers — the closed set of Extension prefixes (`_STR`/`_S`, `_INT`/`_I`, `_FLOAT`/`_F`, `_BOOL`/`_L`, `_BYTE`/`_B`) — are defined by this specification (§6.5.10). The *vocabulary* of constraint identifiers (such as `xsd:minInclusive`, `json:pattern`, `gdx:maxLength`, or any application-defined equivalents) is defined by external vocabularies, not by this core specification.
 
-This separation is intentional. The core specification defines *how* extensions attach to Templates and *how* they are structurally validated. It does not define *which* specific extensions exist or *what* they mean. Extension vocabularies evolve independently of the core specification: new extensions can be added, refined, or deprecated in vocabulary specifications without revising the core.
+**GDX records but does not interpret.** Constraint identifiers are opaque to GDX. The parser validates that each Constraint Extension is structurally well-formed (correct carrier prefix, valid value-kind, attached at a position where Extensions are admitted per §7.1). It assigns no meaning to the identifier itself. Implementations MUST NOT interpret constraint semantics at the GDX layer; meaning is supplied externally by the vocabulary that defines the identifier, evaluated by a consumer that understands that vocabulary.
 
-The general form of an extension on a Template is:
+This discipline is structural: by refusing to define constraint semantics, GDX ensures that no constraint-semantic conflict can originate at the GDX layer. Constraint vocabularies (XSD, JSON Schema, OWL profiles, bespoke domain vocabularies) own their respective semantics independently and evolve without coordination with GDX or with each other.
+
+The general form of a Constraint Extension on a Template slot is:
 
 ```
-<TD-X TemplateName
-    <STR propertyName
-        <_X extensionName : extensionValue>
+<DEFX TemplateName
+    <X slotName
+        <_X constraintIdentifier : constraintValue>
     >
 >
 ```
 
-Where `_X` is one of the Extension carrier prefixes (`_STR`/`_S`, `_INT`/`_I`, `_FLOAT`/`_F`, `_BOOL`/`_L`, `_BYTE`/`_B`) and `extensionName` is an identifier drawn from a vocabulary.
+Where `_X` is one of the Extension carrier prefixes (`_STR`/`_S`, `_INT`/`_I`, `_FLOAT`/`_F`, `_BOOL`/`_L`, `_BYTE`/`_B`) and `constraintIdentifier` is drawn from a constraint vocabulary.
 
-A worked example using a hypothetical vocabulary:
+#### 8.4.1 Parallel Constraint Vocabularies
+
+Because constraint identifiers are opaque to GDX, multiple constraint vocabularies MAY coexist on the same Template. A single Template MAY carry equivalent or complementary constraints expressed in different vocabularies; each is evaluated independently by consumers that understand its identifiers.
+
+A worked example showing XSD, JSON Schema, and a bespoke vendor vocabulary on the same Template:
 
 ```
 <DEFSTR UserHandle
-    <_BOOL vocab:required : true>
-    <_STR vocab:pattern : "^[a-z0-9_]+$">
-    <_INT vocab:minLength : 3>
-    <_INT vocab:maxLength : 32>
+    <_STR xsd:pattern : "^[a-z0-9_]+$">
+    <_INT xsd:minLength : 3>
+    <_INT xsd:maxLength : 32>
+
+    <_STR json:pattern : "^[a-z0-9_]+$">
+    <_INT json:minLength : 3>
+    <_INT json:maxLength : 32>
+
+    <_STR acme:semantic-class : "account-identifier">
 >
 ```
 
-Here `vocab:required`, `vocab:pattern`, `vocab:minLength`, and `vocab:maxLength` are vocabulary-defined extension names. Their meanings are specified by the `vocab:` vocabulary, not by this document.
+Seven Constraint Extensions; three vocabularies. GDX validates that all seven are well-formed Extension carriers attached to a Property Template. It assigns no meaning to `xsd:pattern`, `json:minLength`, or `acme:semantic-class`. Three classes of consumer process the Template:
 
-A validator processing a Template applies the extensions it recognizes and ignores those it does not. If the validator recognizes an extension and the instance satisfies the constraint, validation continues. If the validator recognizes an extension and the instance fails the constraint, the instance is reported as schema-non-conforming. If the validator does not recognize an extension, the validator MAY emit a warning (to indicate that a constraint was present but not checked) and MUST NOT fail validation on the unrecognized extension alone.
+- An **XSD-aware consumer** reads the `xsd:` roles and applies XSD validation semantics. It ignores the `json:` and `acme:` roles.
+- A **JSON-Schema-aware consumer** reads the `json:` roles and applies JSON-Schema semantics. It ignores the others.
+- An **`acme:`-vocabulary-aware consumer** reads `acme:semantic-class` to drive its domain-specific behavior.
 
-This permissive behavior on unrecognized extensions allows vocabularies to evolve without breaking implementations that have not been updated. An implementation that supports vocabulary version N reads documents using vocabulary version N+1 successfully, treating unknown extensions as advisory.
+None conflicts; all coexist; GDX hosts all three without knowing what any of them mean. The Template is one document; the consumers each read their own slice of it.
 
-An implementation MAY claim conformance to one or more vocabularies. A vocabulary-conforming implementation honors the vocabulary's defined extensions according to the vocabulary's specification. The core specification does not require any particular vocabulary to be supported.
+**This pluralism is a direct consequence of GDX refusing to define constraint semantics.** If GDX-native validation extended even to a primitive like `min` or `pattern`, GDX would have its own constraint opinion competing with the hosted vocabularies, and parallel-vocabulary coexistence would break — a GDX-native `min` and an `xsd:minInclusive` might disagree, raising the question of which wins. By keeping GDX-native validation at only the primitive axioms (Layer 1, §2.2) and treating all constraints as opaque-role Extensions (Layer 2b, §2.2), GDX never competes with any hosted vocabulary. The discipline is what enables the pluralism.
+
+#### 8.4.2 Validator Behavior
+
+A validator processing a Template applies the Constraint Extensions it recognizes and ignores those it does not:
+
+- If the validator recognizes a constraint and the instance satisfies it, validation continues.
+- If the validator recognizes a constraint and the instance fails it, the instance is reported as Layer 2b non-conforming with respect to that vocabulary.
+- If the validator does not recognize a constraint identifier, the validator MAY emit a warning (to indicate that a constraint was present but not checked) and MUST NOT fail validation on the unrecognized identifier alone.
+
+This permissive behavior on unrecognized identifiers allows vocabularies to evolve without breaking implementations that have not been updated, and allows multiple vocabularies to coexist as described above. An implementation that supports vocabulary version N reads documents using vocabulary version N+1 successfully, treating unknown identifiers as advisory. An implementation that supports only XSD reads a document carrying both XSD and JSON-Schema constraints successfully, applying XSD semantics and warning (or silently ignoring, per the implementation's mode — §8.5.1) on the JSON-Schema portion.
+
+An implementation MAY claim conformance to one or more constraint vocabularies. A vocabulary-conforming implementation honors that vocabulary's defined constraints according to the vocabulary's specification. The core specification does not require any particular constraint vocabulary to be supported; implementations choose which vocabularies they speak.
 
 ### 8.5 Conformance Modes, Type Resolution, and Error Reporting
 
@@ -1996,7 +2051,9 @@ This decision is deliberate. Inheritance in distributed-vocabulary environments 
 
 A Template's relationship to other Templates is expressed through `--type` references on its child elements. A Customer Template that has an `address` Record whose shape conforms to an Address Template uses `<REC address --Address>` — a structural reference at the field level, not at the Template level. This composition pattern at the field level provides the shared-shape benefit without the propagation problems that Template-level inheritance would introduce.
 
-**The GDX Common Vocabulary.** The GDX Common Vocabulary is a companion specification, separately versioned from this core specification. It defines a base set of widely useful Templates and Extensions covering numeric width and representation refinements, common semantic types (identifiers, dates, durations, currency), cryptographic and hash types, validation extensions, and predicate refinement extensions for use on REL declarations.
+**The GDX Common Vocabulary.** The GDX Common Vocabulary is a companion specification, separately versioned from this core specification. It defines a base set of widely useful Templates and Constraint Extensions covering numeric width and representation refinements, common semantic types (identifiers, dates, durations, currency), cryptographic and hash types, constraint identifiers, and predicate refinement extensions for use on REL declarations.
+
+The Common Vocabulary is one vocabulary among many. It ships with GDX as a convenience and as a reference vocabulary for the patterns described in this specification, but it has no privileged status at the GDX layer: per §8.4, constraint identifiers from `gdx:` are opaque to GDX in exactly the same way that identifiers from `xsd:`, `json:`, or any application-defined vocabulary are. A document using `xsd:minInclusive` is no less GDX-conformant than a document using `gdx:min`; consumers select which vocabularies they speak.
 
 The Common Vocabulary is versioned independently of the core specification. Vocabulary additions and refinements may occur without revising the core; structural changes to GDX require core revision. Conforming implementations SHOULD support the Common Vocabulary in addition to the core; an implementation that supports only the core is conforming but limited, since common types and constraints will require explicit declaration in every document that uses them.
 
@@ -2234,13 +2291,17 @@ This appendix defines what it means for a serialization, a parser, and a documen
 
 ### A.1 Conformance Layers
 
-Two distinct conformance layers are defined, corresponding to the layers introduced in §2.2:
+Conformance is layered, corresponding to the layers introduced in §2.2:
 
-**Representation Conformance (Layer 1)** addresses how data is encoded. It covers the structural rules of §4 through §8: prefix vocabulary, identifier grammar, literal forms, composition rules, and resource value-kind matching. Representation conformance is decidable at parse time without external context.
+**Representation Conformance (Layer 1)** addresses how data is encoded. It covers the structural rules of §4 through §7: prefix vocabulary, identifier grammar, literal forms, composition rules, and resource value-kind matching. Owned by GDX. Decidable at parse time without external context.
 
-**Schema Conformance (Layer 2)** addresses what data is allowed to mean. It covers the Template-based validation of §8: Template satisfaction, Extension-defined constraints, and vocabulary semantics. Schema conformance is decidable after parsing and requires Template resolution.
+**Schema Conformance (Layer 2)** addresses how data aligns to declared shapes and constraints, and decomposes into two sub-layers:
 
-A document is **fully conforming** if it is both representation-conforming and schema-conforming with respect to all Templates referenced via `--type`. A document with no Template references is fully conforming if it is representation-conforming.
+- **Layer 2a — Template structural conformance.** Covers the Template-based alignment of §8.1, §8.2, §8.3: instance children align to Template slots by `Id` (with `Rel` as cross-vocabulary bridge), and `--type` references resolve. Owned by GDX. Decidable by any consumer that can resolve Templates.
+
+- **Layer 2b — Constraint-vocabulary conformance.** Covers the Constraint Extensions of §8.4: whether instance values satisfy the constraints expressed by a particular constraint vocabulary (XSD, JSON Schema, the GDX Common Vocabulary, or any other). Owned by the constraint vocabulary, not by GDX. Decidable only by a consumer that understands the vocabulary's constraint identifiers. A document MAY be Layer 2b-conforming with respect to one vocabulary and Layer 2b-non-conforming with respect to another; the verdicts are independent and vocabulary-relative.
+
+A document is **fully conforming** at Layer 1 + Layer 2a if it is representation-conforming and Template-structurally-conforming with respect to all Templates referenced via `--type`. A document with no Template references is fully conforming at Layer 1 + Layer 2a if it is representation-conforming. **Layer 2b conformance is always vocabulary-qualified**: a document is "Layer 2b-conforming with respect to vocabulary V" when consumed by a V-aware consumer that finds no constraint violations. Claims of Layer 2b conformance MUST name the vocabulary against which the claim is made.
 
 ### A.2 Serialization Conformance
 
