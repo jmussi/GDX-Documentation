@@ -83,6 +83,10 @@ Changes in v0.11.0 from v0.10.0:
 
 (16) **§8.6 updates Common Vocabulary framing.** The Common Vocabulary is positioned as one vocabulary among many — it ships with GDX as a convenience and reference but has no privileged status at the GDX layer. `gdx:` constraint identifiers are opaque to GDX in the same way as `xsd:`, `json:`, or any other.
 
+(17) **§8.2 expands into subsections covering the universal claim rule and materialization.** §8.2.1 (Slot Alignment) carries forward the Id-and-Rel alignment rule. §8.2.2 (Cross-Role and Transport Restrictions) carries forward the prefix-matching rules. §8.2.3 (The Universal Claim Rule) is new: a four-case matrix governs how Template-declared and instance-declared values reconcile on any claim-bearing field (Rel, Key, default Resource, nested `--type`). Differing claims are conflicts; matching claims are confirmed; silent-on-one-side defers to the other. §8.2.4 (Materialization) is new: defines the build-time operation of writing Template-supplied values into the instance as explicit fields, motivated by the searchability and self-description requirements of persisted documents. Materialization is RECOMMENDED for persistence and OPTIONAL for in-memory processing.
+
+(18) **§8.2 reframes `--type` as a certification claim.** New paragraph stating that an instance's `--type` reference asserts "evaluated against this Template and satisfies it" rather than metaphysical identity. Consumers MUST NOT silently substitute one Template for another on the user's behalf.
+
 
 ## Table of Contents
 
@@ -1850,7 +1854,7 @@ Schemas in GDX are themselves GDX documents. This section defines the schema mec
 
 - **Template structure (§8.1, §8.3).** Templates are GDX elements with `DEF…` prefixes. They declare the structural shape an instance is expected to satisfy: which child slots exist, what role each carries, what Rel each aligns to, what Type each claims. Templates are GDX-native: this specification defines their grammar, their composition rules, and how they are resolved.
 
-- **Template-instance alignment (§8.2).** An instance carrying a `--type` reference asserts that its structure aligns to the referenced Template. The alignment algorithm (children matched by `Id`, with `Rel` as cross-vocabulary bridge) is GDX-native and normatively specified in §8.2. This is Layer 2a (§2.2).
+- **Template-instance alignment (§8.2).** An instance carrying a `--type` reference asserts that its structure aligns to the referenced Template. Slot alignment is by `Id` with `Rel` as a cross-vocabulary bridge; the universal claim rule (§8.2.3) governs how Template-declared and instance-declared values reconcile on aligned slots; materialization (§8.2.4) is the recommended persistence form. This is Layer 2a (§2.2).
 
 - **Constraint Extensions (§8.4).** Constraint vocabularies — XSD, JSON Schema, OWL profiles, bespoke domain vocabularies — are expressed as Extension elements on Template slots. The Extension carriers (`_STR`, `_INT`, etc.) are GDX-native. The constraint identifiers they carry (`xsd:minInclusive`, `json:pattern`, etc.) are vocabulary-defined and opaque to GDX. This is Layer 2b (§2.2). Multiple constraint vocabularies MAY coexist on the same Template; each is interpreted independently by consumers that understand its identifiers.
 
@@ -1889,9 +1893,15 @@ An instance element references a Template by name in its `--type` field. The val
 
 The `--type` reference is a Layer 2 (schema) assertion (§2.2). Resolving the reference and validating the instance against the Template are operations performed after parsing and structural validation. An instance may be representation-conforming (Layer 1) without being schema-conforming (Layer 2): the structure is well-formed, but the contents may not satisfy the claimed Template.
 
-**Slot alignment.** An instance child satisfies a Template slot by matching the slot's `Id` field, using case-sensitive ordinal comparison (§4.2). When a Template slot declares a `Rel`, an instance child carrying the same `Rel` MAY align to the slot even if its local `Id` differs; in that case the `Rel` is the alignment key, supporting cross-vocabulary instances whose local names differ from the Template's slot names.
+The `--type` field is best read as a *certification* claim, not an identity claim: an instance carrying `--com.acme.Address` asserts "this content has been evaluated against, and satisfies, the `com.acme.Address` Template." It does not assert that the instance *is* a `com.acme.Address` in a metaphysical sense, only that the assertion stands for the named Template. Two Templates may describe the same conceptual entity differently; an instance MAY claim conformance to either, and consumers MUST NOT silently substitute one for the other on the user's behalf.
+
+#### 8.2.1 Slot Alignment
+
+An instance child satisfies a Template slot by matching the slot's `Id` field, using case-sensitive ordinal comparison (§4.2). When a Template slot declares a `Rel`, an instance child carrying the same `Rel` MAY align to the slot even if its local `Id` differs; in that case the `Rel` is the alignment key, supporting cross-vocabulary instances whose local names differ from the Template's slot names.
 
 The `Key` field plays no role in Template-instance alignment. Keys are an independent named-anchor mechanism (§3.2, §5.4.5) used by `KeyRef` and `IdKeyRef` reference literals; they are not consulted during schema validation.
+
+#### 8.2.2 Cross-Role and Transport Restrictions
 
 A `--type` reference MUST resolve to a Template whose base role matches the instance's role:
 
@@ -1906,6 +1916,57 @@ A `--type` reference MUST resolve to a Template whose base role matches the inst
 Cross-role references (e.g., a Record instance referencing an Object Template) are schema-conformance failures.
 
 Transport-layer roles (Package, Group) are not subjects of Templates in the core specification. Their structure is defined entirely by §7 composition rules and §9 transport semantics. Vocabularies MAY define Templates for transport-construct validation purposes, but support for such Templates is a vocabulary concern, not a core requirement.
+
+#### 8.2.3 The Universal Claim Rule
+
+A Template MAY declare values for fields that the instance can also carry: the `Rel` field, the `Key` field, the `--type` field (in nested slots), and a default `Resource` value. When both the Template and the instance carry a value for the same field on the same aligned slot, the values are reconciled by a uniform rule that applies independently to each claim-bearing field.
+
+| Template state | Instance state | Effective value | Disposition |
+|---|---|---|---|
+| silent | silent | none | No claim on this field for this slot. |
+| silent | claimed | instance | The instance freely supplies a value; the Template imposes no constraint. |
+| claimed | silent | Template | The Template's value is the effective value, implicitly carried by the instance. |
+| claimed | claimed (matching) | confirmed | Both sides agree. The claim is affirmed. |
+| claimed | claimed (differing) | — | **Conflict.** The instance is Layer 2a non-conforming. |
+
+The rule applies independently to each field. An instance MAY satisfy the rule for `Rel` (case 3 — Template-supplied) while supplying its own value for `Key` (case 2 — free instance claim), with both outcomes being valid.
+
+The differing-claims case (the conflict row) MUST be reported as a Layer 2a non-conformance. Implementations MUST NOT silently prefer one side over the other.
+
+**Scope of "default."** Templates declaring a default `Resource` value declare the value as a fallback: when the instance is silent, the default applies; when the instance carries a value, the instance's value is the effective value. This is case 3 of the rule. A future revision MAY define a "fixed" claim scope, in which a Template's value is required (and a differing instance is a conflict) rather than a default; the distinction is one of claim scope, but the four-case matrix above is unchanged.
+
+#### 8.2.4 Materialization
+
+Per §8.2.3 case 3, a Template-supplied value is an implicit claim of the instance. The value is logically present, but it is not visibly written in the instance's text. An instance read in isolation — without resolving the Template — does not show that claim.
+
+This creates a real difference between the instance's logical content and its persisted form. A query "find all elements with Rel `schema:givenName`" returns the instance only if the resolver has loaded the Template. Without the Template, the same data is invisible to the query. The instance's identity drifts depending on whether the schema is available.
+
+**Materialization** is the build-time operation that resolves §8.2.3 case 3 in the persisted form: it writes the Template-supplied values into the instance as explicit fields. The materialized instance carries its full identity without needing the Template at read time.
+
+```
+# Template:
+<DEFREC com.acme.Customer
+    <STR firstName #schema:givenName>
+    <STR locale : "en-US">
+>
+
+# Authored instance (Template values are implicit):
+<REC alice --com.acme.Customer
+    <STR firstName : "Alice">
+>
+
+# Materialized instance (Template values are explicit):
+<REC alice --com.acme.Customer
+    <STR firstName #schema:givenName : "Alice">    # Rel materialized from Template
+    <STR locale : "en-US">                          # default Resource materialized
+>
+```
+
+Materialization applies to the claim-bearing fields named in §8.2.3: `Rel`, `Key`, `Resource` defaults, and nested `--type` claims. It does NOT extrapolate beyond what the Template explicitly declares; missing slots are not added, and Constraint Extensions (§8.4) are not copied from Template to instance (constraints are vocabulary-defined and remain Template-scoped).
+
+**Materialization is RECOMMENDED for persistence and exchange.** Documents that will be persisted, transmitted, archived, or signed SHOULD be materialized before they are written. This preserves the search and self-description properties of the data when the Template is not accessible at read time. Materialization is OPTIONAL for in-memory processing; tools MAY apply the §8.2.3 claim rule on-the-fly during processing without rewriting the document.
+
+A materialized instance is semantically equivalent to its non-materialized form: per §8.2.3 case 4, every materialized field's value matches the Template's claim, producing affirmed conformance. A receiver of a materialized document MUST treat it as equivalent to the corresponding non-materialized document.
 
 ### 8.3 Property Templates and Semantic Types
 

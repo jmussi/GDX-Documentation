@@ -194,23 +194,38 @@ Qualifiers attach metadata to a Property without changing its value.
 
 Qualifiers refine the meaning of their parent and travel with the data. A consumer reading the temperature should consider the unit Qualifier when interpreting the value.
 
-## 9. Schema Definition
+## 9. Schema Definition and Materialization
 
-Templates define the shape; instances reference them via `--type`.
+Templates define the shape; instances reference them via `--type`. The Template may declare values for slot metadata (Rel, default Resource) that the instance is silent about; those values are logically present on the instance via §8.2.3 of the Core Specification.
 
 ```
-<DEFREC com.acme.Address
-    <STR street>
-    <INT number>
+<DEFREC com.acme.Customer
+    <STR firstName #schema:givenName>
+    <STR lastName #schema:familyName>
+    <STR locale : "en-US">
 >
 
-<REC address --com.acme.Address
-    <STR street : "Main St">
-    <INT number : 100>
+<REC alice --com.acme.Customer
+    <STR firstName : "Alice">
+    <STR lastName : "Smith">
 >
 ```
 
-Templates declare what is expected; instances assert that they conform.
+The instance is silent about each child's `Rel`, and silent about `locale` entirely. By the universal claim rule (Core Spec §8.2.3): for `firstName` and `lastName`, the Template-supplied `Rel`s are the effective values; for `locale`, the Template's default `Resource` is the effective value. The instance logically carries `Rel`s of `schema:givenName` and `schema:familyName`, and a `locale` of `"en-US"`.
+
+When the document is persisted, exchanged, or archived, **materialize** those Template-supplied values into the instance. The materialized form is what readers see when the schema is not available at read time:
+
+```
+<REC alice --com.acme.Customer
+    <STR firstName #schema:givenName : "Alice">
+    <STR lastName #schema:familyName : "Smith">
+    <STR locale : "en-US">
+>
+```
+
+The materialized instance is self-describing. A reader that does not load `com.acme.Customer` still sees the predicate alignments; a query for elements with `Rel` `schema:givenName` finds this instance without resolving the Template. Materialization is recommended for persistence; it is optional for in-memory processing where the Template is already available.
+
+Materialization does not extrapolate beyond what the Template explicitly declares. Missing slots are not invented; Constraint Extensions on the Template (Core Spec §8.4) remain Template-scoped and are not copied into the instance.
 
 ## 10. Embedded Structured Value
 
