@@ -87,6 +87,18 @@ Changes in v0.11.0 from v0.10.0:
 
 (18) **§8.2 distinguishes named type identity from observable conformance.** Two new paragraphs in §8.2: (a) `--type` is an identity claim anchored to the Template name; two Templates with identical shapes are different types, and an instance of one is not silently an instance of the other; (b) cross-type conformance — an instance of type A structurally satisfying Template B — is a separately observable relation, useful for validation against multiple schemas, version-compatibility checks, and migration tooling. Conformance does not redefine identity. Consumers MUST NOT silently substitute one type for another even when their instances mutually conform; any cross-conformance is surfaced as a derived observation, not a rewrite of the original `--type` claim.
 
+(19) **§1.1 reframes GDX as an abstract data model with concrete representations.** A new opening paragraph establishes that GDX is the data model — the abstract content — and that Standard Form, Compact Form, Binary Form, and programmatic in-memory form are alternative concrete representations of that model. This clarifies the boundary "what is GDX?" and positions the various forms as faithful realizations rather than separate things.
+
+(20) **§4 (Abstract Data Model) intro reinforces the model/representation distinction.** New paragraph ties the data model defined in §4 to its concrete realizations: each preserves the same elements, prefixes, field semantics, and composition relationships; conversions transform surface syntax without changing content.
+
+(21) **§2.1 adds Core / Extension definitional pair.** New terminology entries formally distinguish the **core** (what GDX itself defines and interprets — prefix vocabulary, element model, grammars, composition, Template-instance alignment, claim rule, primitive value-kind axioms) from **extension** (vocabulary-defined material that rides on top of the core — Rel identifiers, Type identifiers, Constraint Extension content). The pair names the **interpretation** boundary between what GDX understands and what GDX hosts. The terms *core layer* and *extension layer* are introduced as a convenient shorthand for the two sides of the boundary.
+
+(22) **§3.7 articulates the optional-elaboration principle.** New subsection: elements are valid at their minimum form (Prefix alone); elaboration is opt-in and proceeds along two structurally distinct patterns. Identity elaboration is orthogonal across three independent axes (`Id`, `Key`, `Rel`). Value elaboration is layered across five layers (category, value, structural identity, constraint attachment, constraint semantics), where each layer is optional given the layer above and the layers live in different places (instance, Template, vocabulary). The principle organizes how to read the rest of §3 and explains why simple GDX stays simple while richer cases grow without restructuring.
+
+(23) **§1.3 adds integration-surface, not-LCD framing.** A clause in the substrate-paragraph clarifies that GDX is the integration surface where multiple vocabularies coexist, not a lowest-common-denominator subset of them. The structural schema is opinionated and complete; what's neutral is the constraint layer.
+
+(24) **Targeted wording sweep: core/extension terminology adopted across §2.2 and §8.4.** Replaced phrases like "the GDX layer" and "hosted on top" with "core layer" and "extension layer" where the new terminology disambiguates the interpretation boundary from the mechanism boundary. Other places — where wording was already clear — were left as-is to avoid churn.
+
 
 ## Table of Contents
 
@@ -109,7 +121,9 @@ Changes in v0.11.0 from v0.10.0:
 
 ### 1.1 What GDX Is
 
-GDX (Graph Data eXchange) is a data persistence and exchange format. GDX is designed to be easily read, modified and created by humans.  A GDX document is composed of a set of nested elements. Each element has the same strutural composition. Each element carries a role prefix, comprised of a minimal yet expressive closed vocabulary, which enables unambiguous interpretation of the elements resouce field. Elements may carry an identifier, a predicate that aligns it to a shared semantic definition,  a typed resource value, and a reference to a schema type.
+GDX (Graph Data eXchange) is a typed graph data model with a closed structural schema and a family of concrete representations. The data model is the abstract content: elements with prefixes declaring their role and value-kind, identity fields, typed resource values, schema-type claims, and composition into trees with graph references. The concrete representations are how that abstract content is realized for human reading, machine exchange, and in-memory processing — Standard Form (§5 of this specification), Compact Form (companion specification), Binary Form (planned companion), and the programmatic in-memory form a runtime exposes. A GDX document, regardless of which representation it is serialized in, conveys the same underlying data; tools convert between representations without changing the model content.
+
+GDX is designed to be easily read, modified and created by humans. A GDX document is composed of a set of nested elements. Each element has the same strutural composition. Each element carries a role prefix, comprised of a minimal yet expressive closed vocabulary, which enables unambiguous interpretation of the elements resouce field. Elements may carry an identifier, a predicate that aligns it to a shared semantic definition,  a typed resource value, and a reference to a schema type.
 
 A small GDX example:
 
@@ -162,7 +176,7 @@ GDX's design choices are responses to the problems named in §1.2 and the gaps l
 
 **Simple schemas.** Schemas in GDX are GDX. A Template is an element with a `DEF[type]` prefix that declares the expected shape of conforming instances. The same parser reads Templates and instances; the same syntax expresses both. There is no separate schema language, and a Template can travel in the same document as the instances it describes. 
 
-**Structural schema with pluggable constraint vocabularies.** GDX defines a complete structural schema — the prefix vocabulary, the element model with its identity and value fields, Template-based slot declarations, and composition axioms. This structural schema is what GDX *is*, and it is fixed by this specification. What GDX deliberately does *not* define is constraint implementation: numeric bounds, string patterns, regex matches, semantic types, and similar value-level constraints have no normative semantics at the GDX layer. Constraint vocabularies (XSD, JSON Schema, OWL profiles, bespoke domain vocabularies) are expressed *on top of* GDX as Extension elements whose role identifiers GDX records but never interprets. This separation lets GDX serve as an interchange substrate for constraint vocabularies: multiple vocabularies can coexist on the same Template, each interpreted by its own consumer, without GDX taking a side on what any constraint means. The layered validity model that follows from this stance is defined in §2.2 and §8.
+**Structural schema with pluggable constraint vocabularies.** GDX defines a complete structural schema — the prefix vocabulary, the element model with its identity and value fields, Template-based slot declarations, and composition axioms. This structural schema is what GDX *is*, and it is fixed by this specification. What GDX deliberately does *not* define is constraint implementation: numeric bounds, string patterns, regex matches, semantic types, and similar value-level constraints have no normative semantics at the GDX layer. Constraint vocabularies (XSD, JSON Schema, OWL profiles, bespoke domain vocabularies) are expressed *on top of* GDX as Extension elements whose role identifiers GDX records but never interprets. This separation lets GDX serve as an integration surface for constraint vocabularies: multiple vocabularies can coexist on the same Template, each interpreted by its own consumer, without GDX taking a side on what any constraint means. GDX is not a lowest-common-denominator subset of those vocabularies; its structural schema is opinionated and complete, while the constraint layer is deliberately neutral. The layered validity model that follows from this stance is defined in §2.2 and §8.
 
 **Unified document and graph model.** A GDX document is a tree, but tree elements may carry Edges that reference other elements by identifier. Object identifiers can be local names, paths, GUIDs, or full IRIs. The same document can be read as a tree (for hierarchical access), traversed as a graph (for relationship navigation), or stored as relational rows (for operational systems). Each access pattern uses the same underlying data; no separate format is needed.
 
@@ -298,6 +312,12 @@ This section defines the terms used throughout the specification. The key words 
 
 - **Transport layer** — the set of GDX roles representing transient organizational and exchange constructs: Package and Group (§9). Transport-layer constructs are unpacked by receivers and are not persisted as such.
 
+- **Core** — the structural and semantic content normatively defined by this specification: the prefix vocabulary, the element model, the identifier and literal grammars, the composition axioms, the Template structure and instance-alignment mechanism, the universal claim rule, and the primitive value-kind axioms. The core is what GDX *is*; it is fixed by this specification and does not change when extensions are added. (Distinguish "the core" — the concept — from "the Core Specification" — the document name. The latter is this document.)
+
+- **Extension** — vocabulary-defined material that rides on top of the core through GDX's extension-point mechanisms. Extensions include: predicate identifiers in the `Rel` field, Template names in the `Type` field, and Constraint Extension elements (§8.4) carrying constraint identifiers from external vocabularies. The core records extensions structurally and validates their well-formedness; their *semantic content* is interpreted externally by consumers that understand the vocabulary in question. The core/extension distinction is the **interpretation** boundary between what GDX knows and what GDX merely carries.
+
+- **Core layer / Extension layer** — when a discussion needs to distinguish what GDX understands from what GDX hosts, the terms *core layer* and *extension layer* refer to those two sides of the interpretation boundary. The core layer is owned by this specification; the extension layer is owned by external vocabularies and their consumers.
+
 ### 2.2 Conformance Layers
 
 GDX defines a layered conformance model. Each layer is independent, evaluated by a different agent, and reports its own kind of error.
@@ -312,7 +332,7 @@ GDX defines a layered conformance model. Each layer is independent, evaluated by
 
 The layers are independent. A document may be Layer 1-conforming but Layer 2a-non-conforming (well-formed but does not satisfy its Template's structure). A document may be Layer 2a-conforming but Layer 2b-non-conforming for one vocabulary and Layer 2b-conforming for another (same data; one vocabulary's constraints pass, another's fail). All four verdicts MUST be reported and handled distinctly by conforming implementations.
 
-The decomposition reflects an intentional architectural stance: GDX defines a structural schema (§1.3) but no constraint implementation. Constraint semantics are external and vocabulary-relative. This stance is what allows multiple constraint vocabularies to coexist on the same data without GDX taking a side; see §8.4.
+The decomposition reflects the core/extension boundary (§2.1). Layer 1 and Layer 2a are the **core layer** — what GDX itself defines, owns, and evaluates. Layer 2b is the **extension layer** — what external constraint vocabularies define and what their consumers evaluate. GDX records extension-carried content but does not interpret it. This boundary is what allows multiple constraint vocabularies to coexist on the same data without GDX taking a side; see §8.4.
 
 ### 2.3 Vocabulary Terms
 
@@ -420,11 +440,39 @@ The three mechanisms answer different questions:
 
 A reference to an Object (`@OBJ`) and an EDGE to an Object both carry an `@target` reference value, but they are structurally distinct. The reference is a pointer; the edge is a graph-statement element with its own children. Choose based on whether the link itself is a structural participant in your data (use EDGE) or merely an identifier of a target (use `@OBJ`).
 
+### 3.7 Optional Elaboration
+
+A GDX element is valid at its minimum form: the Prefix alone (e.g., `<STR>`, `<REC>`, `<OBJ>`) is sufficient for a well-formed element wherever its role is permitted. Every other field — `Id`, `Key`, `Rel`, `Resource`, `Type` — and the element's children are optional. An element with only a Prefix already declares its structural role and value-kind; richer claims are added only where the use case demands them.
+
+Elaboration beyond the minimum follows two structurally distinct patterns.
+
+**Identity is orthogonal.** The three identity fields — `Id`, `Key`, `Rel` — are independent dimensions. An element may carry any combination of them in any order, and the presence or absence of one places no constraint on the others. An element may have an `Id` and no `Key`; a `Key` and no `Id`; a `Rel` with both, with one, or with neither. Each axis serves a distinct addressing purpose:
+
+- `Id` names the element within its scope (locally meaningful for Properties and Records; globally meaningful for Objects).
+- `Key` provides a location-stable anchor for references (§5.4.5).
+- `Rel` aligns the element to a cross-document vocabulary predicate (§3.6, §6.5.4).
+
+The independence of these axes is what lets a single element be addressable in multiple ways simultaneously without conflict.
+
+**Value elaboration is layered.** When an element carries content beyond its bare role, elaboration proceeds through nested layers. Each layer adds narrowing detail without altering what the prior layer said. The layers live in different places — some on the instance, some on the Template the instance references, some in the external vocabulary that defines a constraint identifier:
+
+1. **Category** (instance) — the Prefix declares the element's structural role and, for value-bearing roles, its value-kind. The Prefix is the minimum.
+2. **Value** (instance) — the Resource carries the concrete value, conforming to the value-kind declared by the Prefix. A value-bearing element without a Resource declares the slot but contributes no value (§4.3.3); with a Resource, it declares both.
+3. **Structural identity** (instance) — a `--type` reference asserts that the element's content conforms to a named Template (§8.2). This narrows the value from "any value of this value-kind" to "a value satisfying this Template's slot structure."
+4. **Constraint attachment** (Template, not instance) — Constraint Extensions on the referenced Template (§8.4) carry vocabulary-defined restrictions. These do not appear on the instance directly; they apply through the Template claim.
+5. **Constraint semantics** (external vocabulary) — the meaning of each constraint identifier (`xsd:minInclusive`, `json:pattern`, etc.) is defined by the vocabulary that owns the identifier, evaluated externally by consumers that understand that vocabulary.
+
+Each layer is optional given the layer above it: an element with a value need not have a `--type`; an element with a `--type` need not be constrained beyond the Template's structural declarations; constraints need not exist for every Template; no consumer is required to understand every constraint vocabulary. The minimum (Prefix alone) is at one end of this spectrum; a fully-elaborated element with full identity, value, type, and constraint-bearing Template is at the other.
+
+This minimal-by-default discipline is what keeps simple GDX simple. A Property with just a name and a value is one line; the same element can grow identity and schema affordances as the use case demands, without restructuring.
+
 ---
 
 ## 4. The GDX Abstract Data Model
 
 This section defines GDX at runtime: the abstract structure an implementation must represent, the rules an implementation must enforce, and the semantic states an implementation must distinguish. Concepts are in §3; text form is in §5.
+
+The data model defined here is the single authoritative content that every concrete GDX representation faithfully realizes (§1.1). Standard Form (§5), Compact Form (companion specification), Binary Form (planned companion), and the programmatic in-memory form a runtime exposes are alternative realizations of the same model: each preserves the same elements, the same prefixes, the same field semantics, the same composition relationships. Conversions between representations transform the surface syntax without changing the model content; a round-trip through any combination of representations yields the same abstract document.
 
 A GDX element is the tuple
 
@@ -1995,9 +2043,9 @@ The specific identifiers used in examples (`gdx:email`, `gdx:i8`, `gdx:csv`, `gd
 
 Extensions on Template properties carry vocabulary-defined constraints that instances may be evaluated against. The structural carriers — the closed set of Extension prefixes (`_STR`/`_S`, `_INT`/`_I`, `_FLOAT`/`_F`, `_BOOL`/`_L`, `_BYTE`/`_B`) — are defined by this specification (§6.5.10). The *vocabulary* of constraint identifiers (such as `xsd:minInclusive`, `json:pattern`, `gdx:maxLength`, or any application-defined equivalents) is defined by external vocabularies, not by this core specification.
 
-**GDX records but does not interpret.** Constraint identifiers are opaque to GDX. The parser validates that each Constraint Extension is structurally well-formed (correct carrier prefix, valid value-kind, attached at a position where Extensions are admitted per §7.1). It assigns no meaning to the identifier itself. Implementations MUST NOT interpret constraint semantics at the GDX layer; meaning is supplied externally by the vocabulary that defines the identifier, evaluated by a consumer that understands that vocabulary.
+**GDX records but does not interpret.** Constraint identifiers are extension-layer content (§2.1): the core records them as well-formed elements but assigns no meaning. The parser validates that each Constraint Extension is structurally well-formed (correct carrier prefix, valid value-kind, attached at a position where Extensions are admitted per §7.1). It does not interpret the identifier itself. Implementations MUST NOT interpret constraint semantics at the core layer; meaning is supplied by the vocabulary that defines the identifier, evaluated by a consumer that understands that vocabulary.
 
-This discipline is structural: by refusing to define constraint semantics, GDX ensures that no constraint-semantic conflict can originate at the GDX layer. Constraint vocabularies (XSD, JSON Schema, OWL profiles, bespoke domain vocabularies) own their respective semantics independently and evolve without coordination with GDX or with each other.
+This discipline is structural: by holding constraint semantics out of the core, GDX ensures that no constraint-semantic conflict can originate at the core layer. Constraint vocabularies (XSD, JSON Schema, OWL profiles, bespoke domain vocabularies) own their respective semantics independently and evolve without coordination with GDX or with each other.
 
 The general form of a Constraint Extension on a Template slot is:
 
@@ -2031,15 +2079,15 @@ A worked example showing XSD, JSON Schema, and a bespoke vendor vocabulary on th
 >
 ```
 
-Seven Constraint Extensions; three vocabularies. GDX validates that all seven are well-formed Extension carriers attached to a Property Template. It assigns no meaning to `xsd:pattern`, `json:minLength`, or `acme:semantic-class`. Three classes of consumer process the Template:
+Seven Constraint Extensions; three vocabularies. The core validates that all seven are well-formed Extension carriers attached to a Property Template. It assigns no meaning to `xsd:pattern`, `json:minLength`, or `acme:semantic-class`. Three classes of consumer process the Template:
 
-- An **XSD-aware consumer** reads the `xsd:` roles and applies XSD validation semantics. It ignores the `json:` and `acme:` roles.
-- A **JSON-Schema-aware consumer** reads the `json:` roles and applies JSON-Schema semantics. It ignores the others.
+- An **XSD-aware consumer** reads the `xsd:` identifiers and applies XSD validation semantics. It ignores the `json:` and `acme:` identifiers.
+- A **JSON-Schema-aware consumer** reads the `json:` identifiers and applies JSON-Schema semantics. It ignores the others.
 - An **`acme:`-vocabulary-aware consumer** reads `acme:semantic-class` to drive its domain-specific behavior.
 
-None conflicts; all coexist; GDX hosts all three without knowing what any of them mean. The Template is one document; the consumers each read their own slice of it.
+None conflicts; all coexist; the core hosts all three without knowing what any of them mean. The Template is one document; the consumers each read their own slice of it.
 
-**This pluralism is a direct consequence of GDX refusing to define constraint semantics.** If GDX-native validation extended even to a primitive like `min` or `pattern`, GDX would have its own constraint opinion competing with the hosted vocabularies, and parallel-vocabulary coexistence would break — a GDX-native `min` and an `xsd:minInclusive` might disagree, raising the question of which wins. By keeping GDX-native validation at only the primitive axioms (Layer 1, §2.2) and treating all constraints as opaque-role Extensions (Layer 2b, §2.2), GDX never competes with any hosted vocabulary. The discipline is what enables the pluralism.
+**This pluralism is a direct consequence of GDX holding constraint semantics out of the core.** If core validation extended even to a primitive like `min` or `pattern`, the core would have its own constraint opinion competing with the extension-layer vocabularies, and parallel-vocabulary coexistence would break — a core `min` and an `xsd:minInclusive` might disagree, raising the question of which wins. By keeping core validation at only the primitive axioms (Layer 1, §2.2) and treating all constraints as extension-layer content (Layer 2b), the core never competes with any vocabulary. The discipline is what enables the pluralism.
 
 #### 8.4.2 Validator Behavior
 
@@ -2116,7 +2164,7 @@ A Template's relationship to other Templates is expressed through `--type` refer
 
 **The GDX Common Vocabulary.** The GDX Common Vocabulary is a companion specification, separately versioned from this core specification. It defines a base set of widely useful Templates and Constraint Extensions covering numeric width and representation refinements, common semantic types (identifiers, dates, durations, currency), cryptographic and hash types, constraint identifiers, and predicate refinement extensions for use on REL declarations.
 
-The Common Vocabulary is one vocabulary among many. It ships with GDX as a convenience and as a reference vocabulary for the patterns described in this specification, but it has no privileged status at the GDX layer: per §8.4, constraint identifiers from `gdx:` are opaque to GDX in exactly the same way that identifiers from `xsd:`, `json:`, or any application-defined vocabulary are. A document using `xsd:minInclusive` is no less GDX-conformant than a document using `gdx:min`; consumers select which vocabularies they speak.
+The Common Vocabulary is one vocabulary among many. It ships with GDX as a convenience and as a reference vocabulary for the patterns described in this specification, but it has no privileged status at the core layer: per §8.4, constraint identifiers from `gdx:` are extension-layer content in exactly the same way that identifiers from `xsd:`, `json:`, or any application-defined vocabulary are. A document using `xsd:minInclusive` is no less GDX-conformant than a document using `gdx:min`; consumers select which vocabularies they speak.
 
 The Common Vocabulary is versioned independently of the core specification. Vocabulary additions and refinements may occur without revising the core; structural changes to GDX require core revision. Conforming implementations SHOULD support the Common Vocabulary in addition to the core; an implementation that supports only the core is conforming but limited, since common types and constraints will require explicit declaration in every document that uses them.
 
