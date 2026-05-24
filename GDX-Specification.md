@@ -102,6 +102,12 @@ Changes in v0.11.0 from v0.10.0:
 
 (28) **Three cross-references updated for the §1.2/§1.3 swap.** §3.1 ("responds to the problems §1.2 named" → "§1.3 names"); §8 layered-model paragraph ("(§1.3)" → "(§1.2)"); the new §1.3 closing references "(§1.2)" for the layering/pluralism design goals. Historical changelog entries that reference §1.3 at the time of their item are left as-is; they correctly describe the change at the point it was made.
 
+(29) **Role definition reframed as both structural and conceptual.** §2.1 and the §6 intro paragraph now describe Role as carrying both the structural shape (what fields and children are admitted) and the conceptual interpretation (how the element is to be read in relation to its parent). This makes explicit a property the spec previously relied on implicitly — that two roles may share a structural shape and still differ as roles because their conceptual interpretation differs.
+
+(30) **§6.5 role descriptions sharpened with explicit conceptual leads.** Each per-role subsection now leads with a one-sentence conceptual identity for the role before describing structural mechanics. Object is "a thing with identity"; Record is "a compound property"; Property is "an attribute of its parent"; Edge is "a graph statement"; Block is "a labeled section"; Annotation is "a note attached to its parent"; Package is "a transport wrapper"; Group is "a transport partition"; Qualifier is "a refinement on its parent's value"; Extension is "a schema rule attached to a Template"; Embedded is "a structured value in a scalar's position"; Node is "a semi-structured pocket"; Set is "a multiplicity"; Template is "a type contract"; REL is "a predicate as a first-class entity"; Reference is "a typed pointer to another element". The conceptual lead resolves why structurally-similar roles (Object/Record being the load-bearing example) exist as distinct roles — the distinction lives in interpretation, not in structure.
+
+(31) **§6.5.2 adds explicit Object/Record comparison.** A new paragraph at the end of §6.5.2 names that Records and Objects share structural shape but differ conceptually, with the consequences for addressability, persistence, and document root spelled out.
+
 
 ## Table of Contents
 
@@ -291,7 +297,7 @@ This section defines the terms used throughout the specification. The key words 
 
 - **Prefix** — the leading token that declares an element's role. Belongs to the closed vocabulary defined in §6.
 
-- **Role** — the structural position an element occupies in the data model: Object, Record, Block, Edge, Property, Set, Node, Qualifier, Extension, Template, Relation Declaration, Annotation, Package, or Group. Obtained from a prefix by stripping any modifier. See §6.
+- **Role** — the structural position an element occupies in the data model *and* the conceptual interpretation that position carries. A role names both the structural shape (what fields and children are admitted) and the meaning (how the element is to be interpreted in relation to its parent and the wider document). The closed enumeration of roles — Object, Record, Block, Edge, Property, Set, Node, Qualifier, Extension, Template, Relation Declaration, Annotation, Package, Group — covers both axes; each role's detail is in §6.5. Obtained from a prefix by stripping any modifier.
 
 - **Modifier** — a sigil or letter prefix-fragment that adapts a base role without changing its composition rules: `*`(Set), `%`(Embedded), `.`(Qualifier), `_`(Extension), `N`(Node), `DEF`(Template).
 
@@ -1089,7 +1095,7 @@ Both are valid GDX. The simple form is not a stripped-down version of the rich f
 
 ## 6. Element Roles
 
-An element's **role** is its structural position in the data model. The role is declared by the element's prefix; the closed set of roles is enumerated by the closed set of prefixes. This section introduces the prefix vocabulary in three layers — the base roles (§6.2), the set suffix and reference operator (§6.3), and the refinement modifiers (§6.4) — then provides detailed treatment of each role (§6.5).
+An element's **role** is its position and interpretation in the data model. The role declares both what the element is structurally (what fields it carries, what children it admits) and how it is to be read conceptually (an attribute of its parent, a thing with identity, a graph statement, a refinement, and so on). Two roles may share a structural shape and still differ as roles because their conceptual interpretation differs — Object and Record are the load-bearing example (§6.5.1, §6.5.2). The role is declared by the element's prefix; the closed set of roles is enumerated by the closed set of prefixes. This section introduces the prefix vocabulary in three layers — the base roles (§6.2), the set suffix and reference operator (§6.3), and the refinement modifiers (§6.4) — then provides detailed treatment of each role in §6.5, where the structural and conceptual aspects of each role are both stated.
 
 The prefix vocabulary is **closed** and committed against future change. Implementations MUST NOT introduce new prefixes; extensibility is provided through Templates (§8), Extensions, and the predicate vocabulary mechanism. New primitive types, new structural roles, or new domain concerns are expressed by composing existing prefixes with Templates, Extensions, and vocabulary identifiers — never by adding a new prefix.
 
@@ -1272,9 +1278,9 @@ This section provides detailed treatment of each role introduced in §6.2, §6.3
 |-----------|----------|-----------|------------|
 | `OBJ`     | `O`      | —         | required (resource identifier) |
 
-An Object is an identifiable entity that may be referenced by other Objects. Objects are the primary type for data that will be persisted and exchanged. An Object's identifier is a resource identifier: a path, CURIE, GUID, IRI, or other globally meaningful identifier. The specification places no constraint on the scheme.
+An Object is a **thing with identity** — an independently-identified entity that stands on its own and may be referenced from other elements. Conceptually, an Object is the kind of element that *other* elements refer to: a Person, an Order, a Server, a Document. It is the unit of persistence and exchange, and its identifier (a path, CURIE, GUID, IRI, or other globally meaningful identifier) is what makes that referenceability possible. The specification places no constraint on the identifier scheme.
 
-The root of a GDX document MUST be one or more Objects, Templates, REL declarations, or Packages. Objects may not contain other Objects except through the Embedded modifier (§6.5.11) or as transport-layer payload (§6.5.7, §9).
+Structurally, an Object is a container of named children. The root of a GDX document MUST be one or more Objects, Templates, REL declarations, or Packages. Objects may not contain other Objects except through the Embedded modifier (§6.5.11) or as transport-layer payload (§6.5.7, §9).
 
 ```
 <OBJ people/alice
@@ -1289,9 +1295,11 @@ The root of a GDX document MUST be one or more Objects, Templates, REL declarati
 |-----------|----------|-----------|------------|
 | `REC`     | `R`      | —         | required (local) when in named-attribute position |
 
-A Record is a composite of named properties — the canonical class instance or struct equivalent in GDX. A Record *contains* its children, in contrast to a Block which merely *labels* a region of children (§6.5.5). A Record's identifier is a local identifier, meaningful within the document.
+A Record is a **compound property** — a named composite that belongs to its parent's structure rather than standing on its own. Conceptually, a Record is to its parent what a struct or nested object is to a programming-language container: it represents "the parent has an X of shape Y," where Y is a collection of named properties. A Record contributes to its parent's identity rather than carrying its own.
 
-A Record may contain Properties, Sets, Edges, nested Records, Qualifiers, Nodes, and Annotations. Records may not contain Objects (except through the Embedded modifier, §6.5.11), Groups, or Extensions.
+Structurally, a Record is a container of named children, admitting Properties, Sets, Edges, nested Records, Qualifiers, Nodes, and Annotations. A Record's identifier is a local identifier, meaningful within its containing scope — it names the slot the Record fills in its parent, not a globally addressable resource. A Record *contains* its children, in contrast to a Block which merely *labels* a region of children (§6.5.5). Records may not contain Objects (except through the Embedded modifier, §6.5.11), Groups, or Extensions.
+
+**Records and Objects share structural shape** (both are composites of named children) but differ conceptually: an Object stands as an identified thing; a Record belongs to its parent as a compound property. The distinction matters for addressability (Objects are globally referenceable by Id; Records require path or key composition to reach — see §5.2.6), for persistence (Objects are the unit of storage; Records are stored as part of their containing Object), and for what may root a document (Objects may root; Records may not).
 
 ```
 <REC address
@@ -1302,7 +1310,9 @@ A Record may contain Properties, Sets, Edges, nested Records, Qualifiers, Nodes,
 
 #### 6.5.3 Property — `STR`, `INT`, `FLOAT`, `BOOL`, `BYTE`
 
-Value primitives carry typed scalar values as their Resource. The Resource value-kind MUST match the prefix family.
+A Property is an **attribute of its parent** — a single typed value that participates in the parent's structure. Conceptually, the Property's Id names the attribute; the Resource carries its value; the parent owns the Property as part of its content. Properties do not stand on their own — like Records, they belong to their containing element rather than being addressable as independent entities. Properties are GDX's leaves: the smallest carriers of typed information.
+
+Structurally, value primitives carry typed scalar values as their Resource. The Resource value-kind MUST match the prefix family.
 
 | Canonical | Minified | Resource value-kind |
 |-----------|----------|---------------------|
@@ -1328,7 +1338,9 @@ Properties require an identifier when in named-attribute position and may carry 
 |-----------|----------|---------------------|------------|
 | `EDGE`    | `E`      | `reference`         | `#rel` field required |
 
-An Edge expresses a directed relation between two entities. Edges are GDX's representation of labeled property graph (LPG) edges: the parent element is the source, the Resource is a reference (`@target-id`) designating the target Object, and the `#rel` field names the edge type.
+An Edge is a **graph statement** — a directed assertion that one entity stands in a named relation to another. Conceptually, an Edge says "the parent is related to the target by this predicate," and like any statement it can carry its own attributes describing how, when, or with what confidence the relation holds. Edges are GDX's first-class representation of labeled property graph (LPG) edges, baked into the same element form as the rest of the data model.
+
+Structurally, the parent element is the source, the Resource is a reference (`@target-id`) designating the target Object, and the `#rel` field names the edge type.
 
 ```
 <OBJ alice
@@ -1380,7 +1392,7 @@ Implementations MAY support modes where unresolved references are treated as war
 |-----------|----------|-----------|------------|
 | `BLK`     | —        | —         | required (local) |
 
-A Block labels a region of an Object's children with a shared purpose or context. Where a Record asks "what is this composite value?", a Block asks "what context do these children belong to?". A Block is not a data type — it does not represent a structured composite that the parent *has*; it labels a region of the parent's children, asserting that they share a common purpose. BLK has no minified form.
+A Block is a **labeled section** — an organizational grouping that names a region of children sharing a common purpose or context. Conceptually, where a Record asks "what is this composite value?", a Block asks "what context do these children belong to?". A Block is not a data type — it does not represent a structured composite that the parent *has*; it labels a region of the parent's children, asserting that they share a common purpose. Structurally, a Block is a named container that holds children but does not contribute a composite value to its parent. BLK has no minified form.
 
 Blocks accept the same children as Objects and may only appear under an Object or another Block. The children of a Block are addressed through the Block identifier (e.g., `/article-42/head/title`).
 
@@ -1406,7 +1418,7 @@ A Block label says something about its children's purpose in the Object, but is 
 |-----------|----------|---------------------|
 | `REM`     | —        | `string`            |
 
-A `REM` element is a leaf-only metadata note. REM elements may appear under any role and never have children. The Resource is a string carrying the annotation text. REM has no minified form.
+An Annotation is a **note attached to its parent** — out-of-band commentary intended for human or tooling consumption rather than for the data model's content. Conceptually, an Annotation is text added alongside the data: provenance, audit notes, explanatory remarks, processing hints. Structurally, a `REM` element is a leaf-only string-valued element that may appear under any role and never has children. REM has no minified form.
 
 ```
 <OBJ Order123
@@ -1424,7 +1436,7 @@ Annotations survive round-trip serialization and are part of the document, but c
 |-----------|----------|-----------|------------|
 | `PKG`     | —        | —         | optional   |
 
-A Package is a transport-layer construct (§9). It wraps Objects, Templates, REL declarations, and metadata for transport between systems. Packages are not persisted as such; receivers unpack them and store the contents. PKG has no minified form.
+A Package is a **transport wrapper** — an envelope around a payload of Objects, Templates, and REL declarations along with metadata describing the transmission itself. Conceptually, a Package is what travels between systems: it groups the things being exchanged with the information needed to interpret that exchange (source, timestamp, version, correlation identifiers). Packages are not persisted as such; receivers unpack them and store the contents. Structurally, a Package is a transport-layer construct (§9) admitting Objects, Templates, REL declarations, Properties, Records, Sets, Annotations, and Groups as children. PKG has no minified form.
 
 ```
 <PKG color-export-2026-04-29
@@ -1442,7 +1454,7 @@ Packages MUST NOT contain other Packages. See §7.2 rule 10 and §9 for transpor
 |-----------|----------|-----------|------------|
 | `GRP`     | —        | —         | required (local) |
 
-A Group is a transport-layer construct (§9) that partitions a Package's contents into named subsets with optional metadata. Groups may only appear as children of Packages or other Groups. Like Packages, Groups are not designed to be persisted. GRP has no minified form.
+A Group is a **transport partition** — a named subset within a Package, used to organize the payload into addressable chunks with their own metadata. Conceptually, a Group answers "which slice of the payload does this material belong to?" — vendor partitions, semantic categories, batch identifiers, or any other organizational axis the sender wishes to surface to the receiver. Structurally, a Group is a transport-layer construct (§9) that partitions a Package's contents into named subsets with optional metadata; Groups may only appear as children of Packages or other Groups. Like Packages, Groups are not designed to be persisted. GRP has no minified form.
 
 ```
 <PKG color-export-2026-04-29
@@ -1459,7 +1471,9 @@ A Group is a transport-layer construct (§9) that partitions a Package's content
 
 #### 6.5.9 Qualifier — `.`
 
-The `.` modifier marks an element as a Qualifier. Qualifiers carry constraints, units, modes, confidence levels, or other metadata that refines the meaning of their parent. They contribute to data semantics and travel with the data. Qualifiers may contain Annotations only.
+A Qualifier is a **refinement on its parent's value** — metadata that adjusts how the parent's content is to be interpreted. Conceptually, a Qualifier says "the parent's value, but read it with this additional context": a unit on a measurement, a confidence on an observation, a mode on a configuration value, a constraint context on a typed value. Qualifiers contribute to data semantics and travel with the data; removing a Qualifier changes what the data means.
+
+Structurally, the `.` modifier marks an element as a Qualifier. Qualifiers may contain Annotations only.
 
 Qualifier is best understood by contrast with Extension (§6.5.10): a **Qualifier** modifies *instance data* (it travels with the value, contributes to interpretation, and is part of the data model); an **Extension** defines *schema rules* (it travels with the Template, contributes to validation, and is NOT part of the data model). Removing a Qualifier changes the meaning of the data; removing an Extension may relax validation but does not change instance data semantics. The `.` sigil signals "this element refines what its parent *means*"; the `_` sigil signals "this element constrains what instances *must satisfy*."
 
@@ -1480,7 +1494,9 @@ Qualifier is best understood by contrast with Extension (§6.5.10): a **Qualifie
 
 #### 6.5.10 Extension — `_`
 
-The `_` modifier marks an element as an Extension — a schema-only attachment that appears as a child of a Template (§6.5.14). Extensions are NOT part of the data model. The structural restriction — Extensions valid only under Templates — is enforced by the composition matrix (§7.1). An Extension appearing outside a Template is malformed.
+An Extension is a **schema rule attached to a Template** — a vocabulary-defined constraint or interpretation directive that instances of the Template are to be evaluated against. Conceptually, an Extension says "instances of this Template must satisfy this rule," where the rule's meaning is owned by the vocabulary that defines the Extension's identifier (§8.4). Extensions are part of the schema layer, not the data layer; removing an Extension may relax validation but does not change what any instance value means.
+
+Structurally, the `_` modifier marks an element as an Extension — a schema-only attachment that appears as a child of a Template (§6.5.14). Extensions are NOT part of the data model. The structural restriction — Extensions valid only under Templates — is enforced by the composition matrix (§7.1). An Extension appearing outside a Template is malformed.
 
 See §6.5.9 for the contrast with Qualifier — both attach to elements, but Extension defines schema rules while Qualifier refines instance data.
 
@@ -1515,9 +1531,9 @@ The first is data ("the temperature value, expressed in celsius"); the second is
 
 #### 6.5.11 Embedded — `%`
 
-The `%` modifier marks a Property, Record, or Object as eligible to appear in a property-value position — where a scalar value would otherwise sit. The embedded element retains its base role's children and identifier rules.
+An Embedded element is a **structured value in a scalar's position** — a way to put a composite where a single typed value would normally sit, while keeping the composite's full GDX identity. Conceptually, Embedded says "the parent has a value, and the value happens to be structured rather than scalar": an address embedded as a Property's value, an alternative representation of a measurement embedded alongside the canonical one, an Object embedded as a configuration value. Without Embedded, structured values would have to be serialized to strings and re-parsed; Embedded preserves the structure in place.
 
-Embedded is the mechanism by which structured values can occupy positions normally reserved for scalars. Without `%`, a Property's value is its Resource (a typed scalar); with `%`, a Property may carry a structured value as its content.
+Structurally, the `%` modifier marks a Property, Record, or Object as eligible to appear in a property-value position — where a scalar value would otherwise sit. The embedded element retains its base role's children and identifier rules.
 
 | Canonical | Minified | Base role |
 |-----------|----------|-----------|
@@ -1557,7 +1573,9 @@ The Embedded modifier is particularly useful when a structured value should reta
 
 #### 6.5.12 Node — `N`
 
-The `N` letter-modifier marks an element as establishing or participating in a Node-zone subtree — a semi-structured container for ad-hoc or schema-less material. The Node modifier composes with primitive bases or with `REC`. The `N` is a letter rather than a sigil because Node-zone elements have different composition rules than the rest of GDX (isolated subtrees — see §7.2 rule 5).
+A Node-zone element is a **semi-structured pocket** within an otherwise structured document — a region where ad-hoc or schema-less material is permitted to live without disturbing the structured discipline around it. Conceptually, Node-zone material says "this subtree's shape isn't fixed; treat it as provisional or external": imported audit data of unknown shape, blobs of metadata from external systems, ad-hoc payloads where a Template would be premature.
+
+Structurally, the `N` letter-modifier marks an element as establishing or participating in a Node-zone subtree. The Node modifier composes with primitive bases or with `REC`. The `N` is a letter rather than a sigil because Node-zone elements have different composition rules than the rest of GDX (isolated subtrees — see §7.2 rule 5).
 
 | Canonical | Minified | Carries Resource? | Resource value-kind |
 |-----------|----------|-------------------|---------------------|
@@ -1587,7 +1605,9 @@ Use Node-zone elements sparingly. Their permissiveness in containment positions 
 
 #### 6.5.13 Set — `*`
 
-The `*` suffix promotes a value-bearing primitive or Record into a multi-valued collection. A Set is a role in its own right, not a transparent overlay on its base role: Set composition rules differ from Property composition rules — a Set may contain its members; a Property cannot.
+A Set is a **multiplicity** — "many of these" as a named element. Conceptually, a Set says "the parent has not one of these but a collection of them": tags on a record, contacts on a person, allowed values in a configuration. The Set itself is the element that participates in its parent's structure; its members are positional rather than named (their order is the document order in which they appear).
+
+Structurally, the `*` suffix promotes a value-bearing primitive or Record into a multi-valued collection. A Set is a role in its own right, not a transparent overlay on its base role: Set composition rules differ from Property composition rules — a Set may contain its members; a Property cannot.
 
 The `*` is a suffix because Set construction is structurally distinct from the refinement modifiers. A Set's value-kind is "collection of base-instances" rather than the base's single-value-kind. Reading `STR*` as "STR, plural" makes the collection semantics legible at the prefix level. See §6.3.1 for the suffix's role in the overall prefix vocabulary.
 
@@ -1639,7 +1659,9 @@ When emptiness itself is meaningful for the application, the Template MAY use `g
 
 #### 6.5.14 Template — `DEF`
 
-The `DEF` prefix-fragment marks an element as a Template definition — a type contract rather than an instance (§8). A Template MUST carry an identifier (the type name) and follows the composition rules of its base role. Templates are the only role that may carry Extension children. Template prefixes are canonical-only; they have no minified form.
+A Template is a **type contract** — a declaration of the shape and constraints an instance must satisfy to claim conformance to a named type (§8). Conceptually, a Template is written in instance vocabulary: it looks like the elements it describes, with the same prefixes and the same composition rules, but with `DEF` declaring "this is the contract, not the data." A Template is what an instance points to through its `--type` field; the instance asserts identity, the Template defines what that identity means structurally.
+
+Structurally, the `DEF` prefix-fragment marks an element as a Template definition. A Template MUST carry an identifier (the type name) and follows the composition rules of its base role. Templates are the only role that may carry Extension children. Template prefixes are canonical-only; they have no minified form.
 
 | Canonical  | Base role |
 |------------|-----------|
@@ -1678,7 +1700,9 @@ A Template's *fields* are described using regular prefixes (not `DEF…` prefixe
 |-----------|----------|-----------|------------|
 | `REL`     | —        | —         | required (predicate identifier) |
 
-A `REL` element declares a predicate as a first-class entity. Predicates declared via REL are referenced from Edges (and other relation-bearing positions) through the `#rel` field. REL has no minified form.
+A Relation Declaration is a **predicate as a first-class entity** — the formal counterpart to the `#rel` references that Edges and other elements carry. Conceptually, a REL says "this predicate has its own identity, and other elements (or RELs) may describe it": its domain and range, its inverse, whether it is symmetric or transitive, what vocabulary it participates in. Without RELs, predicates would be opaque identifiers; with RELs, the predicate vocabulary itself becomes part of the data model.
+
+Structurally, a `REL` element declares a predicate as a first-class entity. Predicates declared via REL are referenced from Edges (and other relation-bearing positions) through the `#rel` field. REL has no minified form.
 
 The fields a REL carries — domain, range, inverse, symmetry, cardinality, and other semantic properties — are determined by the vocabulary the predicate participates in. The core specification defines REL only as a structural role; the predicate semantics live in vocabulary specifications. The GDX Common Vocabulary defines a base set of predicate refinement extensions. Applications may use additional vocabulary-defined extensions or define their own.
 
@@ -1694,7 +1718,9 @@ A REL declaration MAY appear at the document root (alongside or instead of a pri
 
 #### 6.5.16 References — `@KIND`
 
-The `@` operator (§6.3.2) composes with any base or modifier-base composition to produce a typed reference. The resulting element is a leaf-like typed pointer whose Resource is an identifier naming the target.
+A Reference is a **typed pointer to another element** — an element whose content is the identifier (or path or key) of a target rather than a value of its own. Conceptually, a Reference says "the parent has a thing-of-kind-X, and the thing in question is *that* one": an Object's employer, a Template's predecessor version, a configuration's fallback. The Reference is leaf-like — it identifies and stops — distinguishing it from an Edge, which is a graph statement with its own attributes (§3.6).
+
+Structurally, the `@` operator (§6.3.2) composes with any base or modifier-base composition to produce a typed reference. The resulting element is a leaf-like typed pointer whose Resource is an identifier naming the target.
 
 **Element shape.** A `@KIND` element MAY carry an identifier (the name of this reference within its parent's scope), MAY carry a `#rel` field (a predicate naming the link's meaning, useful for vocabulary metadata), and carries its target as a reference literal in Resource position. Children, if any, are limited to Qualifiers and Annotations.
 
