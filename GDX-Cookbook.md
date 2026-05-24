@@ -647,21 +647,21 @@ A GDX vocabulary document defines the predicates, concepts, and schemas of a dom
 >
 
 <REL acme:knows
-    <_OBJ acme:domain : @acme:Person>
-    <_OBJ acme:range  : @acme:Person>
+    <@OBJ #acme:domain : @acme:Person>
+    <@OBJ #acme:range  : @acme:Person>
     <_BOOL acme:symmetric : true>
     <STR rdfs:comment : "Asserts an acquaintance or social relationship.">
 >
 
 <REL acme:employs
-    <_OBJ acme:domain : @acme:Organization>
-    <_OBJ acme:range  : @acme:Person>
+    <@OBJ #acme:domain : @acme:Organization>
+    <@OBJ #acme:range  : @acme:Person>
     <@REL #acme:inverse : @acme:employedBy>
 >
 
 <REL acme:employedBy
-    <_OBJ acme:domain : @acme:Person>
-    <_OBJ acme:range  : @acme:Organization>
+    <@OBJ #acme:domain : @acme:Person>
+    <@OBJ #acme:range  : @acme:Organization>
 >
 
 <DEFOBJ acme:Person

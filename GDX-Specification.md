@@ -128,6 +128,10 @@ Structurally, Extensions are no longer restricted to Templates and RELs. §8.1 c
 
 Cookbook Pattern 20 (Adjunct Extension for Non-Schema Metadata) added, showing provenance on an Object, presentation hint on a Property, migration directive on a Template, and confidence Extension on an Edge. Pattern 19 (Annotation for Provenance) updated to clarify the Annotation-vs-Extension distinction (free-text vs vocabulary-keyed) with a pointer to Pattern 20. Patterns 20-35 renumbered to 21-36; TOC ranges updated.
 
+(39) **Extension value-kind scope clarified; broken `_OBJ` examples fixed.** §7.10 (Extension) adds a normative paragraph stating that Extensions carry primitive value-kinds only (the closed table: `_STR`, `_INT`, `_FLOAT`, `_BOOL`, `_BYTE`). Reference-valued adjunct statements use a Reference (`@KIND`, §7.16) child with a `#rel` predicate naming the assertion. Extensions and References together cover the adjunct-statement surface — Extensions for primitive values, References for reference values — and both attach as vocabulary-keyed children of the parent.
+
+The prior commit (38) introduced examples in §7.10, §7.15, and Cookbook Pattern 26 that incorrectly used `_OBJ` (`<_OBJ gdx:domain : @gdx:Person>`) to express reference-valued REL metadata. `_OBJ` is not in the closed Extension prefix vocabulary and would semantically mean "Extension whose Resource is an Object" — either meaningless (Objects are not a value-kind) or illegal (embedding an Object inside an Extension violates §8.2 rule 2 Object exclusion). All occurrences corrected to use References with `#rel` predicates: `<@OBJ #gdx:domain : @gdx:Person>` for Object references, `<@DEFOBJ #gdx:supersedes : @CustomerV1>` for Template references. No structural change required; the composition matrix already admits References as REL and Template children.
+
 
 ## Table of Contents
 
@@ -480,8 +484,8 @@ GDX expresses this primitive through three coordinated structural mechanisms:
 
 ```
 <REL gdx:knows
-    <_OBJ gdx:domain : @gdx:Person>
-    <_OBJ gdx:range  : @gdx:Person>
+    <@OBJ #gdx:domain : @gdx:Person>
+    <@OBJ #gdx:range  : @gdx:Person>
     <_BOOL gdx:symmetric : true>
 >
 ```
@@ -1570,6 +1574,8 @@ Even when a Template incorporates an Extension into a conformance claim — e.g.
 
 Structurally, the `_` modifier marks an element as an Extension. Extensions MAY appear as children of any element that admits children (the composition matrix §8.1 lists Extension as an admitted child role on all data-bearing and declaration-bearing parents). The Extension carries a vocabulary-defined identifier in its `Id`-position field (the assertion's name) and a typed Resource (the assertion's value, of value-kind matching the Extension's prefix family).
 
+**Extensions carry primitive value-kinds only.** The closed Extension prefix vocabulary admits string, int, float, bool, and bytes (the table below). To express an adjunct statement whose value is a *reference* to another element — for example, "the domain of this predicate is the `gdx:Person` Object" — use a Reference (`@KIND`, §7.16) child with a `#rel` predicate naming the assertion: `<@OBJ #gdx:domain : @gdx:Person>`. Extensions and References together cover the adjunct-statement surface: Extensions for primitive-valued assertions, References for reference-valued assertions. Both attach to elements as vocabulary-keyed children; both are adjunct in nature; the choice between them follows the value-kind of the assertion.
+
 See §7.9 for the contrast with Qualifier — both attach to elements, but Qualifier is *constitutive* (refining what the parent's value means; removing changes meaning), while Extension is *adjunct* (an assertion alongside; removing does not change what the parent is or means). See §7.6 for the contrast with Annotation (REM) — Annotation is free-text without a vocabulary identifier; Extension is vocabulary-keyed and typed.
 
 | Canonical | Minified | Resource value-kind |
@@ -1593,8 +1599,8 @@ A predicate-semantic Extension on a REL:
 
 ```
 <REL gdx:knows
-    <_OBJ gdx:domain : @gdx:Person>
-    <_OBJ gdx:range  : @gdx:Person>
+    <@OBJ #gdx:domain : @gdx:Person>
+    <@OBJ #gdx:range  : @gdx:Person>
     <_BOOL gdx:symmetric : true>
 >
 ```
@@ -1626,7 +1632,7 @@ A migration directive attached to a Template:
     <STR firstName>
     <STR lastName>
     <STR email>
-    <_OBJ gdx:supersedes : @CustomerV1>
+    <@DEFOBJ #gdx:supersedes : @CustomerV1>
     <_STR migrate:from-v1 : "add-email-from-default">
 >
 ```
@@ -1828,8 +1834,8 @@ A REL admits two kinds of children:
 
 ```
 <REL gdx:knows
-    <_OBJ gdx:domain : @gdx:Person>
-    <_OBJ gdx:range  : @gdx:Person>
+    <@OBJ #gdx:domain : @gdx:Person>
+    <@OBJ #gdx:range  : @gdx:Person>
     <_BOOL gdx:symmetric : true>
 >
 
@@ -1860,20 +1866,20 @@ The three are coordinated by name: when a `#rel` identifier matches a `REL` iden
 >
 
 <REL gdx:knows
-    <_OBJ gdx:domain : @gdx:Person>
-    <_OBJ gdx:range  : @gdx:Person>
+    <@OBJ #gdx:domain : @gdx:Person>
+    <@OBJ #gdx:range  : @gdx:Person>
     <_BOOL gdx:symmetric : true>
 >
 
 <REL gdx:employs
-    <_OBJ gdx:domain : @gdx:Organization>
-    <_OBJ gdx:range  : @gdx:Person>
+    <@OBJ #gdx:domain : @gdx:Organization>
+    <@OBJ #gdx:range  : @gdx:Person>
     <@REL #gdx:inverse : @gdx:employedBy>
 >
 
 <REL gdx:employedBy
-    <_OBJ gdx:domain : @gdx:Person>
-    <_OBJ gdx:range  : @gdx:Organization>
+    <@OBJ #gdx:domain : @gdx:Person>
+    <@OBJ #gdx:range  : @gdx:Organization>
 >
 
 <DEFOBJ gdx:Person
