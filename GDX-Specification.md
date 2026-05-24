@@ -46,7 +46,7 @@ Changes in v0.10.0 from v0.9.10 are substantial:
 
 Changes in v0.11.0 from v0.10.0:
 
-(1) **Path-mode and key-mode reference resolution are now normative.** The `$PathExpression` form reserved in v0.10.0 §11.4 is fully specified in a new companion document, the GDX Path Expressions Specification (`GDX-Path.md`). The path grammar supports three segment kinds — `IdSegment` (bareword, matches `Id`), `RelSegment` (`#R`, matches `Rel`), and `OrdinalSegment` (`[N]`, matches by 1-based document order). The `&Key` reference literal provides key-based addressing through the location-stable `Key` anchor. Five reference-literal forms are recognized: `IdRef` (`@Identifier`), `PathRef` (`$PathExpression`), `KeyRef` (`&Key`), `IdPathRef` (`@Identifier$PathExpression`), and `IdKeyRef` (`@Identifier&Key`). The composed forms express cross-document addressing.
+(1) **Path-mode and key-mode reference resolution are now normative.** The `$PathExpression` form reserved in v0.10.0 §11.4 is fully specified in a new companion document, the GDX Path Expressions Specification (`GDX-Path.md`). The path grammar supports three segment kinds — `IdSegment` (bareword, matches `Id`), `RelSegment` (`#R`, matches `Rel`), and `OrdinalSegment` (`[N]`, matches by 1-based document order). The `&Key` reference literal provides key-based addressing through the location-stable `Key` anchor. Five reference-literal forms are recognized: `IdRef` (`@Anchor`), `PathRef` (`$PathExpression`), `KeyRef` (`&Key`), `IdPathRef` (`@Anchor$PathExpression`), and `IdKeyRef` (`@Anchor&Key`). The composed forms express cross-document addressing. The `@Anchor` production carries an optional role marker (`@OBJ:id`, `@REL:id`, `@DEFOBJ:id`, etc.) drawn from the closed prefix vocabulary; when omitted, composed references default to an Object anchor. The marker enables composed references to non-Object anchors (RELs, Templates, transport-layer containers) without requiring resolver inference.
 
 (2) **§11.4 closes.** Path-mode reference resolution is no longer an open issue. References to §11.4 in earlier revisions are satisfied by the companion specification.
 
@@ -65,6 +65,34 @@ Changes in v0.11.0 from v0.10.0:
 (9) **§5.1.1 sigils table updated.** The `$` row is updated from "reserved, grammar deferred" to "introduces a path-mode reference literal (§5.2.6, `GDX-Path.md`)."
 
 (10) **Migration impact.** Existing documents using leading-slash identifiers MUST be migrated (drop the leading slash, retaining any interior `/`). Existing documents using only `@Identifier` references are unaffected. Existing documents that used `&K` numeric Keys for Template-slot alignment MUST be migrated to named-Id Template slots; the `Key` field continues to be lexically valid but no longer carries slot-alignment semantics. Templates that previously used `&1`, `&2` positional slots are migrated to named slots (`firstName`, `lastName`, etc.). Existing documents that used a non-normative `$`-prefixed literal under v0.10.0 §11.4's implementation-defined window MUST conform to the v0.11.0 grammar.
+
+(11) **§1.3 adds the substrate-with-pluggable-constraints positioning.** A new design-goal paragraph names GDX as a structural schema (the prefix vocabulary, element model, Template structure, composition axioms) with no constraint implementation. Constraint vocabularies layer on top as Constraint Extensions whose identifiers GDX records but never interprets.
+
+(12) **§2.2 decomposes Layer 2 conformance.** The single "Schema Conformance" layer splits into Layer 2a (Template structural conformance, owned by GDX) and Layer 2b (constraint-vocabulary conformance, owned by the constraint vocabulary). The decomposition makes explicit that an instance may be Layer 2a-conforming while Layer 2b-non-conforming for one vocabulary and Layer 2b-conforming for another; verdicts are vocabulary-relative above the primitive floor. Appendix A is updated to mirror the split.
+
+(13) **§7.5 closes with a primitive-axioms statement.** A new closing paragraph names the §7.5 validation requirements as the GDX-native floor (Layer 1) and points to §8 for the schema layer.
+
+(14) **§8 gains a layered-intro paragraph.** A new paragraph at the top of §8 frames the section in three layers — Template structure, Template-instance alignment, and Constraint Extensions — and ties each to the §2.2 conformance layers.
+
+(15) **§8.4 renamed and rewritten.** Previous title "Validation Extensions" becomes "Constraint Extensions" to reflect that GDX hosts, vocabularies validate. New normative MUST: GDX implementations MUST NOT interpret constraint semantics; constraint identifiers are opaque to GDX. A new §8.4.1 "Parallel Constraint Vocabularies" formalizes the multi-vocabulary coexistence property and gives a worked example showing XSD, JSON Schema, and a vendor vocabulary on the same Template. §8.4.2 covers validator behavior on recognized vs unrecognized identifiers.
+
+(16) **§8.6 updates Common Vocabulary framing.** The Common Vocabulary is positioned as one vocabulary among many — it ships with GDX as a convenience and reference but has no privileged status at the GDX layer. `gdx:` constraint identifiers are opaque to GDX in the same way as `xsd:`, `json:`, or any other.
+
+(17) **§8.2 expands into subsections covering the universal claim rule and materialization.** §8.2.1 (Slot Alignment) carries forward the Id-and-Rel alignment rule. §8.2.2 (Cross-Role and Transport Restrictions) carries forward the prefix-matching rules. §8.2.3 (The Universal Claim Rule) is new: a four-case matrix governs how Template-declared and instance-declared values reconcile on any claim-bearing field (Rel, Key, default Resource, nested `--type`). Differing claims are conflicts; matching claims are confirmed; silent-on-one-side defers to the other. §8.2.4 (Materialization) is new: defines the build-time operation of writing Template-supplied values into the instance as explicit fields, motivated by the searchability and self-description requirements of persisted documents. Materialization is RECOMMENDED for persistence and OPTIONAL for in-memory processing.
+
+(18) **§8.2 distinguishes named type identity from observable conformance.** Two new paragraphs in §8.2: (a) `--type` is an identity claim anchored to the Template name; two Templates with identical shapes are different types, and an instance of one is not silently an instance of the other; (b) cross-type conformance — an instance of type A structurally satisfying Template B — is a separately observable relation, useful for validation against multiple schemas, version-compatibility checks, and migration tooling. Conformance does not redefine identity. Consumers MUST NOT silently substitute one type for another even when their instances mutually conform; any cross-conformance is surfaced as a derived observation, not a rewrite of the original `--type` claim.
+
+(19) **§1.1 reframes GDX as an abstract data model with concrete representations.** A new opening paragraph establishes that GDX is the data model — the abstract content — and that Standard Form, Compact Form, Binary Form, and programmatic in-memory form are alternative concrete representations of that model. This clarifies the boundary "what is GDX?" and positions the various forms as faithful realizations rather than separate things.
+
+(20) **§4 (Abstract Data Model) intro reinforces the model/representation distinction.** New paragraph ties the data model defined in §4 to its concrete realizations: each preserves the same elements, prefixes, field semantics, and composition relationships; conversions transform surface syntax without changing content.
+
+(21) **§2.1 adds Core / Extension definitional pair.** New terminology entries formally distinguish the **core** (what GDX itself defines and interprets — prefix vocabulary, element model, grammars, composition, Template-instance alignment, claim rule, primitive value-kind axioms) from **extension** (vocabulary-defined material that rides on top of the core — Rel identifiers, Type identifiers, Constraint Extension content). The pair names the **interpretation** boundary between what GDX understands and what GDX hosts. The terms *core layer* and *extension layer* are introduced as a convenient shorthand for the two sides of the boundary.
+
+(22) **§3.7 articulates the optional-elaboration principle.** New subsection: elements are valid at their minimum form (Prefix alone); elaboration is opt-in and proceeds along two structurally distinct patterns. Identity elaboration is orthogonal across three independent axes (`Id`, `Key`, `Rel`). Value elaboration is layered across five layers (category, value, structural identity, constraint attachment, constraint semantics), where each layer is optional given the layer above and the layers live in different places (instance, Template, vocabulary). The principle organizes how to read the rest of §3 and explains why simple GDX stays simple while richer cases grow without restructuring.
+
+(23) **§1.3 adds integration-surface, not-LCD framing.** A clause in the substrate-paragraph clarifies that GDX is the integration surface where multiple vocabularies coexist, not a lowest-common-denominator subset of them. The structural schema is opinionated and complete; what's neutral is the constraint layer.
+
+(24) **Targeted wording sweep: core/extension terminology adopted across §2.2 and §8.4.** Replaced phrases like "the GDX layer" and "hosted on top" with "core layer" and "extension layer" where the new terminology disambiguates the interpretation boundary from the mechanism boundary. Other places — where wording was already clear — were left as-is to avoid churn.
 
 
 ## Table of Contents
@@ -146,6 +174,8 @@ GDX's design choices are responses to the problems named in §1.2 and the gaps l
 **Inline semantic layer.** The optional `#rel` field on any element names a shared predicate that aligns the element's local identity to a cross-document vocabulary. A property `<STR #schema:givenName firstName : "Alice">` is locally named `firstName` but semantically identifies as `schema:givenName`. Two systems using different local names can recognize the same concept by matching the predicate. The alignment travels with the data. This functionality allows data and and semantic layers to be constructed in parallel.
 
 **Simple schemas.** Schemas in GDX are GDX. A Template is an element with a `DEF[type]` prefix that declares the expected shape of conforming instances. The same parser reads Templates and instances; the same syntax expresses both. There is no separate schema language, and a Template can travel in the same document as the instances it describes. 
+
+**Structural schema with pluggable constraint vocabularies.** GDX defines a complete structural schema — the prefix vocabulary, the element model with its identity and value fields, Template-based slot declarations, and composition axioms. This structural schema is what GDX *is*, and it is fixed by this specification. What GDX deliberately does *not* define is constraint implementation: numeric bounds, string patterns, regex matches, semantic types, and similar value-level constraints have no normative semantics at the GDX layer. Constraint vocabularies (XSD, JSON Schema, OWL profiles, bespoke domain vocabularies) are expressed *on top of* GDX as Extension elements whose role identifiers GDX records but never interprets. This separation lets GDX serve as an integration surface for constraint vocabularies: multiple vocabularies can coexist on the same Template, each interpreted by its own consumer, without GDX taking a side on what any constraint means. GDX is not a lowest-common-denominator subset of those vocabularies; its structural schema is opinionated and complete, while the constraint layer is deliberately neutral. The layered validity model that follows from this stance is defined in §2.2 and §8.
 
 **Unified document and graph model.** A GDX document is a tree, but tree elements may carry Edges that reference other elements by identifier. Object identifiers can be local names, paths, GUIDs, or full IRIs. The same document can be read as a tree (for hierarchical access), traversed as a graph (for relationship navigation), or stored as relational rows (for operational systems). Each access pattern uses the same underlying data; no separate format is needed.
 
@@ -281,15 +311,27 @@ This section defines the terms used throughout the specification. The key words 
 
 - **Transport layer** — the set of GDX roles representing transient organizational and exchange constructs: Package and Group (§9). Transport-layer constructs are unpacked by receivers and are not persisted as such.
 
+- **Core** — the structural and semantic content normatively defined by this specification: the prefix vocabulary, the element model, the identifier and literal grammars, the composition axioms, the Template structure and instance-alignment mechanism, the universal claim rule, and the primitive value-kind axioms. The core is what GDX *is*; it is fixed by this specification and does not change when extensions are added. (Distinguish "the core" — the concept — from "the Core Specification" — the document name. The latter is this document.)
+
+- **Extension** — vocabulary-defined material that rides on top of the core through GDX's extension-point mechanisms. Extensions include: predicate identifiers in the `Rel` field, Template names in the `Type` field, and Constraint Extension elements (§8.4) carrying constraint identifiers from external vocabularies. The core records extensions structurally and validates their well-formedness; their *semantic content* is interpreted externally by consumers that understand the vocabulary in question. The core/extension distinction is the **interpretation** boundary between what GDX knows and what GDX merely carries.
+
+- **Core layer / Extension layer** — when a discussion needs to distinguish what GDX understands from what GDX hosts, the terms *core layer* and *extension layer* refer to those two sides of the interpretation boundary. The core layer is owned by this specification; the extension layer is owned by external vocabularies and their consumers.
+
 ### 2.2 Conformance Layers
 
-GDX defines two distinct conformance layers, each addressing a different category of assertion.
+GDX defines a layered conformance model. Each layer is independent, evaluated by a different agent, and reports its own kind of error.
 
-- **Representation Conformance (Layer 1)** — assertions about how a value is encoded. Includes prefix-to-value-kind matching, literal grammar conformance, representation tags (§5.2), and the round-trip text equivalence requirement (Appendix A). Evaluable at parse time without external context. Errors at this layer are *malformed document* errors.
+- **Representation Conformance (Layer 1)** — assertions about how a value is encoded. Includes prefix-to-value-kind matching, literal grammar conformance, representation tags (§5.2), and the round-trip text equivalence requirement (Appendix A). Owned by GDX. Evaluable at parse time without external context. Errors at this layer are *malformed document* errors and are absolute.
 
-- **Schema Conformance (Layer 2)** — assertions about what a value is allowed to mean. Includes Template satisfaction, Extension constraints, and any vocabulary-defined predicate semantics. Evaluable after parsing, requires Template resolution. Errors at this layer are *schema violation* errors.
+- **Schema Conformance (Layer 2)** — assertions about how data aligns to declared shapes and constraints. Decomposes into two sub-layers with different ownership:
 
-The two layers are independent. A document may be representation-conforming without being schema-conforming, or vice versa. The two layers MUST be reported and handled distinctly by conforming implementations.
+  - **Layer 2a — Template structural conformance.** Whether an instance's children align to a referenced Template's declared slots (by `Id`, with `Rel` as cross-vocabulary bridge; see §8.2). Owned by GDX: the validation algorithm is part of this specification. Evaluable by any consumer that can resolve Templates. Errors at this layer are *schema violation* errors.
+
+  - **Layer 2b — Constraint-vocabulary conformance.** Whether the values within a structurally-conforming instance satisfy the constraints expressed by a particular constraint vocabulary (e.g., `xsd:`, `json:`, a domain-specific vocabulary). Owned by the constraint vocabulary, not by GDX. Evaluable only by a consumer that understands the specific vocabulary's role identifiers. GDX records Constraint Extension elements (§8.4) but renders no verdict on them.
+
+The layers are independent. A document may be Layer 1-conforming but Layer 2a-non-conforming (well-formed but does not satisfy its Template's structure). A document may be Layer 2a-conforming but Layer 2b-non-conforming for one vocabulary and Layer 2b-conforming for another (same data; one vocabulary's constraints pass, another's fail). All four verdicts MUST be reported and handled distinctly by conforming implementations.
+
+The decomposition reflects the core/extension boundary (§2.1). Layer 1 and Layer 2a are the **core layer** — what GDX itself defines, owns, and evaluates. Layer 2b is the **extension layer** — what external constraint vocabularies define and what their consumers evaluate. GDX records extension-carried content but does not interpret it. This boundary is what allows multiple constraint vocabularies to coexist on the same data without GDX taking a side; see §8.4.
 
 ### 2.3 Vocabulary Terms
 
@@ -397,11 +439,39 @@ The three mechanisms answer different questions:
 
 A reference to an Object (`@OBJ`) and an EDGE to an Object both carry an `@target` reference value, but they are structurally distinct. The reference is a pointer; the edge is a graph-statement element with its own children. Choose based on whether the link itself is a structural participant in your data (use EDGE) or merely an identifier of a target (use `@OBJ`).
 
+### 3.7 Optional Elaboration
+
+A GDX element is valid at its minimum form: the Prefix alone (e.g., `<STR>`, `<REC>`, `<OBJ>`) is sufficient for a well-formed element wherever its role is permitted. Every other field — `Id`, `Key`, `Rel`, `Resource`, `Type` — and the element's children are optional. An element with only a Prefix already declares its structural role and value-kind; richer claims are added only where the use case demands them.
+
+Elaboration beyond the minimum follows two structurally distinct patterns.
+
+**Identity is orthogonal.** The three identity fields — `Id`, `Key`, `Rel` — are independent dimensions. An element may carry any combination of them in any order, and the presence or absence of one places no constraint on the others. An element may have an `Id` and no `Key`; a `Key` and no `Id`; a `Rel` with both, with one, or with neither. Each axis serves a distinct addressing purpose:
+
+- `Id` names the element within its scope (locally meaningful for Properties and Records; globally meaningful for Objects).
+- `Key` provides a location-stable anchor for references (§5.4.5).
+- `Rel` aligns the element to a cross-document vocabulary predicate (§3.6, §6.5.4).
+
+The independence of these axes is what lets a single element be addressable in multiple ways simultaneously without conflict.
+
+**Value elaboration is layered.** When an element carries content beyond its bare role, elaboration proceeds through nested layers. Each layer adds narrowing detail without altering what the prior layer said. The layers live in different places — some on the instance, some on the Template the instance references, some in the external vocabulary that defines a constraint identifier:
+
+1. **Category** (instance) — the Prefix declares the element's structural role and, for value-bearing roles, its value-kind. The Prefix is the minimum.
+2. **Value** (instance) — the Resource carries the concrete value, conforming to the value-kind declared by the Prefix. A value-bearing element without a Resource declares the slot but contributes no value (§4.3.3); with a Resource, it declares both.
+3. **Structural identity** (instance) — a `--type` reference asserts that the element's content conforms to a named Template (§8.2). This narrows the value from "any value of this value-kind" to "a value satisfying this Template's slot structure."
+4. **Constraint attachment** (Template, not instance) — Constraint Extensions on the referenced Template (§8.4) carry vocabulary-defined restrictions. These do not appear on the instance directly; they apply through the Template claim.
+5. **Constraint semantics** (external vocabulary) — the meaning of each constraint identifier (`xsd:minInclusive`, `json:pattern`, etc.) is defined by the vocabulary that owns the identifier, evaluated externally by consumers that understand that vocabulary.
+
+Each layer is optional given the layer above it: an element with a value need not have a `--type`; an element with a `--type` need not be constrained beyond the Template's structural declarations; constraints need not exist for every Template; no consumer is required to understand every constraint vocabulary. The minimum (Prefix alone) is at one end of this spectrum; a fully-elaborated element with full identity, value, type, and constraint-bearing Template is at the other.
+
+This minimal-by-default discipline is what keeps simple GDX simple. A Property with just a name and a value is one line; the same element can grow identity and schema affordances as the use case demands, without restructuring.
+
 ---
 
 ## 4. The GDX Abstract Data Model
 
 This section defines GDX at runtime: the abstract structure an implementation must represent, the rules an implementation must enforce, and the semantic states an implementation must distinguish. Concepts are in §3; text form is in §5.
+
+The data model defined here is the single authoritative content that every concrete GDX representation faithfully realizes (§1.1). Standard Form (§5), Compact Form (companion specification), Binary Form (planned companion), and the programmatic in-memory form a runtime exposes are alternative realizations of the same model: each preserves the same elements, the same prefixes, the same field semantics, the same composition relationships. Conversions between representations transform the surface syntax without changing the model content; a round-trip through any combination of representations yields the same abstract document.
 
 A GDX element is the tuple
 
@@ -766,14 +836,21 @@ A reference literal designates another addressable element. Five forms are recog
 
 ```ebnf
 ReferenceLiteral  ::= IdRef | PathRef | KeyRef | IdPathRef | IdKeyRef
-IdRef             ::= "@" Identifier
+IdRef             ::= "@" Anchor
 PathRef           ::= "$" PathExpression
 KeyRef            ::= "&" KeyToken
-IdPathRef         ::= "@" Identifier "$" PathExpression
-IdKeyRef          ::= "@" Identifier "&" KeyToken
+IdPathRef         ::= "@" Anchor "$" PathExpression
+IdKeyRef          ::= "@" Anchor "&" KeyToken
+
+Anchor            ::= (AnchorRole ":")? Identifier
+AnchorRole        ::= "OBJ"  | "REL"  | "PKG"  | "GRP"
+                    | "DEFOBJ" | "DEFREC" | "DEFSTR"
+                    | "DEFINT" | "DEFFLOAT" | "DEFBOOL" | "DEFBYTE"
 ```
 
-The `PathExpression` and `KeyToken` grammars and the resolution algorithms are specified in the companion GDX Path Expressions Specification (`GDX-Path.md`). Implementations MUST conform to that specification for the contents of any `$`- or `&`-introduced literal.
+The `Anchor` production carries an optional role marker — a closed-vocabulary keyword drawn from §6.2 followed by `:` — that disambiguates the role of the resolved element. The marker is most useful in composed references where the anchor's role differs from the terminal target's role; in plain `@id` references and in composed references with Object anchors, the marker is optional. When omitted in a composed reference, the anchor defaults to an Object (the most common case).
+
+The `PathExpression` and `KeyToken` grammars and the resolution algorithms are specified in the companion GDX Path Expressions Specification (`GDX-Path.md`). Implementations MUST conform to that specification for the contents of any `$`- or `&`-introduced literal and for the resolution semantics of role markers.
 
 **Identifier-mode** (`IdRef`) is an `@` sigil followed by an identifier:
 
@@ -812,16 +889,20 @@ The `&` sigil MUST be immediately followed by the Key token with no intervening 
 @https://acme.com/people/alice$/address/[2]
 ```
 
-**Composed name + key** (`IdKeyRef`) concatenates identifier-mode with key-mode. The `@Identifier` portion resolves to a starting Object; the `&Key` portion is then looked up within that Object's scope:
+**Composed name + key** (`IdKeyRef`) concatenates identifier-mode with key-mode. The `@Anchor` portion resolves to a starting element; the `&Key` portion is then looked up within that element's scope. When the anchor carries no role marker, the starting element defaults to an Object:
 
 ```
-@gdx:bob&shippingAddress
-@system/audit-log&entry-12345
+@gdx:bob&shippingAddress                 // Object anchor (default)
+@system/audit-log&entry-12345            // Object anchor (default)
+@REL:gdx:knows&annotation-3              // REL anchor (explicit)
+@DEFOBJ:com.acme.Customer&firstName-doc  // Template anchor (explicit)
 ```
 
 The two composed forms are the canonical mechanisms for cross-document addressing. The `$` and `&` operators do not combine within a single reference literal; pick `IdPathRef` for structural traversal or `IdKeyRef` for key-based anchoring.
 
-Because `$` and `&` are not members of `IdContChar`, the boundary between the identifier portion and the path or key portion is lexically unambiguous.
+Because `$` and `&` are not members of `IdContChar`, the boundary between the identifier portion and the path or key portion is lexically unambiguous. The optional `AnchorRole` keyword before `:` is distinguished from a CURIE prefix (`gdx:`, `schema:`) by lookup against the closed `AnchorRole` set: only `OBJ`, `REL`, `PKG`, `GRP`, `DEFOBJ`, `DEFREC`, `DEFSTR`, `DEFINT`, `DEFFLOAT`, `DEFBOOL`, `DEFBYTE` are recognized as role markers.
+
+**Parse-time vs. resolution-time validation of role markers.** The parser MUST reject an unknown role keyword (one not in the closed set). At resolution time, the resolver MUST verify that the named element actually has the claimed role; mismatch yields an unresolved reference.
 
 References are commonly used as the Resource of Edge elements (§6.5.4) or of `@KIND` reference elements (§6.5.16):
 
@@ -945,7 +1026,9 @@ Key scope is determined by the element's position in the document:
 - **Object-scoped.** An element whose nearest enclosing addressable container is an Object has its Key scoped within that Object. Two elements inside the same Object MUST NOT share a Key value.
 - **Document-scoped.** An element at transport-layer position — a direct child of a Package, Group, or document root — has its Key scoped within the document. Two elements at this level MUST NOT share a Key value.
 
-The enclosing-Object rule means that two different Objects MAY each contain an element with the same Key (`&entry-12345` in two different log Objects is permitted), because Key resolution within each Object is independent. The composed `IdKeyRef` form (`@object-id&key`) pins the scope explicitly when addressing across Object boundaries.
+The enclosing-Object rule means that two different Objects MAY each contain an element with the same Key (`&entry-12345` in two different log Objects is permitted), because Key resolution within each Object is independent. The composed `IdKeyRef` form (`@anchor-id&key`) pins the scope explicitly when addressing across Object boundaries.
+
+**Default anchor role in composed references.** In a composed reference (`IdPathRef`, `IdKeyRef`), if the `@Anchor` portion carries no role marker, the resolved element MUST be of role Object. This default reflects the common case for cross-document addressing. To anchor a composed reference at a non-Object element (a REL, a Template, a Package, or a Group), the author MUST use an explicit role marker (§5.2.6).
 
 Key collisions within the same scope make the document malformed; conforming parsers SHOULD emit a diagnostic, and conforming resolvers MUST NOT silently pick one matching element over another.
 
@@ -1629,7 +1712,11 @@ This produces references like `@OBJ`, `@REL`, `@DEFSTR`, `@.STR`, `@_BOOL`, `@%R
 
 **Resolution.** A reference's Resource is a reference literal (`@identifier`) naming the target. The resolver uses the target-kind declared by the prefix to scope the search: a `@REL` reference resolves against the REL declaration scope; a `@DEFOBJ` reference resolves against the Template scope; a `@OBJ` reference resolves against the Object scope. The resolution algorithm parallels Edge Reference Resolution (§6.5.4.1) but is scoped by target-kind.
 
-Identifier-based reference resolution (`@id`) is normative in this specification. Path-based reference resolution (`$path`, `@id$path`) and key-based reference resolution (`&key`, `@id&key`) are specified in the companion GDX Path Expressions Specification (`GDX-Path.md`). The composed forms `@Identifier$PathExpression` and `@Identifier&Key` express cross-document addressing: the identifier portion resolves a starting element by scope walk, and the path or key portion locates the target within that element's scope. A reference whose Resource is any non-`IdRef` literal MUST resolve to exactly one element of the matching role (see `GDX-Path.md` §7).
+Identifier-based reference resolution (`@id`) is normative in this specification. Path-based reference resolution (`$path`, `@anchor$path`) and key-based reference resolution (`&key`, `@anchor&key`) are specified in the companion GDX Path Expressions Specification (`GDX-Path.md`). The composed forms `@Anchor$PathExpression` and `@Anchor&Key` express cross-document addressing: the anchor portion resolves a starting element by scope walk, and the path or key portion locates the target within that element's scope.
+
+The `Anchor` production carries an optional role marker (`@OBJ:id`, `@REL:id`, `@DEFOBJ:id`, etc.) that disambiguates the role of the resolved element. When the marker is present, the scope walk is restricted to elements of the claimed role. When the marker is absent, the role is inferred from the enclosing `@KIND` reference element's prefix (for plain `@id` references) or defaults to `OBJ` (for composed references). The resolver MUST verify that the resolved element actually has the inferred or claimed role; mismatch yields an unresolved reference.
+
+A reference whose Resource is any non-`IdRef` literal MUST resolve to exactly one element of the matching role (see `GDX-Path.md` §7).
 
 **Distinguishing `@OBJ` from EDGE.** Both `@OBJ` and EDGE carry an Object reference, but they are structurally distinct. An `@OBJ` element is a leaf-like typed pointer — it identifies a target without having its own substructure beyond Qualifiers. An EDGE element is a graph-statement element with its own children, including Properties that express edge metadata (weight, confidence, timestamp). Use `@OBJ` when the link is just an identifier; use EDGE when the link itself is a structural participant in the graph with attributes of its own. The full comparison is in §3.6.
 
@@ -1802,13 +1889,23 @@ A conforming parser MUST reject any document containing:
 
 A conforming parser MUST accept any element with an identifier but no Resource section. Such elements are well-formed and represent null values (instance context) or slot declarations (Template context).
 
-The above are *structural* validation requirements (Layer 1, §2.2). Schema validation (Layer 2 — Template satisfaction, Extension-defined constraints) is described in §8.
+The above are the *primitive axioms* of GDX validity — Layer 1 (§2.2). They are owned by GDX, evaluated at parse time, and absolute. Constraint validity beyond these axioms (numeric bounds, string patterns, regex matches, semantic types) is vocabulary-defined and evaluated externally; GDX hosts those constraints as Extension elements but does not interpret them. See §8 for the schema-layer validation model (Layer 2a — Template structural conformance) and Constraint Extensions (Layer 2b — vocabulary-defined constraint conformance).
 
 ---
 
 ## 8. Schemas and Validation (Templates)
 
 > **Status:** Sections 9.1 through 9.5 are stable. Section 9.6 describes mechanisms that are committed in principle but require companion specifications for full normative treatment.
+
+Schemas in GDX are themselves GDX documents. This section defines the schema mechanism in three layers, mirroring the conformance model of §2.2.
+
+- **Template structure (§8.1, §8.3).** Templates are GDX elements with `DEF…` prefixes. They declare the structural shape an instance is expected to satisfy: which child slots exist, what role each carries, what Rel each aligns to, what Type each claims. Templates are GDX-native: this specification defines their grammar, their composition rules, and how they are resolved.
+
+- **Template-instance alignment (§8.2).** An instance carrying a `--type` reference asserts that its structure aligns to the referenced Template. Slot alignment is by `Id` with `Rel` as a cross-vocabulary bridge; the universal claim rule (§8.2.3) governs how Template-declared and instance-declared values reconcile on aligned slots; materialization (§8.2.4) is the recommended persistence form. This is Layer 2a (§2.2).
+
+- **Constraint Extensions (§8.4).** Constraint vocabularies — XSD, JSON Schema, OWL profiles, bespoke domain vocabularies — are expressed as Extension elements on Template slots. The Extension carriers (`_STR`, `_INT`, etc.) are GDX-native. The constraint identifiers they carry (`xsd:minInclusive`, `json:pattern`, etc.) are vocabulary-defined and opaque to GDX. This is Layer 2b (§2.2). Multiple constraint vocabularies MAY coexist on the same Template; each is interpreted independently by consumers that understand its identifiers.
+
+This layered model is what makes GDX a structural schema with pluggable constraint vocabularies (§1.3). The structural surface — what Templates declare, how slots align, how Extensions attach — is fixed by this specification. The constraint surface is open: any vocabulary may define its own constraint identifiers and ride atop the GDX carrier mechanism without negotiating with GDX or with other vocabularies.
 
 ### 8.1 Templates
 
@@ -1843,9 +1940,17 @@ An instance element references a Template by name in its `--type` field. The val
 
 The `--type` reference is a Layer 2 (schema) assertion (§2.2). Resolving the reference and validating the instance against the Template are operations performed after parsing and structural validation. An instance may be representation-conforming (Layer 1) without being schema-conforming (Layer 2): the structure is well-formed, but the contents may not satisfy the claimed Template.
 
-**Slot alignment.** An instance child satisfies a Template slot by matching the slot's `Id` field, using case-sensitive ordinal comparison (§4.2). When a Template slot declares a `Rel`, an instance child carrying the same `Rel` MAY align to the slot even if its local `Id` differs; in that case the `Rel` is the alignment key, supporting cross-vocabulary instances whose local names differ from the Template's slot names.
+**Type identity is named, not structural.** An instance carrying `--com.acme.Customer` asserts that it is of type `com.acme.Customer`. The type's identity is the Template name; two Templates that happen to declare the same shape are nonetheless distinct types, and an instance of one is not silently an instance of the other.
+
+**Conformance is a separately observable relation.** An instance of type A MAY structurally conform to a Template B — its children align to B's slots, its values satisfy B's declared metadata — without B being its type. This cross-type conformance is observable and useful: validators can check an instance against multiple schemas, versioning tools can detect that `acme:swatch.v1` conforms to `acme:swatch.v2`, migration tooling can identify candidate transformations between related types. But conformance does not redefine identity: the `--type` claim is what travels with the data. Consumers MUST NOT silently substitute one type for another even when their instances mutually conform; the original type claim is preserved and any cross-conformance is surfaced as a derived observation, not a rewrite.
+
+#### 8.2.1 Slot Alignment
+
+An instance child satisfies a Template slot by matching the slot's `Id` field, using case-sensitive ordinal comparison (§4.2). When a Template slot declares a `Rel`, an instance child carrying the same `Rel` MAY align to the slot even if its local `Id` differs; in that case the `Rel` is the alignment key, supporting cross-vocabulary instances whose local names differ from the Template's slot names.
 
 The `Key` field plays no role in Template-instance alignment. Keys are an independent named-anchor mechanism (§3.2, §5.4.5) used by `KeyRef` and `IdKeyRef` reference literals; they are not consulted during schema validation.
+
+#### 8.2.2 Cross-Role and Transport Restrictions
 
 A `--type` reference MUST resolve to a Template whose base role matches the instance's role:
 
@@ -1861,9 +1966,60 @@ Cross-role references (e.g., a Record instance referencing an Object Template) a
 
 Transport-layer roles (Package, Group) are not subjects of Templates in the core specification. Their structure is defined entirely by §7 composition rules and §9 transport semantics. Vocabularies MAY define Templates for transport-construct validation purposes, but support for such Templates is a vocabulary concern, not a core requirement.
 
+#### 8.2.3 The Universal Claim Rule
+
+A Template MAY declare values for fields that the instance can also carry: the `Rel` field, the `Key` field, the `--type` field (in nested slots), and a default `Resource` value. When both the Template and the instance carry a value for the same field on the same aligned slot, the values are reconciled by a uniform rule that applies independently to each claim-bearing field.
+
+| Template state | Instance state | Effective value | Disposition |
+|---|---|---|---|
+| silent | silent | none | No claim on this field for this slot. |
+| silent | claimed | instance | The instance freely supplies a value; the Template imposes no constraint. |
+| claimed | silent | Template | The Template's value is the effective value, implicitly carried by the instance. |
+| claimed | claimed (matching) | confirmed | Both sides agree. The claim is affirmed. |
+| claimed | claimed (differing) | — | **Conflict.** The instance is Layer 2a non-conforming. |
+
+The rule applies independently to each field. An instance MAY satisfy the rule for `Rel` (case 3 — Template-supplied) while supplying its own value for `Key` (case 2 — free instance claim), with both outcomes being valid.
+
+The differing-claims case (the conflict row) MUST be reported as a Layer 2a non-conformance. Implementations MUST NOT silently prefer one side over the other.
+
+**Scope of "default."** Templates declaring a default `Resource` value declare the value as a fallback: when the instance is silent, the default applies; when the instance carries a value, the instance's value is the effective value. This is case 3 of the rule. A future revision MAY define a "fixed" claim scope, in which a Template's value is required (and a differing instance is a conflict) rather than a default; the distinction is one of claim scope, but the four-case matrix above is unchanged.
+
+#### 8.2.4 Materialization
+
+Per §8.2.3 case 3, a Template-supplied value is an implicit claim of the instance. The value is logically present, but it is not visibly written in the instance's text. An instance read in isolation — without resolving the Template — does not show that claim.
+
+This creates a real difference between the instance's logical content and its persisted form. A query "find all elements with Rel `schema:givenName`" returns the instance only if the resolver has loaded the Template. Without the Template, the same data is invisible to the query. The instance's identity drifts depending on whether the schema is available.
+
+**Materialization** is the build-time operation that resolves §8.2.3 case 3 in the persisted form: it writes the Template-supplied values into the instance as explicit fields. The materialized instance carries its full identity without needing the Template at read time.
+
+```
+# Template:
+<DEFREC com.acme.Customer
+    <STR firstName #schema:givenName>
+    <STR locale : "en-US">
+>
+
+# Authored instance (Template values are implicit):
+<REC alice --com.acme.Customer
+    <STR firstName : "Alice">
+>
+
+# Materialized instance (Template values are explicit):
+<REC alice --com.acme.Customer
+    <STR firstName #schema:givenName : "Alice">    # Rel materialized from Template
+    <STR locale : "en-US">                          # default Resource materialized
+>
+```
+
+Materialization applies to the claim-bearing fields named in §8.2.3: `Rel`, `Key`, `Resource` defaults, and nested `--type` claims. It does NOT extrapolate beyond what the Template explicitly declares; missing slots are not added, and Constraint Extensions (§8.4) are not copied from Template to instance (constraints are vocabulary-defined and remain Template-scoped).
+
+**Materialization is RECOMMENDED for persistence and exchange.** Documents that will be persisted, transmitted, archived, or signed SHOULD be materialized before they are written. This preserves the search and self-description properties of the data when the Template is not accessible at read time. Materialization is OPTIONAL for in-memory processing; tools MAY apply the §8.2.3 claim rule on-the-fly during processing without rewriting the document.
+
+A materialized instance is semantically equivalent to its non-materialized form: per §8.2.3 case 4, every materialized field's value matches the Template's claim, producing affirmed conformance. A receiver of a materialized document MUST treat it as equivalent to the corresponding non-materialized document.
+
 ### 8.3 Property Templates and Semantic Types
 
-Property Templates (`DEFSTR`, `DEFINT`, `DEFFLOAT`, `DEFBOOL`, `DEFBYTE`) declare semantic types or representation refinements on top of a base value-kind. A Property Template does not change the underlying value-kind; it adds interpretation or validation rules that consumers may apply.
+Property Templates (`DEFSTR`, `DEFINT`, `DEFFLOAT`, `DEFBOOL`, `DEFBYTE`) declare semantic types or representation refinements on top of a base value-kind. A Property Template does not change the underlying value-kind; it carries vocabulary-defined constraint and interpretation rules that consumers process externally per §8.4.
 
 A typical Property Template uses Extensions to express constraints:
 
@@ -1882,42 +2038,67 @@ The interpretation rules are carried by Extensions on the Template. The Extensio
 
 The specific identifiers used in examples (`gdx:email`, `gdx:i8`, `gdx:csv`, `gdx:uuid`) are illustrative. Whether these specific Templates exist, and what their constraints are, is a vocabulary concern, not a core specification concern. The patterns are general; their realization in any particular vocabulary is documented by that vocabulary.
 
-### 8.4 Validation Extensions
+### 8.4 Constraint Extensions
 
-Extensions on Template properties express constraints that instances must satisfy. The structural carriers — the closed set of Extension prefixes (`_STR`/`_S`, `_INT`/`_I`, `_FLOAT`/`_F`, `_BOOL`/`_L`, `_BYTE`/`_B`) — are defined by this specification (§6.5.10). The *vocabulary* of named extensions (the identifiers like `gdx:pattern`, `gdx:min`, or any application-defined equivalents) is defined by the GDX Common Vocabulary or by other vocabularies, not by this core specification.
+Extensions on Template properties carry vocabulary-defined constraints that instances may be evaluated against. The structural carriers — the closed set of Extension prefixes (`_STR`/`_S`, `_INT`/`_I`, `_FLOAT`/`_F`, `_BOOL`/`_L`, `_BYTE`/`_B`) — are defined by this specification (§6.5.10). The *vocabulary* of constraint identifiers (such as `xsd:minInclusive`, `json:pattern`, `gdx:maxLength`, or any application-defined equivalents) is defined by external vocabularies, not by this core specification.
 
-This separation is intentional. The core specification defines *how* extensions attach to Templates and *how* they are structurally validated. It does not define *which* specific extensions exist or *what* they mean. Extension vocabularies evolve independently of the core specification: new extensions can be added, refined, or deprecated in vocabulary specifications without revising the core.
+**GDX records but does not interpret.** Constraint identifiers are extension-layer content (§2.1): the core records them as well-formed elements but assigns no meaning. The parser validates that each Constraint Extension is structurally well-formed (correct carrier prefix, valid value-kind, attached at a position where Extensions are admitted per §7.1). It does not interpret the identifier itself. Implementations MUST NOT interpret constraint semantics at the core layer; meaning is supplied by the vocabulary that defines the identifier, evaluated by a consumer that understands that vocabulary.
 
-The general form of an extension on a Template is:
+This discipline is structural: by holding constraint semantics out of the core, GDX ensures that no constraint-semantic conflict can originate at the core layer. Constraint vocabularies (XSD, JSON Schema, OWL profiles, bespoke domain vocabularies) own their respective semantics independently and evolve without coordination with GDX or with each other.
+
+The general form of a Constraint Extension on a Template slot is:
 
 ```
-<TD-X TemplateName
-    <STR propertyName
-        <_X extensionName : extensionValue>
+<DEFX TemplateName
+    <X slotName
+        <_X constraintIdentifier : constraintValue>
     >
 >
 ```
 
-Where `_X` is one of the Extension carrier prefixes (`_STR`/`_S`, `_INT`/`_I`, `_FLOAT`/`_F`, `_BOOL`/`_L`, `_BYTE`/`_B`) and `extensionName` is an identifier drawn from a vocabulary.
+Where `_X` is one of the Extension carrier prefixes (`_STR`/`_S`, `_INT`/`_I`, `_FLOAT`/`_F`, `_BOOL`/`_L`, `_BYTE`/`_B`) and `constraintIdentifier` is drawn from a constraint vocabulary.
 
-A worked example using a hypothetical vocabulary:
+#### 8.4.1 Parallel Constraint Vocabularies
+
+Because constraint identifiers are opaque to GDX, multiple constraint vocabularies MAY coexist on the same Template. A single Template MAY carry equivalent or complementary constraints expressed in different vocabularies; each is evaluated independently by consumers that understand its identifiers.
+
+A worked example showing XSD, JSON Schema, and a bespoke vendor vocabulary on the same Template:
 
 ```
 <DEFSTR UserHandle
-    <_BOOL vocab:required : true>
-    <_STR vocab:pattern : "^[a-z0-9_]+$">
-    <_INT vocab:minLength : 3>
-    <_INT vocab:maxLength : 32>
+    <_STR xsd:pattern : "^[a-z0-9_]+$">
+    <_INT xsd:minLength : 3>
+    <_INT xsd:maxLength : 32>
+
+    <_STR json:pattern : "^[a-z0-9_]+$">
+    <_INT json:minLength : 3>
+    <_INT json:maxLength : 32>
+
+    <_STR acme:semantic-class : "account-identifier">
 >
 ```
 
-Here `vocab:required`, `vocab:pattern`, `vocab:minLength`, and `vocab:maxLength` are vocabulary-defined extension names. Their meanings are specified by the `vocab:` vocabulary, not by this document.
+Seven Constraint Extensions; three vocabularies. The core validates that all seven are well-formed Extension carriers attached to a Property Template. It assigns no meaning to `xsd:pattern`, `json:minLength`, or `acme:semantic-class`. Three classes of consumer process the Template:
 
-A validator processing a Template applies the extensions it recognizes and ignores those it does not. If the validator recognizes an extension and the instance satisfies the constraint, validation continues. If the validator recognizes an extension and the instance fails the constraint, the instance is reported as schema-non-conforming. If the validator does not recognize an extension, the validator MAY emit a warning (to indicate that a constraint was present but not checked) and MUST NOT fail validation on the unrecognized extension alone.
+- An **XSD-aware consumer** reads the `xsd:` identifiers and applies XSD validation semantics. It ignores the `json:` and `acme:` identifiers.
+- A **JSON-Schema-aware consumer** reads the `json:` identifiers and applies JSON-Schema semantics. It ignores the others.
+- An **`acme:`-vocabulary-aware consumer** reads `acme:semantic-class` to drive its domain-specific behavior.
 
-This permissive behavior on unrecognized extensions allows vocabularies to evolve without breaking implementations that have not been updated. An implementation that supports vocabulary version N reads documents using vocabulary version N+1 successfully, treating unknown extensions as advisory.
+None conflicts; all coexist; the core hosts all three without knowing what any of them mean. The Template is one document; the consumers each read their own slice of it.
 
-An implementation MAY claim conformance to one or more vocabularies. A vocabulary-conforming implementation honors the vocabulary's defined extensions according to the vocabulary's specification. The core specification does not require any particular vocabulary to be supported.
+**This pluralism is a direct consequence of GDX holding constraint semantics out of the core.** If core validation extended even to a primitive like `min` or `pattern`, the core would have its own constraint opinion competing with the extension-layer vocabularies, and parallel-vocabulary coexistence would break — a core `min` and an `xsd:minInclusive` might disagree, raising the question of which wins. By keeping core validation at only the primitive axioms (Layer 1, §2.2) and treating all constraints as extension-layer content (Layer 2b), the core never competes with any vocabulary. The discipline is what enables the pluralism.
+
+#### 8.4.2 Validator Behavior
+
+A validator processing a Template applies the Constraint Extensions it recognizes and ignores those it does not:
+
+- If the validator recognizes a constraint and the instance satisfies it, validation continues.
+- If the validator recognizes a constraint and the instance fails it, the instance is reported as Layer 2b non-conforming with respect to that vocabulary.
+- If the validator does not recognize a constraint identifier, the validator MAY emit a warning (to indicate that a constraint was present but not checked) and MUST NOT fail validation on the unrecognized identifier alone.
+
+This permissive behavior on unrecognized identifiers allows vocabularies to evolve without breaking implementations that have not been updated, and allows multiple vocabularies to coexist as described above. An implementation that supports vocabulary version N reads documents using vocabulary version N+1 successfully, treating unknown identifiers as advisory. An implementation that supports only XSD reads a document carrying both XSD and JSON-Schema constraints successfully, applying XSD semantics and warning (or silently ignoring, per the implementation's mode — §8.5.1) on the JSON-Schema portion.
+
+An implementation MAY claim conformance to one or more constraint vocabularies. A vocabulary-conforming implementation honors that vocabulary's defined constraints according to the vocabulary's specification. The core specification does not require any particular constraint vocabulary to be supported; implementations choose which vocabularies they speak.
 
 ### 8.5 Conformance Modes, Type Resolution, and Error Reporting
 
@@ -1980,7 +2161,9 @@ This decision is deliberate. Inheritance in distributed-vocabulary environments 
 
 A Template's relationship to other Templates is expressed through `--type` references on its child elements. A Customer Template that has an `address` Record whose shape conforms to an Address Template uses `<REC address --Address>` — a structural reference at the field level, not at the Template level. This composition pattern at the field level provides the shared-shape benefit without the propagation problems that Template-level inheritance would introduce.
 
-**The GDX Common Vocabulary.** The GDX Common Vocabulary is a companion specification, separately versioned from this core specification. It defines a base set of widely useful Templates and Extensions covering numeric width and representation refinements, common semantic types (identifiers, dates, durations, currency), cryptographic and hash types, validation extensions, and predicate refinement extensions for use on REL declarations.
+**The GDX Common Vocabulary.** The GDX Common Vocabulary is a companion specification, separately versioned from this core specification. It defines a base set of widely useful Templates and Constraint Extensions covering numeric width and representation refinements, common semantic types (identifiers, dates, durations, currency), cryptographic and hash types, constraint identifiers, and predicate refinement extensions for use on REL declarations.
+
+The Common Vocabulary is one vocabulary among many. It ships with GDX as a convenience and as a reference vocabulary for the patterns described in this specification, but it has no privileged status at the core layer: per §8.4, constraint identifiers from `gdx:` are extension-layer content in exactly the same way that identifiers from `xsd:`, `json:`, or any application-defined vocabulary are. A document using `xsd:minInclusive` is no less GDX-conformant than a document using `gdx:min`; consumers select which vocabularies they speak.
 
 The Common Vocabulary is versioned independently of the core specification. Vocabulary additions and refinements may occur without revising the core; structural changes to GDX require core revision. Conforming implementations SHOULD support the Common Vocabulary in addition to the core; an implementation that supports only the core is conforming but limited, since common types and constraints will require explicit declaration in every document that uses them.
 
@@ -2218,13 +2401,17 @@ This appendix defines what it means for a serialization, a parser, and a documen
 
 ### A.1 Conformance Layers
 
-Two distinct conformance layers are defined, corresponding to the layers introduced in §2.2:
+Conformance is layered, corresponding to the layers introduced in §2.2:
 
-**Representation Conformance (Layer 1)** addresses how data is encoded. It covers the structural rules of §4 through §8: prefix vocabulary, identifier grammar, literal forms, composition rules, and resource value-kind matching. Representation conformance is decidable at parse time without external context.
+**Representation Conformance (Layer 1)** addresses how data is encoded. It covers the structural rules of §4 through §7: prefix vocabulary, identifier grammar, literal forms, composition rules, and resource value-kind matching. Owned by GDX. Decidable at parse time without external context.
 
-**Schema Conformance (Layer 2)** addresses what data is allowed to mean. It covers the Template-based validation of §8: Template satisfaction, Extension-defined constraints, and vocabulary semantics. Schema conformance is decidable after parsing and requires Template resolution.
+**Schema Conformance (Layer 2)** addresses how data aligns to declared shapes and constraints, and decomposes into two sub-layers:
 
-A document is **fully conforming** if it is both representation-conforming and schema-conforming with respect to all Templates referenced via `--type`. A document with no Template references is fully conforming if it is representation-conforming.
+- **Layer 2a — Template structural conformance.** Covers the Template-based alignment of §8.1, §8.2, §8.3: instance children align to Template slots by `Id` (with `Rel` as cross-vocabulary bridge), and `--type` references resolve. Owned by GDX. Decidable by any consumer that can resolve Templates.
+
+- **Layer 2b — Constraint-vocabulary conformance.** Covers the Constraint Extensions of §8.4: whether instance values satisfy the constraints expressed by a particular constraint vocabulary (XSD, JSON Schema, the GDX Common Vocabulary, or any other). Owned by the constraint vocabulary, not by GDX. Decidable only by a consumer that understands the vocabulary's constraint identifiers. A document MAY be Layer 2b-conforming with respect to one vocabulary and Layer 2b-non-conforming with respect to another; the verdicts are independent and vocabulary-relative.
+
+A document is **fully conforming** at Layer 1 + Layer 2a if it is representation-conforming and Template-structurally-conforming with respect to all Templates referenced via `--type`. A document with no Template references is fully conforming at Layer 1 + Layer 2a if it is representation-conforming. **Layer 2b conformance is always vocabulary-qualified**: a document is "Layer 2b-conforming with respect to vocabulary V" when consumed by a V-aware consumer that finds no constraint violations. Claims of Layer 2b conformance MUST name the vocabulary against which the claim is made.
 
 ### A.2 Serialization Conformance
 
