@@ -108,6 +108,16 @@ Changes in v0.11.0 from v0.10.0:
 
 (31) **§6.5.2 adds explicit Object/Record comparison.** A new paragraph at the end of §6.5.2 names that Records and Objects share structural shape but differ conceptually, with the consequences for addressability, persistence, and document root spelled out.
 
+(32) **RELs admit Extension children — internal inconsistency resolved.** The §7.1 composition matrix and rule 8 already allowed Extensions on RELs (for predicate semantics like domain, range, inverse, cardinality), but §6.5.10, §7 modifier transparency, §7.1 prose, and §7.2 rule 7 contradicted this by saying "Extensions only under Templates." All five passages now consistently state that Extensions are valid under Templates or RELs. §6.5.10's conceptual lead is broadened from "a schema rule attached to a Template" to "a schema rule attached to a Template or REL." The composition matrix is unchanged (REL row already shows Extension as admitted child).
+
+(33) **§1.2 adds "First-class predicates and vocabulary documents" design goal.** Elevates REL to a design-level concern. Names the three-component vocabulary system (Rel field, REL declaration, References) and the concept-as-Object decision. Frames GDX as having RDF/OWL's ontology-building primitive while keeping the data model uniform.
+
+(34) **§3.7 (new) Predicates and Vocabularies.** New subsection between §3.6 and (former) §3.7 explaining the predicate vocabulary system: the `Rel` field for alignment, the `REL` element for first-class declaration, References for predicate-to-predicate and predicate-to-concept relationships. Names the concept-as-Object decision. Defines what a vocabulary document is. Optional Elaboration moves to §3.8.
+
+(35) **§6.5.15 (Relation Declaration) sharpened.** Expanded to show: the three-component vocabulary system in detail; what Extensions and References on RELs do; the concept-as-Object pattern; a small worked vocabulary document combining concept Objects, REL declarations with domain/range Extensions, predicate-to-predicate References, and Templates.
+
+(36) **Cookbook Pattern 25 (Complete Vocabulary Document) added.** Shows a full vocabulary document with concept Objects, RELs carrying predicate-semantic Extensions, inverse References between RELs, and Templates bound to concepts. Patterns 25-34 renumbered to 26-35; TOC ranges updated.
+
 
 ## Table of Contents
 
@@ -157,6 +167,8 @@ GDX's design choices target capabilities that established formats and data model
 
 **Inline semantic alignment.** The optional `Rel` field on any element names a shared predicate that aligns the element's local identity to a cross-document vocabulary. `<STR #schema:givenName firstName : "Alice">` is locally named `firstName` but semantically identifies as `schema:givenName`. Two systems using different local names can recognize the same concept by matching the predicate. The alignment travels with the data, not in a separate mapping layer. This is RDF's predicate-alignment property without RDF's triple-model overhead; JSON and YAML have no semantic layer at all.
 
+**First-class predicates and vocabulary documents.** The `Rel` field is one half of GDX's predicate vocabulary system; the `REL` element (§6.5.15) is the other. A REL declaration names a predicate as a first-class entity that can carry its own metadata — domain, range, inverse, cardinality, subPropertyOf relationships, application-defined annotations — through Extension elements (§6.5.10). A GDX document MAY contain RELs alongside Objects, Templates, and concept-bearing Objects to compose a complete vocabulary: predicates with their semantics, schemas with their constraints, and the conceptual entities the vocabulary describes. The system is recursive — RELs may reference other RELs, RELs may carry typed references to domain/range Objects, and the vocabulary itself is just GDX. This gives GDX the ontology-building primitive of RDF/OWL while keeping the data model uniform. GDX has no separate Class or Concept role: when a vocabulary needs to name a concept (a type of entity, an enumeration value, a category), an Object with a conceptual identifier serves that role and is addressable like any other Object.
+
 **Schema is data.** A Template is a GDX element with a `DEF…` prefix. It uses the same syntax as the instances it describes; the same parser reads both; the same query mechanisms address both. There is no separate schema language, no schema compilation, no schema/instance impedance. A Template can travel in the same document as the instances that satisfy it — common in vocabulary documents, integration tests, and self-contained exchange formats. XSD is a separate language from XML; JSON Schema is a separate convention layered over JSON; GDX collapses the distinction.
 
 **Structural schema with pluggable constraint vocabularies.** GDX defines a complete structural schema — the prefix vocabulary, the element model with its identity and value fields, Template-based slot declarations, the universal claim rule, and the composition axioms. This structural schema is what GDX *is*, and it is fixed by this specification. What GDX deliberately does *not* define is constraint implementation: numeric bounds, string patterns, regex matches, semantic types, and similar value-level constraints have no normative semantics in the core. Constraint vocabularies (XSD, JSON Schema, OWL profiles, bespoke domain vocabularies) ride on top as Extension elements whose identifiers GDX records but never interprets. This lets GDX serve as an integration surface where multiple constraint vocabularies coexist — XSD and JSON Schema on the same Template, each interpreted by its own consumer. GDX is not a lowest-common-denominator subset of these vocabularies; its structural schema is opinionated and complete, while the constraint layer is deliberately neutral. No other widely-used format hosts multiple constraint vocabularies neutrally.
@@ -169,7 +181,7 @@ GDX's design choices target capabilities that established formats and data model
 
 **Layered validity with clear ownership.** Validity is layered, not monolithic. Three rungs with three different owners (§2.2): GDX-native primitive axioms (an `INT` is an integer — owned by the core), Template structural conformance (instance children align to declared slots — owned by GDX's alignment algorithm), and constraint-vocabulary conformance (instance values satisfy vocabulary-defined constraints — owned by the vocabulary). An element can be GDX-valid, Template-conforming, and constraint-invalid for one vocabulary while constraint-valid for another; the verdicts are independent and the boundaries are visible. XSD, JSON Schema, and OWL each conflate these into a single valid-or-not answer; GDX separates them by ownership.
 
-**Minimum-is-enough elaboration.** Every element is valid with just its prefix; identity, value, type, and constraint affordances are all opt-in (§3.7). Identity grows along three orthogonal axes (`Id`, `Key`, `Rel`); value elaboration is layered across instance, Template, and external vocabulary. Simple cases stay simple — a property with just a name and a value is one line — and richer cases grow without restructuring. Schema-first typed formats require ceremony even for trivial values; GDX lets the simplicity match the situation.
+**Minimum-is-enough elaboration.** Every element is valid with just its prefix; identity, value, type, and constraint affordances are all opt-in (§3.8). Identity grows along three orthogonal axes (`Id`, `Key`, `Rel`); value elaboration is layered across instance, Template, and external vocabulary. Simple cases stay simple — a property with just a name and a value is one line — and richer cases grow without restructuring. Schema-first typed formats require ceremony even for trivial values; GDX lets the simplicity match the situation.
 
 ### 1.3 Comparison with Existing Formats
 
@@ -441,7 +453,42 @@ The three mechanisms answer different questions:
 
 A reference to an Object (`@OBJ`) and an EDGE to an Object both carry an `@target` reference value, but they are structurally distinct. The reference is a pointer; the edge is a graph-statement element with its own children. Choose based on whether the link itself is a structural participant in your data (use EDGE) or merely an identifier of a target (use `@OBJ`).
 
-### 3.7 Optional Elaboration
+### 3.7 Predicates and Vocabularies
+
+A predicate in GDX is a named relationship — `schema:givenName`, `gdx:knows`, `acme:approvedBy`. Predicates are how elements align to shared meaning across documents and systems. GDX expresses predicates through three coordinated mechanisms that together form a complete vocabulary system.
+
+**The `Rel` field — predicate alignment on an element.** Any element MAY carry a `#rel` field naming the predicate it represents. The `#rel` is a CURIE or IRI; it identifies a predicate, not a value. A Property `<STR #schema:givenName firstName : "Alice">` says "this property's local name is `firstName`, and it semantically corresponds to the `schema:givenName` predicate." An Edge `<EDGE #gdx:knows : @bob>` says "this edge instantiates the `gdx:knows` predicate, linking the parent to bob." The `#rel` field is lightweight: it names a predicate but says nothing about what the predicate means.
+
+**The `REL` element — predicate as a first-class entity.** A `REL` element declares a predicate with its own metadata. The metadata is carried by Extension children (§6.5.10) — domain, range, inverse, symmetry, cardinality, subPropertyOf, and any other vocabulary-defined annotations. A REL declaration is GDX's mechanism for *publishing* a predicate definition that other documents and tools may consult.
+
+```
+<REL gdx:knows
+    <_OBJ gdx:domain : @gdx:Person>
+    <_OBJ gdx:range  : @gdx:Person>
+    <_BOOL gdx:symmetric : true>
+>
+```
+
+The `#rel` field on any element may reference a predicate declared as a REL elsewhere. The relationship is by-name: when the `#rel` identifier matches a REL declaration's identifier in scope, consumers may consult the declaration for predicate semantics. The relationship is not required — a `#rel` identifier without a corresponding REL declaration is valid; it just lacks the metadata a REL would provide.
+
+**References (`@REL`) — predicates referring to other predicates and to concepts.** RELs may carry references to other RELs (inverse, subPropertyOf, equivalentProperty) and to Objects that represent concepts (domain, range). The reference is a typed pointer (§6.5.16); the RE composed system is recursive — vocabularies can refer to vocabularies, predicates to concepts, concepts to other concepts.
+
+**Concept-as-Object.** GDX has no separate Class or Concept role. When a vocabulary needs to name a concept — a type of entity, an enumeration value, a category — an Object with a conceptual identifier serves that role:
+
+```
+<OBJ gdx:Person>
+<OBJ gdx:Organization>
+<OBJ gdx:Color
+    <STR rdfs:label : "Color">
+    <STR rdfs:comment : "A perceived chromatic attribute.">
+>
+```
+
+These Objects are addressable like any other Object (`@gdx:Person`), referenceable from REL declarations (as domain/range), and may carry their own properties and relationships. The decision to use Objects rather than introduce a separate Class role keeps the data model uniform: the vocabulary describing a domain and the data within the domain are written in the same form.
+
+**Vocabulary documents.** A complete GDX vocabulary document is just a document whose roots are REL declarations, concept Objects, and Templates. The document defines a vocabulary's predicates, the concepts they connect, and the schemas instances must satisfy — all in the same syntax as the data those vocabularies describe.
+
+### 3.8 Optional Elaboration
 
 A GDX element has a minimum form determined by its role and position. The Prefix is always required (§4.2); for Properties, Records, Objects, and Templates in named-attribute position, at least one identifier field (`Id`, `Key`, or `Rel`) is additionally required; in Set-member position, no identifier is required because the element identifies itself by position. Beyond this role-specific minimum, every field is optional. The minimum form is meaningful on its own, and richer claims are added only where the use case demands.
 
@@ -1494,9 +1541,9 @@ Qualifier is best understood by contrast with Extension (§6.5.10): a **Qualifie
 
 #### 6.5.10 Extension — `_`
 
-An Extension is a **schema rule attached to a Template** — a vocabulary-defined constraint or interpretation directive that instances of the Template are to be evaluated against. Conceptually, an Extension says "instances of this Template must satisfy this rule," where the rule's meaning is owned by the vocabulary that defines the Extension's identifier (§8.4). Extensions are part of the schema layer, not the data layer; removing an Extension may relax validation but does not change what any instance value means.
+An Extension is a **schema rule attached to a Template or REL** — a vocabulary-defined constraint or interpretation directive carried by a schema-layer or vocabulary-layer parent. Conceptually, an Extension on a Template says "instances of this Template must satisfy this rule" (§8.4); an Extension on a REL says "this predicate carries this declared semantic property" (domain, range, inverse, cardinality, etc. — see §6.5.15). In both cases the rule's meaning is owned by the vocabulary that defines the Extension's identifier. Extensions are part of the schema/vocabulary layer, not the data layer; removing an Extension may relax validation or strip a predicate-level annotation but does not change what any instance value means.
 
-Structurally, the `_` modifier marks an element as an Extension — a schema-only attachment that appears as a child of a Template (§6.5.14). Extensions are NOT part of the data model. The structural restriction — Extensions valid only under Templates — is enforced by the composition matrix (§7.1). An Extension appearing outside a Template is malformed.
+Structurally, the `_` modifier marks an element as an Extension — a schema-only attachment that appears as a child of a Template (§6.5.14) or a REL declaration (§6.5.15). The structural restriction — Extensions valid only under Templates or RELs — is enforced by the composition matrix (§7.1). An Extension appearing under any other parent is malformed.
 
 See §6.5.9 for the contrast with Qualifier — both attach to elements, but Extension defines schema rules while Qualifier refines instance data.
 
@@ -1700,21 +1747,75 @@ A Template's *fields* are described using regular prefixes (not `DEF…` prefixe
 |-----------|----------|-----------|------------|
 | `REL`     | —        | —         | required (predicate identifier) |
 
-A Relation Declaration is a **predicate as a first-class entity** — the formal counterpart to the `#rel` references that Edges and other elements carry. Conceptually, a REL says "this predicate has its own identity, and other elements (or RELs) may describe it": its domain and range, its inverse, whether it is symmetric or transitive, what vocabulary it participates in. Without RELs, predicates would be opaque identifiers; with RELs, the predicate vocabulary itself becomes part of the data model.
+A Relation Declaration is a **predicate as a first-class entity** — the published counterpart to the `#rel` references that Edges and other elements carry. Conceptually, a REL says "this predicate has its own identity, and the metadata describing it lives here": its domain and range, its inverse, whether it is symmetric or transitive, what vocabulary it participates in, what concepts it connects. Without RELs, predicates would be opaque identifiers used inline; with RELs, the predicate vocabulary itself becomes part of the data model.
 
-Structurally, a `REL` element declares a predicate as a first-class entity. Predicates declared via REL are referenced from Edges (and other relation-bearing positions) through the `#rel` field. REL has no minified form.
+Structurally, a `REL` element declares a predicate as a first-class entity. The `REL` element's identifier is the predicate identifier itself (typically a CURIE such as `gdx:knows` or `schema:givenName`). REL has no minified form.
 
-The fields a REL carries — domain, range, inverse, symmetry, cardinality, and other semantic properties — are determined by the vocabulary the predicate participates in. The core specification defines REL only as a structural role; the predicate semantics live in vocabulary specifications. The GDX Common Vocabulary defines a base set of predicate refinement extensions. Applications may use additional vocabulary-defined extensions or define their own.
+A REL admits two kinds of children:
+
+- **Extensions** (§6.5.10) — carry vocabulary-defined predicate semantics: domain, range, inverse, symmetry, cardinality, subPropertyOf, equivalent-property relationships, and any other properties an ontology vocabulary defines for predicates. The set of recognized Extension identifiers is vocabulary-defined; the core spec defines REL structurally but assigns no semantics to specific identifiers.
+- **References** (`@KIND`, §6.5.16) — typed pointers from this REL to other elements: another REL (for inverse, subPropertyOf, equivalentProperty), an Object (for concept-bearing domain/range targets), a Template (for type-bound range), and so on.
 
 ```
-<REL gdx:knows>
+<REL gdx:knows
+    <_OBJ gdx:domain : @gdx:Person>
+    <_OBJ gdx:range  : @gdx:Person>
+    <_BOOL gdx:symmetric : true>
+>
 
 <REL gdx:manages
     <@REL #gdx:inverse : @gdx:reportsTo>
 >
 ```
 
-A REL declaration MAY appear at the document root (alongside or instead of a primary Object) or within a vocabulary document. Resolution of `#rel` references follows the same mechanism as Type reference resolution (§8.5).
+The interplay among the three vocabulary-related elements is:
+
+- The `#rel` field on any element names a predicate by identifier (§3.7). The reference is lightweight — it asserts "this element represents this predicate" without requiring the predicate to be declared anywhere.
+- A `REL` element declares the predicate with its metadata, making the predicate's semantics part of the data model.
+- A `@REL` reference points at a REL declaration from elsewhere (typically from another REL describing a relationship between predicates).
+
+The three are coordinated by name: when a `#rel` identifier matches a `REL` identifier in scope, the REL's metadata applies to the predicate. When a `@REL` reference matches a `REL` identifier, the reference resolves to that declaration.
+
+**Concept-as-Object.** GDX deliberately has no separate Class or Concept role. When a vocabulary needs to name a concept (a type of entity, an enumeration value, a category), an Object with a conceptual identifier serves that role. RELs reference concepts as Objects (`@gdx:Person`, `@gdx:Organization`), and concept Objects may carry their own properties, labels, and relationships like any other Object. This keeps the data model uniform — vocabulary, schema, and data all use the same element form.
+
+**A small vocabulary document:**
+
+```
+<OBJ gdx:Person
+    <STR rdfs:label : "Person">
+>
+
+<OBJ gdx:Organization
+    <STR rdfs:label : "Organization">
+>
+
+<REL gdx:knows
+    <_OBJ gdx:domain : @gdx:Person>
+    <_OBJ gdx:range  : @gdx:Person>
+    <_BOOL gdx:symmetric : true>
+>
+
+<REL gdx:employs
+    <_OBJ gdx:domain : @gdx:Organization>
+    <_OBJ gdx:range  : @gdx:Person>
+    <@REL #gdx:inverse : @gdx:employedBy>
+>
+
+<REL gdx:employedBy
+    <_OBJ gdx:domain : @gdx:Person>
+    <_OBJ gdx:range  : @gdx:Organization>
+>
+
+<DEFOBJ gdx:Person
+    <STR firstName>
+    <STR familyName>
+    <REC* knows>
+>
+```
+
+This document defines a small vocabulary: two concept Objects (`gdx:Person`, `gdx:Organization`), three predicates with declared domain/range and inverse relationships, and one Template binding instance shape to the Person concept. The entire vocabulary is GDX; consumers parse it with the same parser they use for instances.
+
+A REL declaration MAY appear at the document root (alongside or instead of primary Objects) or within a vocabulary document. Resolution of `#rel` references follows the same mechanism as Type reference resolution (§8.5).
 
 #### 6.5.16 References — `@KIND`
 
@@ -1772,7 +1873,7 @@ GDX nesting is governed by a single matrix indexed by **role**. The table below 
 
 Modifier-bearing and operator-bearing prefixes are validated as their base role with two refinements:
 
-- **Refinement modifiers** (`.`, `_`, `%`, `N`) and the **`DEF` declaration construct** do not change which roles may contain or be contained by the element, with two exceptions: Extensions (`_X`) may only appear under Templates (rule 7), and Node-zone elements (`NX`) have isolated-subtree semantics (rule 5).
+- **Refinement modifiers** (`.`, `_`, `%`, `N`) and the **`DEF` declaration construct** do not change which roles may contain or be contained by the element, with two exceptions: Extensions (`_X`) may only appear under Templates or REL declarations (rule 7), and Node-zone elements (`NX`) have isolated-subtree semantics (rule 5).
 
 - **The `*` suffix** (Set) and **the `@` operator** (Reference) produce roles whose composition rules are distinct from their bases. A Set follows the Set row; a Reference follows the Reference row.
 
@@ -1797,7 +1898,7 @@ Modifier-bearing and operator-bearing prefixes are validated as their base role 
 | **Group**           | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   | ✓ | ✓ | ✓ |
 | **Document root**   | ✓ |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-The Template row covers all `DEF…` prefixes, validated by their base role's row except where Extensions are admitted (Templates are the only parent role that admits Extension children). Templates also admit Reference children, which support cross-references to other Templates (e.g., for version chains or supersedes-by relationships).
+The Template row covers all `DEF…` prefixes, validated by their base role's row except where Extensions are admitted (Templates and REL declarations are the two parent roles that admit Extension children — see the REL row and §6.5.15). Templates also admit Reference children, which support cross-references to other Templates (e.g., for version chains or supersedes-by relationships).
 
 The Reference row covers all `@…` prefixes. References are leaf-like: they admit only Qualifiers and Annotations as children. They do NOT carry Properties, Edges, Sets, or other structural children of their own. The element identifies its target via the Resource (a reference literal); the target lives elsewhere and is reached through resolution.
 
@@ -1823,11 +1924,11 @@ The following rules are consequences of the matrix and are repeated here for cla
 
 6. **Sets contain members of their declared element type.** A Set's children MUST be elements whose prefix matches the Set's element type. A `STR*` Set contains `STR` members; a `REC*` Set contains `REC` members. Qualifiers, Extensions (where permitted), and Annotations may also appear as Set children to refine or annotate the Set itself.
 
-7. **Extensions are schema-only.** Extensions MAY appear only under Template (`DEF…`) elements. An Extension under any other parent role is malformed.
+7. **Extensions are schema-only.** Extensions MAY appear only under Template (`DEF…`) elements or REL declarations. An Extension under any other parent role is malformed. Extensions on Templates declare instance-validation rules (§8.4); Extensions on RELs declare predicate semantics (§6.5.15).
 
 8. **REL declares predicates.** A REL element may carry Extension children that declare predicate semantics (domain, range, inverse, symmetry, cardinality, etc.). The vocabulary of those Extensions is defined by the GDX Common Vocabulary or by application vocabularies.
 
-9. **Modifier transparency.** Embedded (`%X`), Template (`DEF…`), Qualifier (`.X`), Extension (`_X`), and Node (`NX`) modifier-bearing prefixes are validated as their base role for composition purposes. The modifier never changes what is allowed inside or what may contain the element, with two exceptions: Extensions are restricted to Template parents (rule 7), and Node-zone elements have isolated-subtree semantics (rule 5).
+9. **Modifier transparency.** Embedded (`%X`), Template (`DEF…`), Qualifier (`.X`), Extension (`_X`), and Node (`NX`) modifier-bearing prefixes are validated as their base role for composition purposes. The modifier never changes what is allowed inside or what may contain the element, with two exceptions: Extensions are restricted to Template or REL parents (rule 7), and Node-zone elements have isolated-subtree semantics (rule 5).
 
 10. **Transport non-nesting.** Packages MUST NOT contain other Packages. Groups MUST NOT contain Packages. Transport-layer roles form a controlled structure: a Package may contain Groups and data-layer items; a Group may contain other Groups and data-layer items.
 
