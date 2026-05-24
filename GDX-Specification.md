@@ -7,12 +7,7 @@
 
 
 ## Abstract
-
-GDX (Graph Data eXchange) is a typed graph data format for representing structured information as elements with explicit roles, identifiers, predicates, values, and schema references. It combines the typing of programming languages, the predicate alignment of semantic-web formats, and the document orientation of human-readable formats in a single representation.
-
-GDX targets applications requiring structured data, semantic relationships, and stable identity within a unified model. The core specification defines a small closed vocabulary of structural roles, a uniform identifier and literal grammar, and a Template-based schema mechanism in which schemas are themselves GDX documents. Vocabularies layer on top through extension and template mechanisms; the core specification stays stable while vocabularies evolve independently.
-
-This document defines the abstract data model, the prefix vocabulary and composition rules, the canonical text form, and the schema and validation mechanism. It is independent of any particular wire format. Companion specifications cover the Compact Form, the Binary Form, and the GDX Common Vocabulary.
+This document defines the GDX abstract data model, the GDX prefix vocabulary and composition rules, the canonical text form, and the schema and validation mechanism. It is independent of any particular wire format. Companion specifications cover the Compact and Binary Forms.
 
 
 ## Status of This Document
@@ -93,7 +88,13 @@ Changes in v0.11.0 from v0.10.0:
 
 ### 1.1 What GDX Is
 
-GDX (Graph Data eXchange) is a data persistence and exchange format. GDX is designed to be easily read, modified and created by humans.  A GDX document is composed of a set of nested elements. Each element has the same strutural composition. Each element carries a role prefix, comprised of a minimal yet expressive closed vocabulary, which enables unambiguous interpretation of the elements resouce field. Elements may carry an identifier, a predicate that aligns it to a shared semantic definition,  a typed resource value, and a reference to a schema type.
+GDX is a layered conceptual framework, defining an abstract model realized in multiple concrete representations; textural serialization, binary wire format, and programamtic representation.
+
+The framework is layered by ownership. The foundationla GDX core defines the structural model, element composition, grammar, type primitives and axioms. The upper layers of GDX provide a structural surface for hosting type meaning, schema, validation, semantic alignment and ontology.      
+
+GDX aims to provide a robust data persitence and exchange format through the use of focused closed grammar. It GDX targets applications requiring a mix of structured and semi strucutred data, semantic relationships, graph edge semantics and stable identity within a unified model. The core specification defines a small closed vocabulary of structural roles and a Template-based schema mechanism in which schemas are themselves GDX documents. 
+
+ GDX is designed to be easily read, modified and created by humans.  A GDX document is composed of a set of nested elements. Each element has the same strutural composition. Each element carries a role prefix, comprised of a minimal yet expressive closed vocabulary, which enables unambiguous interpretation of the elements resouce field. Elements may carry an identifier, a predicate that aligns it to a shared semantic definition,  a typed resource value, and a reference to a schema type.
 
 A small GDX example:
 
