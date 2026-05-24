@@ -10,9 +10,9 @@
 
 This document defines the GDX Path Expression — a syntax and resolution model for addressing individual elements within a GDX document by their structural location. Path expressions complement the identifier-mode reference syntax (`@Identifier`) and the key-mode reference syntax (`&Key`) defined in the GDX Core Specification by providing access to elements that lack a globally addressable identifier, including Records, Blocks, value Properties, Qualifiers, and Extensions.
 
-The path grammar is uniform across all consuming contexts. This specification defines the syntax and per-segment selection semantics; the cardinality and failure semantics for any given consumer (references, delta operations, queries) are specified by the consuming layer. This document normatively defines address-mode behavior — the cardinality contract used by `@KIND` reference elements (Core Specification §6.5.16). Query-mode and delta-mode behaviors are reserved for future companion specifications.
+The path grammar is uniform across all consuming contexts. This specification defines the syntax and per-segment selection semantics; the cardinality and failure semantics for any given consumer (references, delta operations, queries) are specified by the consuming layer. This document normatively defines address-mode behavior — the cardinality contract used by `@KIND` reference elements (Core Specification §7.16). Query-mode and delta-mode behaviors are reserved for future companion specifications.
 
-This specification resolves the `$PathExpression` reservation in Core Specification §11.4 (Path-Mode Reference Resolution). It defines the five reference-literal forms recognized in `@KIND` reference resources: `IdRef` (`@Anchor`), `PathRef` (`$PathExpression`), `KeyRef` (`&Key`), `IdPathRef` (`@Anchor$PathExpression`), and `IdKeyRef` (`@Anchor&Key`). The composed forms `IdPathRef` and `IdKeyRef` express cross-document addressing by structural path or by Key-based anchor respectively. The `Anchor` production carries an optional role marker (`@OBJ:id`, `@REL:id`, `@DEFOBJ:id`, etc.) drawn from the closed prefix vocabulary; when omitted, composed references default to an Object anchor.
+This specification resolves the `$PathExpression` reservation in Core Specification §12.4 (Path-Mode Reference Resolution). It defines the five reference-literal forms recognized in `@KIND` reference resources: `IdRef` (`@Anchor`), `PathRef` (`$PathExpression`), `KeyRef` (`&Key`), `IdPathRef` (`@Anchor$PathExpression`), and `IdKeyRef` (`@Anchor&Key`). The composed forms `IdPathRef` and `IdKeyRef` express cross-document addressing by structural path or by Key-based anchor respectively. The `Anchor` production carries an optional role marker (`@OBJ:id`, `@REL:id`, `@DEFOBJ:id`, etc.) drawn from the closed prefix vocabulary; when omitted, composed references default to an Object anchor.
 
 This document does not address query-mode semantics (wildcards, filters, descendant axis, projections), delta/patch operations, or filter expression languages. The syntactic territory those features require is enumerated as reserved (§9) so that v1 path expressions remain forward-compatible.
 
@@ -174,7 +174,7 @@ Examples:
 - `#gdx:knows` matches a child with `Rel` `gdx:knows`.
 - `#schema:givenName` matches a child with that Rel.
 
-The Rel field is not constrained to be unique among the children of an element. Multiple Properties, Edges, or other elements MAY share the same Rel value (Core Spec §6.5.4 explicitly allows multiple Edges of the same Rel between the same source/target pair). A `RelSegment` therefore may match zero, one, or many child elements at the data layer.
+The Rel field is not constrained to be unique among the children of an element. Multiple Properties, Edges, or other elements MAY share the same Rel value (Core Spec §7.4 explicitly allows multiple Edges of the same Rel between the same source/target pair). A `RelSegment` therefore may match zero, one, or many child elements at the data layer.
 
 Address-mode consumers (§7) require exactly one match. Authors writing paths in address-mode contexts SHOULD select segments such that the terminal step matches a single child; this typically means using an `IdSegment` or `OrdinalSegment` at any step where multiple siblings could share a Rel. Alternatively, when the target element carries a `Key`, the `&Key` reference literal (§5.1) addresses it directly without requiring path traversal at all.
 
@@ -240,7 +240,7 @@ The `Anchor` production extends the identifier portion of `@`-references with an
 
 ### 5.1 Form Semantics
 
-- **`IdRef`** — name-mode resolution. The `@Anchor` is resolved per the scope walk of Core Spec §6.5.16. When the anchor carries no role marker, the role is inferred from the enclosing `@KIND` reference element's prefix. When the anchor carries a role marker, the resolver looks for an element of the named role with the matching identifier.
+- **`IdRef`** — name-mode resolution. The `@Anchor` is resolved per the scope walk of Core Spec §7.16. When the anchor carries no role marker, the role is inferred from the enclosing `@KIND` reference element's prefix. When the anchor carries a role marker, the resolver looks for an element of the named role with the matching identifier.
 - **`PathRef`** — structural traversal rooted at the document containing the reference literal.
 - **`KeyRef`** — key-mode lookup within the scope of the reference (Core Spec §5.4.5).
 - **`IdPathRef`** — composed name + path. The `@Anchor` portion resolves to a starting element; the `$PathExpression` portion is then evaluated rooted at that starting element. When the anchor carries no role marker, the starting element defaults to an Object (the most common anchor for cross-document path addressing).
@@ -292,7 +292,7 @@ The `$` and `&` operators do not combine within a single reference literal. The 
 
 - Local-document (the identifier matches an element within the same document).
 - Namespace-relative (the identifier matches a name registered in a vocabulary or package scope).
-- Remote IRI (the identifier is a fully qualified IRI; implementations MAY perform network resolution per Core Spec §6.5.16 rule 3).
+- Remote IRI (the identifier is a fully qualified IRI; implementations MAY perform network resolution per Core Spec §7.16 rule 3).
 
 The path or key portion is then evaluated within the resolved element's scope:
 
@@ -313,7 +313,7 @@ The forms `@Anchor$` (trailing `$` with no path segments), `@Anchor&` (trailing 
 
 ### 5.6 Reference-Element Composition
 
-A `@KIND` reference element (Core Spec §6.5.16) MAY use any of the five reference literal forms as its Resource. The choice of form is governed by what the reference is addressing and how the target is most stably identified:
+A `@KIND` reference element (Core Spec §7.16) MAY use any of the five reference literal forms as its Resource. The choice of form is governed by what the reference is addressing and how the target is most stably identified:
 
 | Use                                                                                            | Form          |
 |------------------------------------------------------------------------------------------------|---------------|
@@ -333,7 +333,7 @@ When both a Key and a structural path could address the target, prefer the Key f
 
 Path resolution is a left-to-right traversal of the segments of a `PathExpression`, starting from a defined starting element. The starting element is determined by the consuming context:
 
-- For `PathRef` (Core Spec §5.2.6, as revised): the root of the document containing the reference literal. For documents with multiple top-level elements (Core Spec §7.2 rule 1), the document root is a notional container of the top-level elements; the first segment matches against the top-level elements as children of that container.
+- For `PathRef` (Core Spec §5.2.6, as revised): the root of the document containing the reference literal. For documents with multiple top-level elements (Core Spec §8.2 rule 1), the document root is a notional container of the top-level elements; the first segment matches against the top-level elements as children of that container.
 - For `IdPathRef`: the element produced by name-mode resolution of the `@Identifier` portion. If that resolution fails (no element matches the identifier in any scope), the path is not evaluated and the entire reference is unresolved.
 - For other consumers (delta operations, queries — future): the starting element is defined by the consuming specification.
 
@@ -376,7 +376,7 @@ The consuming specification interprets the outcome according to its cardinality 
 
 ## 7. Address-Mode Singularity
 
-This section is **normative** for the use of path expressions as reference literals in `@KIND` reference elements (Core Spec §6.5.16) and is anticipated to be referenced normatively by future delta-operation specifications.
+This section is **normative** for the use of path expressions as reference literals in `@KIND` reference elements (Core Spec §7.16) and is anticipated to be referenced normatively by future delta-operation specifications.
 
 A `PathRef` or `IdPathRef` appearing as the Resource of a `@KIND` reference element is **resolved** if and only if path evaluation yields exactly one element whose role matches the enclosing `@KIND` prefix.
 
@@ -405,7 +405,7 @@ Alternatively, when the target element carries a `Key`, switch from a `PathRef`/
 
 ### 7.3 Resolution Determinism
 
-For a conforming document, conforming resolvers MUST produce the same resolution outcome (resolved-to-element vs. unresolved) for the same path expression evaluated against the same starting element. Implementation-defined behavior is permitted only for the network-resolution component of identifier-mode resolution (Core Spec §6.5.16 rule 3); the path-traversal component is fully determined by the document.
+For a conforming document, conforming resolvers MUST produce the same resolution outcome (resolved-to-element vs. unresolved) for the same path expression evaluated against the same starting element. Implementation-defined behavior is permitted only for the network-resolution component of identifier-mode resolution (Core Spec §7.16 rule 3); the path-traversal component is fully determined by the document.
 
 
 ---
@@ -465,11 +465,11 @@ The address-mode singularity requirement (§7 of this specification) is added as
 
 The optional `AnchorRole` marker disambiguates the role of the resolved element in composed references (`IdPathRef`, `IdKeyRef`) when the anchor is not an Object. In the absence of a marker, the anchor defaults to OBJ. Parse-time validation rejects unknown role keywords; resolution-time validation ensures the named element matches the claimed role.
 
-### 8.5 Template-Instance Alignment (Core Spec §8.2)
+### 8.5 Template-Instance Alignment (Core Spec §9.2)
 
-Core Spec §8.2 is amended with an explicit alignment rule: an instance child satisfies a Template slot by matching the slot's `Id` field (case-sensitive ordinal comparison). When a Template slot declares a `Rel`, an instance child carrying the same `Rel` MAY align to the slot even if its local `Id` differs; in that case the `Rel` is the alignment key. The `Key` field plays no role in Template-instance alignment.
+Core Spec §9.2 is amended with an explicit alignment rule: an instance child satisfies a Template slot by matching the slot's `Id` field (case-sensitive ordinal comparison). When a Template slot declares a `Rel`, an instance child carrying the same `Rel` MAY align to the slot even if its local `Id` differs; in that case the `Rel` is the alignment key. The `Key` field plays no role in Template-instance alignment.
 
-### 8.6 Composition Matrix (Core Spec §7.1)
+### 8.6 Composition Matrix (Core Spec §8.1)
 
 `@KIND` reference elements become resolvable against targets that were previously not addressable by the identifier-mode grammar. The composition matrix expands as follows:
 
@@ -479,11 +479,11 @@ Core Spec §8.2 is amended with an explicit alignment rule: an instance child sa
 - `@%REC`, `@%OBJ`, `@%STR`, `@%INT`, etc. — resolvable when the path or key terminal is an Embedded element.
 - `@STR`, `@INT`, `@FLOAT`, `@BOOL`, `@BYTE` to value Properties — resolvable when the path or key terminal is a value Property of the corresponding value-kind. (Distinct from references to Objects of those names, which is not a legal composition; `@STR` to an Object is malformed.)
 
-Parent-context restrictions on where `@KIND` references may appear (Core Spec §7.1) are unchanged. Only the addressability of the **target** expands; the rules for where a reference element may sit in its parent's children are governed by the existing composition matrix.
+Parent-context restrictions on where `@KIND` references may appear (Core Spec §8.1) are unchanged. Only the addressability of the **target** expands; the rules for where a reference element may sit in its parent's children are governed by the existing composition matrix.
 
 ### 8.7 Closure of Open Item §11.4
 
-Core Spec §11.4 (Path-Mode Reference Resolution) closes upon publication of this specification. Its forward reference is satisfied here; the open issue is resolved.
+Core Spec §12.4 (Path-Mode Reference Resolution) closes upon publication of this specification. Its forward reference is satisfied here; the open issue is resolved.
 
 
 ---
@@ -521,17 +521,17 @@ The following items are not resolved by this specification and are expected to b
 
 ### 10.1 Node-Zone Boundary Behavior
 
-Node-zone elements (the `N` modifier; Core Spec §6.5.13) are described as semi-structured isolated subtrees with composition rules distinct from the rest of GDX (Core Spec §7.2 rule 5). It is not normatively specified whether a path expression may traverse into a Node-zone subtree from outside, whether path expressions written **within** a Node-zone subtree may reach **outside** the Node-zone, and whether the segment-kind selectors retain their semantics inside Node-zone material.
+Node-zone elements (the `N` modifier; Core Spec §7.13) are described as semi-structured isolated subtrees with composition rules distinct from the rest of GDX (Core Spec §8.2 rule 5). It is not normatively specified whether a path expression may traverse into a Node-zone subtree from outside, whether path expressions written **within** a Node-zone subtree may reach **outside** the Node-zone, and whether the segment-kind selectors retain their semantics inside Node-zone material.
 
 A future revision is expected to specify either (a) Node-zone subtrees are opaque to outside path expressions (paths halt at the Node-zone boundary), or (b) paths traverse Node-zone subtrees with the same segment semantics. Implementers SHOULD NOT rely on either behavior in v1.
 
 ### 10.2 Path Behavior Across Embedded Elements
 
-Embedded elements (the `%` modifier; Core Spec §6.5.11) appear in property-value position while retaining their base role's children and identifier rules. Path traversal through an Embedded element behaves naturally — the Embedded element is a child of its parent, and its own children are accessed by further segments — but this should be stated explicitly in a subsequent revision, including the case where a `PathRef` terminates at an Embedded element.
+Embedded elements (the `%` modifier; Core Spec §7.11) appear in property-value position while retaining their base role's children and identifier rules. Path traversal through an Embedded element behaves naturally — the Embedded element is a child of its parent, and its own children are accessed by further segments — but this should be stated explicitly in a subsequent revision, including the case where a `PathRef` terminates at an Embedded element.
 
 ### 10.3 Ordinal Counting and Annotations
 
-`OrdinalSegment` is specified to count "all children in document order." It is not made explicit whether this count includes Annotations (Core Spec §6.5.6, REM and other annotation forms). Two interpretations are plausible:
+`OrdinalSegment` is specified to count "all children in document order." It is not made explicit whether this count includes Annotations (Core Spec §7.6, REM and other annotation forms). Two interpretations are plausible:
 
 - **Inclusive.** Annotations count as children for ordinal purposes; `[1]` may select an Annotation if it precedes other children.
 - **Exclusive.** Annotations are skipped; only "structural" children are counted.
@@ -799,7 +799,7 @@ Two migration patterns are available:
 
 Existing references using `@Identifier` continue to work without modification, subject to the `IdStartChar` narrowing.
 
-Existing usages of `$PathExpression` (which were previously implementation-defined under Core Spec §11.4) MUST be reviewed against the v1 grammar in this specification. Implementations that previously accepted permissive or non-conforming `$`-prefixed literals MUST be updated to reject any form not produced by the grammar in §5 and Appendix A.
+Existing usages of `$PathExpression` (which were previously implementation-defined under Core Spec §12.4) MUST be reviewed against the v1 grammar in this specification. Implementations that previously accepted permissive or non-conforming `$`-prefixed literals MUST be updated to reject any form not produced by the grammar in §5 and Appendix A.
 
 ### C.3 Documents Unaffected by Migration
 
