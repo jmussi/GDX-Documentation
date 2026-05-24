@@ -94,6 +94,14 @@ Changes in v0.11.0 from v0.10.0:
 
 (24) **Targeted wording sweep: core/extension terminology adopted across §2.2 and §8.4.** Replaced phrases like "the GDX layer" and "hosted on top" with "core layer" and "extension layer" where the new terminology disambiguates the interpretation boundary from the mechanism boundary. Other places — where wording was already clear — were left as-is to avoid churn.
 
+(25) **§1 restructured.** §1.1 (What GDX Is) trimmed for redundancy: removed the duplicate prose paragraph (with `strutural`/`resouce` typos), pulled the "single repeating element shape" paragraph forward from §1.3's tail, and framed the small example explicitly as Standard Form (one realization of the abstract model). §1.2 and §1.3 swapped positions: design goals now lead, format comparison follows. The rhetorical flow shifts from "survey landscape, explain choices" to "introduce model, state goals, validate against alternatives."
+
+(26) **§1.2 (Design Goals) rewritten with nine model-focused goals.** Replaced the previous mixed list (which combined model goals with serialization-format virtues) with nine goals that each articulate a capability GDX commits to and a corresponding gap in established formats or data models. The new goals: Typed elements baked into the form; Inline semantic alignment; Schema is data; Structural schema with pluggable constraint vocabularies; Unified document and graph model; Self-describing instances without the schema; Reflexivity through typed references; Layered validity with clear ownership; Minimum-is-enough elaboration. Serialization-format virtues (round-trip stability, encoding efficiency, canonical content addressing) are explicitly relegated to §5 as properties of Standard Form rather than goals of the data model.
+
+(27) **§1.3 (Comparison with Existing Formats) absorbed the side-by-side example.** The composite-record side-by-side comparison block (showing the same record in GDX Standard, GDX Compact, JSON, YAML, and XML) moved from the tail of the old §1.3 to the tail of the new §1.3 (the comparison section). It now functions as a synthesizing example after each format's individual discussion rather than as an interruption of the design-goals list. The new §1.3 also gets typo cleanup (`unweildly`, `loosing`, `Write and Read`) and a sharpened opening that frames the section as validation of the §1.2 claims against the landscape.
+
+(28) **Three cross-references updated for the §1.2/§1.3 swap.** §3.1 ("responds to the problems §1.2 named" → "§1.3 names"); §8 layered-model paragraph ("(§1.3)" → "(§1.2)"); the new §1.3 closing references "(§1.2)" for the layering/pluralism design goals. Historical changelog entries that reference §1.3 at the time of their item are left as-is; they correctly describe the change at the point it was made.
+
 
 ## Table of Contents
 
@@ -116,15 +124,11 @@ Changes in v0.11.0 from v0.10.0:
 
 ### 1.1 What GDX Is
 
-GDX is a layered conceptual framework, defining an abstract model realized in multiple concrete representations; textural serialization, binary wire format, and programamtic representation.
+GDX (Graph Data eXchange) is a typed graph data model with a closed structural schema and a family of concrete representations. The data model is the abstract content: elements with prefixes declaring their role and value-kind, identity fields, typed resource values, schema-type claims, and composition into trees with graph references. The concrete representations are how that abstract content is realized for human reading, machine exchange, and in-memory processing — Standard Form (§5 of this specification), Compact Form (companion specification), Binary Form (planned companion), and the programmatic in-memory form a runtime exposes. A GDX document, regardless of which representation it is serialized in, conveys the same underlying data; tools convert between representations without changing the model content.
 
-The framework is layered by ownership. The foundationla GDX core defines the structural model, element composition, grammar, type primitives and axioms. The upper layers of GDX provide a structural surface for hosting type meaning, schema, validation, semantic alignment and ontology.      
+The model is built on a single repeating element shape: a prefix declaring the element's role, optional identity fields, an optional typed value, and optional children that compose into trees and graph relationships. The same element shape expresses Properties, Records, Objects, Edges, Sets, Templates, References — every role GDX defines. This shape is the load-bearing design choice from which the rest of the specification follows; §3 develops the element as a concept and §4 defines it formally.
 
-GDX aims to provide a robust data persitence and exchange format through the use of focused closed grammar. It GDX targets applications requiring a mix of structured and semi strucutred data, semantic relationships, graph edge semantics and stable identity within a unified model. The core specification defines a small closed vocabulary of structural roles and a Template-based schema mechanism in which schemas are themselves GDX documents. 
-
- GDX is designed to be easily read, modified and created by humans.  A GDX document is composed of a set of nested elements. Each element has the same strutural composition. Each element carries a role prefix, comprised of a minimal yet expressive closed vocabulary, which enables unambiguous interpretation of the elements resouce field. Elements may carry an identifier, a predicate that aligns it to a shared semantic definition,  a typed resource value, and a reference to a schema type.
-
-A small GDX example:
+The following small example, written in Standard Form, illustrates how the data model surfaces in text:
 
 ```
 <OBJ Alice
@@ -135,59 +139,51 @@ A small GDX example:
 >
 ```
 
-This declares an Object identified as `Alice` with three typed properties (string, integer, boolean) and an Edge expressing a `knows` relationship to another Object identified as `Bob`. Every element states its type, its role, and its content explicitly. No external schema is required to know that `age` is an integer, that `active` is a boolean, or that the Edge points to another entity.
+This declares an Object identified as `Alice` with three typed properties (string, integer, boolean) and an Edge expressing a `knows` relationship to another Object identified as `Bob`. Every element states its role, its value-kind, and its content explicitly. No external schema is required to know that `age` is an integer, that `active` is a boolean, or that the Edge points to another entity — the data model itself carries that information on each element.
 
-GDX carries structured application data, semantic relationships, and stable identity within a single uniform model. The properties it combines — typed values like a programming language, semantic alignment like the semantic web, hierarchical structure like a document format, and graph relationships like a property graph — are typically split across separate formats; GDX provides them in one.
+GDX is designed to be easily read, modified, and created by humans. The same data is just as easily produced by tools, parsed by machines, and traversed by graph queries. It carries structured application data, semantic relationships, and stable identity within a single uniform model — properties that established formats and data models typically split across several incompatible designs.
 
+### 1.2 GDX Design Goals
 
+GDX's design choices target capabilities that established formats and data models leave on the table. The goals below name what the data model itself commits to. Properties of any particular concrete representation (round-trip stability of the text form, encoding efficiency, canonical form for content addressing) are properties of Standard Form and are defined in §5 and its companion specifications.
 
-### 1.2 Existing Approaches
+**Typed elements baked into the form.** Every element declares its role and value-kind as part of its identity, not through external annotation or value-shape inference. `<INT age : 24>` is unambiguously an integer-valued property; `<STR version : "1.10">` is unambiguously a string. JSON's number-but-no-int-vs-float, YAML's permissive type inference (`yes`/`no`/`NO` parsing surprises), and XML's everything-is-text-with-attributes all leave types implicit. GDX makes the type part of the element's primary identity — every element in the data model carries an explicit value-kind, and readers and tools never have to infer it from the value's appearance.
 
-The data format landscape offers several established options, each with real strengths and real limits.
+**Inline semantic alignment.** The optional `Rel` field on any element names a shared predicate that aligns the element's local identity to a cross-document vocabulary. `<STR #schema:givenName firstName : "Alice">` is locally named `firstName` but semantically identifies as `schema:givenName`. Two systems using different local names can recognize the same concept by matching the predicate. The alignment travels with the data, not in a separate mapping layer. This is RDF's predicate-alignment property without RDF's triple-model overhead; JSON and YAML have no semantic layer at all.
+
+**Schema is data.** A Template is a GDX element with a `DEF…` prefix. It uses the same syntax as the instances it describes; the same parser reads both; the same query mechanisms address both. There is no separate schema language, no schema compilation, no schema/instance impedance. A Template can travel in the same document as the instances that satisfy it — common in vocabulary documents, integration tests, and self-contained exchange formats. XSD is a separate language from XML; JSON Schema is a separate convention layered over JSON; GDX collapses the distinction.
+
+**Structural schema with pluggable constraint vocabularies.** GDX defines a complete structural schema — the prefix vocabulary, the element model with its identity and value fields, Template-based slot declarations, the universal claim rule, and the composition axioms. This structural schema is what GDX *is*, and it is fixed by this specification. What GDX deliberately does *not* define is constraint implementation: numeric bounds, string patterns, regex matches, semantic types, and similar value-level constraints have no normative semantics in the core. Constraint vocabularies (XSD, JSON Schema, OWL profiles, bespoke domain vocabularies) ride on top as Extension elements whose identifiers GDX records but never interprets. This lets GDX serve as an integration surface where multiple constraint vocabularies coexist — XSD and JSON Schema on the same Template, each interpreted by its own consumer. GDX is not a lowest-common-denominator subset of these vocabularies; its structural schema is opinionated and complete, while the constraint layer is deliberately neutral. No other widely-used format hosts multiple constraint vocabularies neutrally.
+
+**Unified document and graph model.** A GDX document is a tree, but tree elements may carry Edges and typed references to other elements anywhere in the document or beyond it. Object identifiers can be local names, hierarchical paths, GUIDs, or full IRIs. The same data is readable as a document, traversable as a graph, and storable as relational rows (§10) — each access pattern uses the same underlying data with no separate format. Document databases and graph databases currently force a choice between which view the data lives in; GDX makes both natural and lets the consumer pick.
+
+**Self-describing instances without the schema.** When a Template declares metadata for a slot (the slot's `Rel`, a default value, a Key anchor), an instance may omit the metadata and rely on the Template to supply it. Before persistence, materialization (§8.2.4) writes those Template-supplied values into the instance as explicit fields. A materialized instance carries its full identity without needing the Template at read time — searchable by `Rel`, queryable by predicate, parseable in isolation. This solves a problem schema-validated formats have traditionally had: data written against a schema becomes opaque to queries when the schema isn't loaded.
+
+**Reflexivity through typed references.** Any addressable element can be the target of a typed reference (`@KIND`) from any other element. References compose with path expressions (`$path`) and Key anchors (`&key`) to address elements that lack global identifiers. This is the model-level expression of "everything is data": vocabulary documents reference Templates and predicates, configuration documents reference Objects, instances reference each other. The reference is itself a GDX element, validated like any other. JSON's `$ref` convention and XML's `IDREF` are bolt-ons; GDX's references are first-class typed elements.
+
+**Layered validity with clear ownership.** Validity is layered, not monolithic. Three rungs with three different owners (§2.2): GDX-native primitive axioms (an `INT` is an integer — owned by the core), Template structural conformance (instance children align to declared slots — owned by GDX's alignment algorithm), and constraint-vocabulary conformance (instance values satisfy vocabulary-defined constraints — owned by the vocabulary). An element can be GDX-valid, Template-conforming, and constraint-invalid for one vocabulary while constraint-valid for another; the verdicts are independent and the boundaries are visible. XSD, JSON Schema, and OWL each conflate these into a single valid-or-not answer; GDX separates them by ownership.
+
+**Minimum-is-enough elaboration.** Every element is valid with just its prefix; identity, value, type, and constraint affordances are all opt-in (§3.7). Identity grows along three orthogonal axes (`Id`, `Key`, `Rel`); value elaboration is layered across instance, Template, and external vocabulary. Simple cases stay simple — a property with just a name and a value is one line — and richer cases grow without restructuring. Schema-first typed formats require ceremony even for trivial values; GDX lets the simplicity match the situation.
+
+### 1.3 Comparison with Existing Formats
+
+The design goals above name capabilities GDX commits to. This section sets those claims against the data format landscape — JSON, YAML, XML, RDF/OWL, and binary protocols — to show where each existing format does what GDX does and where it doesn't.
 
 **JSON** is simple, ubiquitous, and supported by every modern programming environment. Its weaknesses follow from its simplicity: numbers have no integer-vs-float distinction, binary data has no native form, semantic alignment requires external convention, and validation requires a separate schema language. JSON is the right answer when universality matters more than richness.
 
-**YAML** is friendly for human authoring and widely used for configuration. Its type inference is permissive — `yes`, `no`, `on`, `off` may parse as booleans depending on YAML version, version numbers like `1.10` may parse as floats, country codes like `NO` may parse as the boolean false. Round-trip stability requires careful quoting discipline. YAML documents also become unweildly as they become more complex loosing the readibility benefits it is designed for.
+**YAML** is friendly for human authoring and widely used for configuration. Its type inference is permissive — `yes`, `no`, `on`, `off` may parse as booleans depending on YAML version, version numbers like `1.10` may parse as floats, country codes like `NO` may parse as the boolean false. Round-trip stability requires careful quoting discipline. YAML documents also become unwieldy as they grow more complex, losing the readability benefits they were designed for.
 
-**XML** provides hierarchical structure, namespaces, and a mature schema language (XSD). Its weaknesses are verbosity and the attribute-versus-element ambiguity (some data goes in attributes, some in elements, with no principled rule). As a mechanism for markup XML is excellent but is less efficient for pure information exchange.
+**XML** provides hierarchical structure, namespaces, and a mature schema language (XSD). Its weaknesses are verbosity and the attribute-versus-element ambiguity (some data goes in attributes, some in elements, with no principled rule). As a mechanism for markup XML is excellent but it is less efficient for pure information exchange.
 
-**RDF/OWL** models data as a graph of subject-predicate-object triples and supports semantic interoperability through shared vocabularies. RDF triples function as the basis for ontology building. Its strengths come at the cost of high complexity (multiple serializations, blank nodes, named graphs, OWL inference) and ergonomics that many application developers find off-putting. 
+**RDF/OWL** models data as a graph of subject-predicate-object triples and supports semantic interoperability through shared vocabularies. RDF triples function as the basis for ontology building. Its strengths come at the cost of high complexity (multiple serializations, blank nodes, named graphs, OWL inference) and ergonomics that many application developers find off-putting.
 
 **Binary protocols** (Protobuf, FlatBuffers, Cap'n Proto, Avro) optimize wire format size and parse speed at the cost of human readability and schema portability. Each requires schema definition in its own language and ahead-of-time compilation. These are the right answer for high-frequency machine-to-machine traffic.
 
-In the preceding example each format's development can be traced to a primary motivation, XML as markup, YAML for human Write and Read, RDF for ontological development, JSON as object serialization.  Each of these formats does its job well within its domain. The gap is for applications that need *several* of these properties together: explicit types like a binary protocol, semantic alignment like RDF, schema validation like XML, and document readability like JSON.
+Each format's development can be traced to a primary motivation: XML for markup, YAML for human writing and reading, RDF for ontology, JSON for object serialization, binary protocols for wire efficiency. Each does its job well within its domain. The gap GDX fills is for applications needing *several* of these properties together: explicit types like a binary protocol, semantic alignment like RDF, schema validation like XML, document readability like JSON, and the layering / pluralism properties (§1.2) that none of them provide.
 
-### 1.3 GDX Design Goals
+A short side-by-side example illustrates the contrast. The same composite record across formats:
 
-GDX's design choices are responses to the problems named in §1.2 and the gaps left by existing formats.
-
-**Portability and exchange.** GDX is designed so that complex typed data structures and object graphs can be encapsulated in a single document and uniformly parsed wihtout requiring external schemas. GDX is well suited for exchange of relational data to and from databases. It also works well as an intermediate data exchange between different file formats. 
-
-**Variable complexity.** GDX is able to encode simple key value pairs with minimal overhead in one element, and express semantic relationships and explicit graph edges in the next. The use of GDX features is entirely driven by user requirements and can vary across a document.
-
-**Typed elements.** Every GDX element begins with a prefix that declares its role and/or value-kind. The prefix ensures that an explicit interpretation of the resource is communicated. This may be a value literal type like `STR` declaring a string-valued property or a compound data type 'REC'. In other cases the element's prefix communicates that that it's resource should be interpreted as a reference to another object. It is this explicit declaration of the role of each element means that the receiver does not infer types from value appearance and removes the need for an external schema just to read the data correctly. 
-
-**Efficient encoding of high information density.** Every GDX element is able to encode several pieces of information through the use of field location and sigil prefixes. This allows GDX to contain rich expressions on a minimal surface.
-
-**Closed minimal vocabulary.** The structural surface, the prefix vocabulary, composition rules, identifier grammar, literal grammar is closed and small (§6). This minimal set of prefix terms produces a core vocaulary sufficient to explicitly communicate concepts about value relationship, data literal vs reference relationsip, using basic graph concepts. this core vocabulary is designed to be expressive enough to handle a wide range of requirements. GDX also is designed for vocabularies to be layer on top through the existing extension and template mechanisms. The core specification stays stable while vocabularies evolve independently.
-
-**Inline semantic layer.** The optional `#rel` field on any element names a shared predicate that aligns the element's local identity to a cross-document vocabulary. A property `<STR #schema:givenName firstName : "Alice">` is locally named `firstName` but semantically identifies as `schema:givenName`. Two systems using different local names can recognize the same concept by matching the predicate. The alignment travels with the data. This functionality allows data and and semantic layers to be constructed in parallel.
-
-**Simple schemas.** Schemas in GDX are GDX. A Template is an element with a `DEF[type]` prefix that declares the expected shape of conforming instances. The same parser reads Templates and instances; the same syntax expresses both. There is no separate schema language, and a Template can travel in the same document as the instances it describes. 
-
-**Structural schema with pluggable constraint vocabularies.** GDX defines a complete structural schema — the prefix vocabulary, the element model with its identity and value fields, Template-based slot declarations, and composition axioms. This structural schema is what GDX *is*, and it is fixed by this specification. What GDX deliberately does *not* define is constraint implementation: numeric bounds, string patterns, regex matches, semantic types, and similar value-level constraints have no normative semantics at the GDX layer. Constraint vocabularies (XSD, JSON Schema, OWL profiles, bespoke domain vocabularies) are expressed *on top of* GDX as Extension elements whose role identifiers GDX records but never interprets. This separation lets GDX serve as an integration surface for constraint vocabularies: multiple vocabularies can coexist on the same Template, each interpreted by its own consumer, without GDX taking a side on what any constraint means. GDX is not a lowest-common-denominator subset of those vocabularies; its structural schema is opinionated and complete, while the constraint layer is deliberately neutral. The layered validity model that follows from this stance is defined in §2.2 and §8.
-
-**Unified document and graph model.** A GDX document is a tree, but tree elements may carry Edges that reference other elements by identifier. Object identifiers can be local names, paths, GUIDs, or full IRIs. The same document can be read as a tree (for hierarchical access), traversed as a graph (for relationship navigation), or stored as relational rows (for operational systems). Each access pattern uses the same underlying data; no separate format is needed.
-
-**Round-trip stability by design.** The spec defines exactly what a serialization must preserve (Appendix A). Numeric width, value-kind, identifier ordering, child order, and Annotation positions all round-trip exactly. A strict canonical form supports content addressing and cryptographic signing.
-
-GDX expresses everything through a single repeating element form: a prefix declaring the role, optional identifying fields, an optional typed resource, and an optional schema reference. The same form expresses Properties, Records, Objects, Edges, Sets, and Templates — every role GDX defines.
-
-This shape is the load-bearing design choice from which the rest of the specification follows. §3 develops the element as a concept; §4 defines it formally.
-
-A short side-by-side example illustrates the contrast. The same composite record in several formats:
-
-**GDX:**
+**GDX (Standard Form):**
 
 ```
 <REC customer
@@ -195,6 +191,15 @@ A short side-by-side example illustrates the contrast. The same composite record
     <INT age : 24>
     <BOOL active : true>
 >
+```
+
+**GDX (Compact Form):**
+
+```
+REC customer
+  STR firstName : "Alice"
+  INT age : 24
+  BOOL active : true
 ```
 
 **JSON:**
@@ -207,15 +212,6 @@ A short side-by-side example illustrates the contrast. The same composite record
     "active": true
   }
 }
-```
-**GDX: Compact**
-
-```
-REC customer
-  STR firstName : "Alice"
-  INT age : 24
-  BOOL active : true
-
 ```
 
 **YAML:**
@@ -237,7 +233,7 @@ customer:
 </customer>
 ```
 
-The shapes are similar; the information each carries is not. JSON, YAML, and XML each leave several things implicit: that `age` is an integer (not a string `"24"`), that `active` is a boolean (not the string `"true"`), and that `firstName` aligns with the `schema:givenName` predicate. The receiver must already know — through external schema, convention, or out-of-band documentation — what types and meanings to assign. The GDX form makes each of these explicit on the element itself.
+The shapes are similar; the information each carries is not. JSON, YAML, and XML each leave several things implicit: that `age` is an integer (not a string `"24"`), that `active` is a boolean (not the string `"true"`), and (in a richer example) that `firstName` aligns with the `schema:givenName` predicate. The receiver must already know — through external schema, convention, or out-of-band documentation — what types and meanings to assign. The GDX form makes each of these explicit on the element itself.
 
 A more extensive comparison covering predicate alignment, schema validation, and graph-structured data is in the Format Comparison companion specification.
 
@@ -363,7 +359,7 @@ The focus is conceptual. Programming-model concerns — how an implementation re
 
 A GDX element states its own type, its own role, and its own content. No external schema is required to determine that a value is an integer rather than a string, that a reference points to another entity, or that a field aligns with a shared predicate. The element carries this information on itself.
 
-This is the design choice that responds to the problems §1.2 named. Type ambiguity dissolves when the element declares its value-kind through its prefix. Semantic drift dissolves when the element carries its own predicate alignment. Schema separation dissolves when the schema is itself written in the same form as the data. Document-vs-graph tension dissolves when the same element form expresses both hierarchical containment (parent-child) and graph relationships (Edges). Round-trip instability dissolves when the form is canonical enough that parsing and re-emitting produce identical text.
+This is the design choice that responds to the problems §1.3 names. Type ambiguity dissolves when the element declares its value-kind through its prefix. Semantic drift dissolves when the element carries its own predicate alignment. Schema separation dissolves when the schema is itself written in the same form as the data. Document-vs-graph tension dissolves when the same element form expresses both hierarchical containment (parent-child) and graph relationships (Edges). Round-trip instability dissolves when the form is canonical enough that parsing and re-emitting produce identical text.
 
 None of these dissolutions requires an external interpretation layer. The element is enough on its own.
 
@@ -1905,7 +1901,7 @@ Schemas in GDX are themselves GDX documents. This section defines the schema mec
 
 - **Constraint Extensions (§8.4).** Constraint vocabularies — XSD, JSON Schema, OWL profiles, bespoke domain vocabularies — are expressed as Extension elements on Template slots. The Extension carriers (`_STR`, `_INT`, etc.) are GDX-native. The constraint identifiers they carry (`xsd:minInclusive`, `json:pattern`, etc.) are vocabulary-defined and opaque to GDX. This is Layer 2b (§2.2). Multiple constraint vocabularies MAY coexist on the same Template; each is interpreted independently by consumers that understand its identifiers.
 
-This layered model is what makes GDX a structural schema with pluggable constraint vocabularies (§1.3). The structural surface — what Templates declare, how slots align, how Extensions attach — is fixed by this specification. The constraint surface is open: any vocabulary may define its own constraint identifiers and ride atop the GDX carrier mechanism without negotiating with GDX or with other vocabularies.
+This layered model is what makes GDX a structural schema with pluggable constraint vocabularies (§1.2). The structural surface — what Templates declare, how slots align, how Extensions attach — is fixed by this specification. The constraint surface is open: any vocabulary may define its own constraint identifiers and ride atop the GDX carrier mechanism without negotiating with GDX or with other vocabularies.
 
 ### 8.1 Templates
 
