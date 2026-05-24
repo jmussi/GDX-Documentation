@@ -120,6 +120,14 @@ Changes in v0.11.0 from v0.10.0:
 
 (37) **§6.5 promoted to standalone §7 (Element Roles); subsequent sections renumbered.** The per-role catalog (formerly §6.5.1 through §6.5.16) is now §7 as a top-level section, with each role at `###` depth instead of `####`. §6 is renamed from "Element Roles" to "Prefix Vocabulary" to reflect its narrowed scope (the prefix grammar, base vocabulary, special operators, and refinement modifiers). The new §7 is the authoritative role reference. Subsequent sections shift up by one: Composition Axioms (was §7) → §8, Schemas and Validation (was §8) → §9, Transport (was §9) → §10, Data Persistence (was §10) → §11, Open Issues (was §11) → §12. All body cross-references to §6.5.x → §7.x, §7.x → §8.x, §8.x → §9.x, §9 → §10, §10.x → §11.x, §11.x → §12.x. The Table of Contents and the v0.11.0 changelog entries are updated to current section numbers; older changelog entries (v0.9.x, v0.10.0) are also updated since the sections being described still exist at the new numbers.
 
+(38) **Extensions reframed as adjunct statements; structural restriction lifted.** §7.10 (Extension) is rewritten to define Extensions as *adjunct statements* — vocabulary-defined assertions attached to an element that consumers may interpret and act upon, but on which the element does not depend for its identity, value, or validity. This reframing replaces the prior "schema rule attached to a Template or REL" framing, which described one application of Extensions rather than what they are. The "harmlessly ignored" property (consumers that don't recognize an Extension's vocabulary ignore it) follows directly from the adjunct nature and is what allows multiple vocabularies to coexist on the same element.
+
+Structurally, Extensions are no longer restricted to Templates and RELs. §8.1 composition matrix is updated: the Extension column shows ✓ for all parent roles that admit children, with the exceptions of Annotation (leaf-only) and Node (isolated-subtree per rule 5). §8.2 rule 7 is rewritten to state the adjunct property; rule 9 (modifier transparency) drops the Extension-restriction exception. This is an additive change for existing documents — Constraint Extensions on Templates still work exactly as before; predicate-semantic Extensions on RELs still work; what is now also permitted is provenance Extensions on Objects, presentation Extensions on Properties, audit Extensions on Edges, signing Extensions on transport wrappers, and any other vocabulary-defined adjunct statement attached to any element.
+
+§9.4 (Constraint Extensions) retains its title and content as a normative description of one specific Extension application (schema validation on Templates). A new opening paragraph in §9.4 frames constraint validation as one use of the broader Extension mechanism.
+
+Cookbook Pattern 20 (Adjunct Extension for Non-Schema Metadata) added, showing provenance on an Object, presentation hint on a Property, migration directive on a Template, and confidence Extension on an Edge. Pattern 19 (Annotation for Provenance) updated to clarify the Annotation-vs-Extension distinction (free-text vs vocabulary-keyed) with a pointer to Pattern 20. Patterns 20-35 renumbered to 21-36; TOC ranges updated.
+
 
 ## Table of Contents
 
@@ -1554,11 +1562,15 @@ Qualifier is best understood by contrast with Extension (§7.10): a **Qualifier*
 
 ### 7.10 Extension — `_`
 
-An Extension is a **schema rule attached to a Template or REL** — a vocabulary-defined constraint or interpretation directive carried by a schema-layer or vocabulary-layer parent. Conceptually, an Extension on a Template says "instances of this Template must satisfy this rule" (§9.4); an Extension on a REL says "this predicate carries this declared semantic property" (domain, range, inverse, cardinality, etc. — see §7.15). In both cases the rule's meaning is owned by the vocabulary that defines the Extension's identifier. Extensions are part of the schema/vocabulary layer, not the data layer; removing an Extension may relax validation or strip a predicate-level annotation but does not change what any instance value means.
+An Extension is an **adjunct statement** — a vocabulary-defined assertion attached to an element that a consumer may interpret and act upon, but on which the element does not depend for its identity, value, or validity. Unlike `--type` and `Rel`, which are *constitutive* (claims the element makes about what it is and how it relates), an Extension is *adjunct*: offered alongside the element rather than part of it. The element is complete without the Extension; a consumer that understands the Extension's vocabulary may act on the statement, while one that does not ignores it harmlessly. This adjunct property is what allows multiple vocabularies to coexist on the same element — each consumer reads its own slice and ignores the rest.
 
-Structurally, the `_` modifier marks an element as an Extension — a schema-only attachment that appears as a child of a Template (§7.14) or a REL declaration (§7.15). The structural restriction — Extensions valid only under Templates or RELs — is enforced by the composition matrix (§8.1). An Extension appearing under any other parent is malformed.
+Extensions range broadly. Schema-validation rules on Templates (numeric bounds, string patterns — §9.4) are one application. Predicate semantics on RELs (domain, range, inverse, cardinality — §7.15) are another. Provenance metadata, presentation hints, migration directives, ontology axioms, and any other vocabulary-defined assertion attachable to an element all share the same adjunct shape — offered alongside the element rather than constituting it. The Extension is uniformly opaque to GDX-core; the world around it (validator, renderer, migration tool, ontology reasoner) decides how much weight to give it.
 
-See §7.9 for the contrast with Qualifier — both attach to elements, but Extension defines schema rules while Qualifier refines instance data.
+Even when a Template incorporates an Extension into a conformance claim — e.g., a `_INT xsd:minInclusive` that the validator enforces against instance values — the Extension itself remains adjunct in nature. Its bindingness is conferred by the validator or Template that chooses to honor its vocabulary, not by the Extension itself.
+
+Structurally, the `_` modifier marks an element as an Extension. Extensions MAY appear as children of any element that admits children (the composition matrix §8.1 lists Extension as an admitted child role on all data-bearing and declaration-bearing parents). The Extension carries a vocabulary-defined identifier in its `Id`-position field (the assertion's name) and a typed Resource (the assertion's value, of value-kind matching the Extension's prefix family).
+
+See §7.9 for the contrast with Qualifier — both attach to elements, but Qualifier is *constitutive* (refining what the parent's value means; removing changes meaning), while Extension is *adjunct* (an assertion alongside; removing does not change what the parent is or means). See §7.6 for the contrast with Annotation (REM) — Annotation is free-text without a vocabulary identifier; Extension is vocabulary-keyed and typed.
 
 | Canonical | Minified | Resource value-kind |
 |-----------|----------|---------------------|
@@ -1568,6 +1580,8 @@ See §7.9 for the contrast with Qualifier — both attach to elements, but Exten
 | `_BOOL`   | `_L`     | `bool`              |
 | `_BYTE`   | `_B`     | `bytes`             |
 
+A schema constraint on a Template (Extensions' most common use):
+
 ```
 <DEFSTR Email
     <_BOOL required : true>
@@ -1575,15 +1589,58 @@ See §7.9 for the contrast with Qualifier — both attach to elements, but Exten
 >
 ```
 
-The same value-kind may appear as a Qualifier or as an Extension depending on what is being said:
+A predicate-semantic Extension on a REL:
+
+```
+<REL gdx:knows
+    <_OBJ gdx:domain : @gdx:Person>
+    <_OBJ gdx:range  : @gdx:Person>
+    <_BOOL gdx:symmetric : true>
+>
+```
+
+Provenance attached to an Object instance:
+
+```
+<OBJ orders/2026-04-29
+    <_STR acme:source-system : "legacy-orders-v3">
+    <_STR acme:imported-at : "2026-04-29T14:22:10Z">
+    <STR customer : "ACME Corp">
+    <FLOAT total : 1250.00d>
+>
+```
+
+A presentation hint attached to a Property:
+
+```
+<INT score : 87
+    <_STR ui:color : "green">
+    <_STR ui:label : "Performance Score">
+>
+```
+
+A migration directive attached to a Template:
+
+```
+<DEFOBJ CustomerV2
+    <STR firstName>
+    <STR lastName>
+    <STR email>
+    <_OBJ gdx:supersedes : @CustomerV1>
+    <_STR migrate:from-v1 : "add-email-from-default">
+>
+```
+
+In each case, GDX records the Extension as a well-formed element; what (if anything) happens with it is determined by the consumer that understands the vocabulary. The same value-kind may appear as a Qualifier or as an Extension depending on what is being said:
 
 ```
 <FLOAT temperature : 21.5
-    <.STR unit : "celsius">          ← Qualifier: this temperature is in celsius
+    <.STR unit : "celsius">          ← Qualifier (constitutive): part of the value's meaning
+    <_STR acme:precision : "high">   ← Extension (adjunct): an assertion about the measurement
 >
 
 <DEFFLOAT TemperatureReading
-    <_STR unit : "celsius">          ← Extension: instances of this Template are constrained to celsius
+    <_STR unit : "celsius">          ← Extension on Template (incorporated into validation by the validator)
 >
 ```
 
@@ -1894,28 +1951,30 @@ Modifier-bearing and operator-bearing prefixes are validated as their base role 
 
 | Parent ↓ \ Child →  | Object | Record | Block | Property | Set | Node | Edge | Reference | Qualifier | Extension | Annotation | REL | Group |
 |---------------------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| **Object**          |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   | ✓ |   |   |
-| **Record**          |   | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   | ✓ |   |   |
-| **Block**           |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   | ✓ |   |   |
-| **Property**        |   |   |   |   |   | ✓ |   |   | ✓ |   | ✓ |   |   |
-| **Set**             |   |   |   | ✓ |   | ✓ |   |   | ✓ |   | ✓ |   |   |
+| **Object**          |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |
+| **Record**          |   | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |
+| **Block**           |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |
+| **Property**        |   |   |   |   |   | ✓ |   |   | ✓ | ✓ | ✓ |   |   |
+| **Set**             |   |   |   | ✓ |   | ✓ |   |   | ✓ | ✓ | ✓ |   |   |
 | **Node**            |   |   |   |   |   | ✓ |   |   |   |   | ✓ |   |   |
-| **Edge**            |   | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   | ✓ |   |   |
-| **Reference**       |   |   |   |   |   |   |   |   | ✓ |   | ✓ |   |   |
-| **Qualifier**       |   |   |   |   |   |   |   |   |   |   | ✓ |   |   |
-| **Extension**       |   |   |   |   |   |   |   |   |   |   | ✓ |   |   |
+| **Edge**            |   | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |
+| **Reference**       |   |   |   |   |   |   |   |   | ✓ | ✓ | ✓ |   |   |
+| **Qualifier**       |   |   |   |   |   |   |   |   |   | ✓ | ✓ |   |   |
+| **Extension**       |   |   |   |   |   |   |   |   |   | ✓ | ✓ |   |   |
 | **Annotation**      |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | **Template**        |   | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |
 | **REL**             |   |   |   |   |   |   |   | ✓ |   | ✓ | ✓ |   |   |
-| **Package**         | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   | ✓ | ✓ | ✓ |
-| **Group**           | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   |   | ✓ | ✓ | ✓ |
+| **Package**         | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   | ✓ | ✓ | ✓ | ✓ |
+| **Group**           | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   | ✓ | ✓ | ✓ | ✓ |
 | **Document root**   | ✓ |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
-The Template row covers all `DEF…` prefixes, validated by their base role's row except where Extensions are admitted (Templates and REL declarations are the two parent roles that admit Extension children — see the REL row and §7.15). Templates also admit Reference children, which support cross-references to other Templates (e.g., for version chains or supersedes-by relationships).
+**Extension admittance is broad.** Extensions are adjunct statements (§7.10) — vocabulary-defined assertions attached to an element that consumers may interpret and act on. Because Extensions don't constitute the element they attach to, they may appear under almost any parent role: data-bearing elements (Object, Record, Property, etc.) for provenance, presentation hints, and other instance-level adjuncts; vocabulary and schema elements (REL, Template) for predicate semantics and schema constraints; transport-layer wrappers (Package, Group) for transport metadata such as signing or routing directives. The Extension column in the matrix shows ✓ for all parent roles that admit children. The exceptions are Annotation (leaf-only) and Node (isolated-subtree per rule 5 — Extensions cannot leak into Node-zone material).
 
-The Reference row covers all `@…` prefixes. References are leaf-like: they admit only Qualifiers and Annotations as children. They do NOT carry Properties, Edges, Sets, or other structural children of their own. The element identifies its target via the Resource (a reference literal); the target lives elsewhere and is reached through resolution.
+The Template row covers all `DEF…` prefixes, validated by their base role's row. Templates admit both Extensions (carrying constraints that the validator enforces against instances — §9.4) and References (for cross-references to other Templates, e.g., version chains or supersedes-by relationships).
 
-The REL row admits Extensions (for predicate semantics: domain, range, inverse, symmetry) and References (for vocabulary metadata such as `@REL` pointing to inverse predicates or `@DEFOBJ` pointing to domain/range Templates).
+The Reference row covers all `@…` prefixes. References are leaf-like with respect to *structural* children — they do NOT carry Properties, Edges, Sets, Records, or Objects of their own. They MAY carry Qualifiers (refining the reference's meaning), Extensions (vocabulary-defined adjunct statements about the reference, such as provenance or confidence), and Annotations. The element identifies its target via the Resource (a reference literal); the target lives elsewhere and is reached through resolution.
+
+The REL row admits Extensions (most commonly for predicate semantics: domain, range, inverse, symmetry, cardinality — but any vocabulary-defined assertion about the predicate) and References (typed pointers to other RELs for vocabulary metadata, or to Objects for concept-bearing domain/range targets).
 
 The Package row admits Templates (any `DEF…` prefix) and REL declarations as payload along with Objects. For clarity: a Package may directly contain Object instances (`OBJ`/`O`), Template definitions (`DEF…`), REL declarations (`REL`), Properties (metadata), Records (metadata), Sets (metadata), Annotations, and Groups for transport-internal organization. A Group admits the same children as a Package except for Package itself.
 
@@ -1937,11 +1996,11 @@ The following rules are consequences of the matrix and are repeated here for cla
 
 6. **Sets contain members of their declared element type.** A Set's children MUST be elements whose prefix matches the Set's element type. A `STR*` Set contains `STR` members; a `REC*` Set contains `REC` members. Qualifiers, Extensions (where permitted), and Annotations may also appear as Set children to refine or annotate the Set itself.
 
-7. **Extensions are schema-only.** Extensions MAY appear only under Template (`DEF…`) elements or REL declarations. An Extension under any other parent role is malformed. Extensions on Templates declare instance-validation rules (§9.4); Extensions on RELs declare predicate semantics (§7.15).
+7. **Extensions are adjunct.** An Extension is a vocabulary-defined assertion attached to an element (§7.10). It may appear under any parent that admits children, with two exceptions: it cannot appear under an Annotation (leaf-only) or inside a Node-zone subtree (rule 5). The Extension's bindingness is determined by the consumer that interprets its vocabulary — validators acting on Constraint Extensions on Templates (§9.4), renderers acting on presentation Extensions, ontology reasoners acting on axiom Extensions on RELs, and so on. A consumer that does not recognize an Extension's vocabulary identifier ignores it; this is the property that allows multiple vocabularies to coexist on the same element.
 
-8. **REL declares predicates.** A REL element may carry Extension children that declare predicate semantics (domain, range, inverse, symmetry, cardinality, etc.). The vocabulary of those Extensions is defined by the GDX Common Vocabulary or by application vocabularies.
+8. **REL declares predicates.** A REL element may carry Extension children that declare predicate semantics (domain, range, inverse, symmetry, cardinality, etc.). The vocabulary of those Extensions is defined by the GDX Common Vocabulary or by application vocabularies. This is one specific application of rule 7's adjunct-Extension mechanism.
 
-9. **Modifier transparency.** Embedded (`%X`), Template (`DEF…`), Qualifier (`.X`), Extension (`_X`), and Node (`NX`) modifier-bearing prefixes are validated as their base role for composition purposes. The modifier never changes what is allowed inside or what may contain the element, with two exceptions: Extensions are restricted to Template or REL parents (rule 7), and Node-zone elements have isolated-subtree semantics (rule 5).
+9. **Modifier transparency.** Embedded (`%X`), Template (`DEF…`), Qualifier (`.X`), Extension (`_X`), and Node (`NX`) modifier-bearing prefixes are validated as their base role for composition purposes. The modifier never changes what is allowed inside or what may contain the element, with one exception: Node-zone elements have isolated-subtree semantics (rule 5) and admit only Node-zone elements (or Annotations) as children, regardless of what their base role would admit.
 
 10. **Transport non-nesting.** Packages MUST NOT contain other Packages. Groups MUST NOT contain Packages. Transport-layer roles form a controlled structure: a Package may contain Groups and data-layer items; a Group may contain other Groups and data-layer items.
 
@@ -2188,6 +2247,8 @@ The interpretation rules are carried by Extensions on the Template. The Extensio
 The specific identifiers used in examples (`gdx:email`, `gdx:i8`, `gdx:csv`, `gdx:uuid`) are illustrative. Whether these specific Templates exist, and what their constraints are, is a vocabulary concern, not a core specification concern. The patterns are general; their realization in any particular vocabulary is documented by that vocabulary.
 
 ### 9.4 Constraint Extensions
+
+Constraint Extensions are one specific application of the broader Extension mechanism (§7.10): Extensions attached to Template slots that vocabulary-aware validators interpret as constraints on instances. Other applications of the Extension mechanism — provenance on Objects, presentation hints on Properties, predicate semantics on RELs (§7.15), and so on — share the same underlying shape (vocabulary-defined adjunct statements) but are interpreted by other consumers. This section covers the constraint use specifically; the general adjunct-Extension framing is in §7.10.
 
 Extensions on Template properties carry vocabulary-defined constraints that instances may be evaluated against. The structural carriers — the closed set of Extension prefixes (`_STR`/`_S`, `_INT`/`_I`, `_FLOAT`/`_F`, `_BOOL`/`_L`, `_BYTE`/`_B`) — are defined by this specification (§7.10). The *vocabulary* of constraint identifiers (such as `xsd:minInclusive`, `json:pattern`, `gdx:maxLength`, or any application-defined equivalents) is defined by external vocabularies, not by this core specification.
 
