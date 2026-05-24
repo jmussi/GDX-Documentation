@@ -437,29 +437,42 @@ A reference to an Object (`@OBJ`) and an EDGE to an Object both carry an `@targe
 
 ### 3.7 Optional Elaboration
 
-A GDX element is valid at its minimum form: the Prefix alone (e.g., `<STR>`, `<REC>`, `<OBJ>`) is sufficient for a well-formed element wherever its role is permitted. Every other field — `Id`, `Key`, `Rel`, `Resource`, `Type` — and the element's children are optional. An element with only a Prefix already declares its structural role and value-kind; richer claims are added only where the use case demands them.
+A GDX element has a minimum form determined by its role and position. The Prefix is always required (§4.2); for Properties, Records, Objects, and Templates in named-attribute position, at least one identifier field (`Id`, `Key`, or `Rel`) is additionally required; in Set-member position, no identifier is required because the element identifies itself by position. Beyond this role-specific minimum, every field is optional. The minimum form is meaningful on its own, and richer claims are added only where the use case demands.
+
+A small example shows the range:
+
+```
+<STR firstName : "Alice">           # Property at the typical minimum
+<OBJ alice>                         # Object at its minimum (Id only)
+<REC address>                       # Record declaring a slot with no value
+<STR>                               # Property as Set member (no identifier needed)
+```
+
+Each is valid. Each carries meaning: a Property with a value, a named Object with no children, a declared but empty Record, a positional Property within a Set.
 
 Elaboration beyond the minimum follows two structurally distinct patterns.
 
-**Identity is orthogonal.** The three identity fields — `Id`, `Key`, `Rel` — are independent dimensions. An element may carry any combination of them in any order, and the presence or absence of one places no constraint on the others. An element may have an `Id` and no `Key`; a `Key` and no `Id`; a `Rel` with both, with one, or with neither. Each axis serves a distinct addressing purpose:
+**Identity is orthogonal.** The three identity fields — `Id`, `Key`, `Rel` — are independent dimensions. An element may carry any combination of them; the presence or absence of one places no constraint on the others. Each axis serves a distinct addressing purpose:
 
 - `Id` names the element within its scope (locally meaningful for Properties and Records; globally meaningful for Objects).
 - `Key` provides a location-stable anchor for references (§5.4.5).
 - `Rel` aligns the element to a cross-document vocabulary predicate (§3.6, §6.5.4).
 
-The independence of these axes is what lets a single element be addressable in multiple ways simultaneously without conflict.
+The independence of these axes is what lets a single element be addressable in multiple ways simultaneously without conflict — a Property may be named locally, anchored stably, and semantically aligned all at once, or carry only one, or none.
 
 **Value elaboration is layered.** When an element carries content beyond its bare role, elaboration proceeds through nested layers. Each layer adds narrowing detail without altering what the prior layer said. The layers live in different places — some on the instance, some on the Template the instance references, some in the external vocabulary that defines a constraint identifier:
 
-1. **Category** (instance) — the Prefix declares the element's structural role and, for value-bearing roles, its value-kind. The Prefix is the minimum.
-2. **Value** (instance) — the Resource carries the concrete value, conforming to the value-kind declared by the Prefix. A value-bearing element without a Resource declares the slot but contributes no value (§4.3.3); with a Resource, it declares both.
-3. **Structural identity** (instance) — a `--type` reference asserts that the element's content conforms to a named Template (§8.2). This narrows the value from "any value of this value-kind" to "a value satisfying this Template's slot structure."
-4. **Constraint attachment** (Template, not instance) — Constraint Extensions on the referenced Template (§8.4) carry vocabulary-defined restrictions. These do not appear on the instance directly; they apply through the Template claim.
-5. **Constraint semantics** (external vocabulary) — the meaning of each constraint identifier (`xsd:minInclusive`, `json:pattern`, etc.) is defined by the vocabulary that owns the identifier, evaluated externally by consumers that understand that vocabulary.
+| Layer                | Lives on             | What it adds                                                                                                                                                                                                                                                                       |
+|----------------------|----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Category             | Instance (Prefix)    | The structural role (Property, Record, Object, etc.) and, for value-bearing roles, the value-kind (string, int, float, etc.). The minimum required on every element.                                                                                                              |
+| Value                | Instance (Resource)  | The concrete value, conforming to the value-kind declared by the Prefix. May be absent (null) or present (§4.3.3).                                                                                                                                                                  |
+| Type identity        | Instance (`--type`)  | A claim that the element is of the named type, anchored to the Template name (§8.2). The claim implies structural conformance to that Template's slot declarations; conformance with other Templates is separately observable but does not redefine the element's type identity. |
+| Constraint attachment| Template             | Constraint Extensions on the referenced Template carry vocabulary-defined restrictions — numeric bounds, string patterns, semantic types (§8.4). They apply to the instance through its Type claim, not directly.                                                                  |
+| Constraint semantics | External vocabulary  | The meaning of each constraint identifier (`xsd:minInclusive`, `json:pattern`, etc.) is defined by the vocabulary that owns the identifier and evaluated externally by consumers that understand the vocabulary.                                                                    |
 
-Each layer is optional given the layer above it: an element with a value need not have a `--type`; an element with a `--type` need not be constrained beyond the Template's structural declarations; constraints need not exist for every Template; no consumer is required to understand every constraint vocabulary. The minimum (Prefix alone) is at one end of this spectrum; a fully-elaborated element with full identity, value, type, and constraint-bearing Template is at the other.
+Each layer is optional given the layer above it. The minimum (Prefix and any role-required identifier) sits at one end of this spectrum; a fully-elaborated element with full identity, value, type, and a constraint-bearing Template sits at the other.
 
-This minimal-by-default discipline is what keeps simple GDX simple. A Property with just a name and a value is one line; the same element can grow identity and schema affordances as the use case demands, without restructuring.
+This minimal-by-default discipline lets GDX scale from trivial ad-hoc data to fully-typed structured exchange within a single model. Schema-first typed formats (XSD, JSON Schema, Protobuf) are positioned at the structured end of that span and require schema commitment before any value is expressed; they solve a different problem well. GDX's optionality is what makes the trivial-to-rich range navigable without restructuring as needs evolve.
 
 ---
 
