@@ -211,7 +211,7 @@ Templates define the shape; instances reference them via `--type`. The Template 
 >
 ```
 
-The instance is silent about each child's `Rel`, and silent about `locale` entirely. By the universal claim rule (Core Spec §8.2.3): for `firstName` and `lastName`, the Template-supplied `Rel`s are the effective values; for `locale`, the Template's default `Resource` is the effective value. The instance logically carries `Rel`s of `schema:givenName` and `schema:familyName`, and a `locale` of `"en-US"`.
+The instance is silent about each child's `Rel`, and silent about `locale` entirely. By the universal claim rule (Core Spec §9.2.3): for `firstName` and `lastName`, the Template-supplied `Rel`s are the effective values; for `locale`, the Template's default `Resource` is the effective value. The instance logically carries `Rel`s of `schema:givenName` and `schema:familyName`, and a `locale` of `"en-US"`.
 
 When the document is persisted, exchanged, or archived, **materialize** those Template-supplied values into the instance. The materialized form is what readers see when the schema is not available at read time:
 
@@ -225,7 +225,7 @@ When the document is persisted, exchanged, or archived, **materialize** those Te
 
 The materialized instance is self-describing. A reader that does not load `com.acme.Customer` still sees the predicate alignments; a query for elements with `Rel` `schema:givenName` finds this instance without resolving the Template. Materialization is recommended for persistence; it is optional for in-memory processing where the Template is already available.
 
-Materialization does not extrapolate beyond what the Template explicitly declares. Missing slots are not invented; Constraint Extensions on the Template (Core Spec §8.4) remain Template-scoped and are not copied into the instance.
+Materialization does not extrapolate beyond what the Template explicitly declares. Missing slots are not invented; Constraint Extensions on the Template (Core Spec §9.4) remain Template-scoped and are not copied into the instance.
 
 ## 10. Embedded Structured Value
 
@@ -320,7 +320,7 @@ The two layers operate independently and are validated separately. Per Core Spec
 
 ## 16. Parallel Constraint Vocabularies on One Template
 
-A single Template MAY carry constraints expressed in multiple constraint vocabularies simultaneously. Each vocabulary's identifiers are opaque to GDX (Core Spec §8.4); GDX records them as well-formed Extensions and assigns no meaning. Consumers each read the vocabularies they understand and ignore the rest.
+A single Template MAY carry constraints expressed in multiple constraint vocabularies simultaneously. Each vocabulary's identifiers are opaque to GDX (Core Spec §9.4); GDX records them as well-formed Extensions and assigns no meaning. Consumers each read the vocabularies they understand and ignore the rest.
 
 ```
 <DEFSTR UserHandle

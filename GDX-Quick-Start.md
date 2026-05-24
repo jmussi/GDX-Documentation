@@ -32,7 +32,7 @@ An Object with one Property:
 
 Read this as: an Object named `Person` containing a string-valued Property named `name` with the value `"Alice"`. The `<` and `>` delimit each element; the `STR` prefix declares the inner element is a string; the `:` separates the Property's identifier from its value; the outer `OBJ` declares the document's root entity.
 
-A GDX document's root must be an Object, Template, Relation Declaration, or Package (§7) — the Object here plays that role. Inside it, the `STR` Property carries the typed value.
+A GDX document's root must be an Object, Template, Relation Declaration, or Package (Core Spec §8) — the Object here plays that role. Inside it, the `STR` Property carries the typed value.
 
 If you've used JSON, the equivalent is `{"Person": {"name": "Alice"}}` — but with one important difference: GDX states explicitly that `name` is a string. There's no ambiguity about whether `42` means the integer 42 or the string "42"; in GDX you write `<INT age : 42>` for the integer or `<STR age : "42">` for the string.
 
@@ -212,11 +212,11 @@ What it costs: a few characters per element (the prefix and brackets). For data 
 
 The Quick Start above shows about 80% of what you'll use day to day. For the rest:
 
-- §1 (Introduction) explains the problem space and design philosophy
-- §3 (The GDX Element) is the conceptual centerpiece: how the element form works and why it's shaped that way
-- §4 (Core Data Model) and §5 (Canonical Text Form) are the foundational definitions
-- §6 (Roles) is the complete reference for every role of element and its prefix
-- §9 (Transport) covers how Packages and Groups behave during exchange
+- Core Spec §1 (Introduction) explains the problem space and design philosophy
+- Core Spec §3 (GDX Concepts) is the conceptual centerpiece: how the element form works and why it's shaped that way
+- Core Spec §4 (Abstract Data Model) and §5 (Canonical Text Form) are the foundational definitions
+- Core Spec §6 (Prefix Vocabulary) and §7 (Element Roles) together are the complete reference for every role of element and its prefix
+- Core Spec §10 (Transport) covers how Packages and Groups behave during exchange
 - The GDX Cookbook (companion specification) shows worked patterns for common needs
 - The Companion Vocabulary specification defines standardized identifiers (Templates, predicates, validation extensions) you can use across applications
 - The Compact Form Grammar specification defines the human-friendly serialization shown in §8

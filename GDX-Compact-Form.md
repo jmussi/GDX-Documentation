@@ -77,7 +77,7 @@ The Compact Form preserves the Core Spec data model with no information loss. Ev
 What the Compact Form does NOT preserve:
 
 - **Bracket-style whitespace flexibility.** Standard Form admits whitespace between fields; Compact Form requires fields on a single line.
-- **Source-level comments.** File-level comments (§5.4) appear in Compact Form but are NOT preserved when converting to Standard Form. Comments that should travel with the data are expressed using REM Annotations (Core Spec §6.5.6), which work identically in both forms.
+- **Source-level comments.** File-level comments (§5.4) appear in Compact Form but are NOT preserved when converting to Standard Form. Comments that should travel with the data are expressed using REM Annotations (Core Spec §7.6), which work identically in both forms.
 
 The Standard Form is the canonical wire and storage format. The Compact Form is for authoring. A typical pipeline:
 
@@ -109,7 +109,7 @@ The Compact Form is NOT:
 
 ## 2. Document Structure
 
-A Compact Form document consists of one or more top-level elements at zero indentation, separated by blank lines. The structural rules of the Core Spec apply: each top-level element MUST be one of Object, Template, REL, or Package (Core Spec §7.2 rule 1).
+A Compact Form document consists of one or more top-level elements at zero indentation, separated by blank lines. The structural rules of the Core Spec apply: each top-level element MUST be one of Object, Template, REL, or Package (Core Spec §8.2 rule 1).
 
 ### 2.1 Top-Level Elements
 
@@ -356,7 +356,7 @@ E #knows : @bob                          // identifier-mode
 @STR slotDoc : @DEFOBJ:com.acme.Customer&firstName-doc  // Template anchor
 ```
 
-`@KIND` reference elements (Core Spec §6.5.16) appear in Compact Form with the prefix in the usual position:
+`@KIND` reference elements (Core Spec §7.16) appear in Compact Form with the prefix in the usual position:
 
 ```
 O alice
@@ -516,7 +516,7 @@ Comments are NOT part of the data model. They exist in the source file and are N
 - Converting Standard Form to Compact Form (no comments are introduced)
 - Persisting the data through any storage layer
 
-For documentation that should travel with the data, use REM Annotations (Core Spec §6.5.6), which work identically in both forms:
+For documentation that should travel with the data, use REM Annotations (Core Spec §7.6), which work identically in both forms:
 
 ```
 # This comment is editorial — for the developer's eyes only.
@@ -635,7 +635,7 @@ The following items exist in Compact Form source files but are NOT part of the d
 Items that are part of the data model and ARE preserved:
 
 - All element content (prefixes, identifiers, resources, types)
-- REM Annotations (Core Spec §6.5.6) — carry textual notes as data
+- REM Annotations (Core Spec §7.6) — carry textual notes as data
 - Child order
 - Null state of properties
 
@@ -1035,7 +1035,7 @@ BytesContentLine ::= IndentSpaces Base64Char+ NEWLINE
 
 // ===== Top-Level Element Restriction =====
 
-// Per Core Spec §7.2 rule 1, the prefix of a TopLevelElement
+// Per Core Spec §8.2 rule 1, the prefix of a TopLevelElement
 // MUST be one of: ObjectPrefix, TemplatePrefix, RelPrefix,
 // PackagePrefix.
 ```
