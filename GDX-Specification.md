@@ -1,7 +1,7 @@
 # GDX — Graph Data eXchange Specification
 
-- **Status:** Draft v0.11.0 (working draft, pre-1.0)
-- **Date:** 2026-05-20
+- **Status:** Draft v0.13.0 (working draft, pre-1.0)
+- **Date:** 2026-05-25
 - **Editors:** 
 - **Authors:** Julian Mussi
 
@@ -132,6 +132,137 @@ Cookbook Pattern 20 (Adjunct Extension for Non-Schema Metadata) added, showing p
 
 The prior commit (38) introduced examples in §7.10, §7.15, and Cookbook Pattern 26 that incorrectly used `_OBJ` (`<_OBJ gdx:domain : @gdx:Person>`) to express reference-valued REL metadata. `_OBJ` is not in the closed Extension prefix vocabulary and would semantically mean "Extension whose Resource is an Object" — either meaningless (Objects are not a value-kind) or illegal (embedding an Object inside an Extension violates §8.2 rule 2 Object exclusion). All occurrences corrected to use References with `#rel` predicates: `<@OBJ #gdx:domain : @gdx:Person>` for Object references, `<@DEFOBJ #gdx:supersedes : @CustomerV1>` for Template references. No structural change required; the composition matrix already admits References as REL and Template children.
 
+Changes in v0.12.0 from v0.11.0:
+
+(40) **Embedded modifier `%` replaced by VAL role.** The Embedded refinement modifier (`%STR`, `%REC`, `%OBJ`, etc.) is removed from the prefix vocabulary and replaced by a new first-class role, **VAL** (minified **V**), defined in §7.11. Where `%X` previously expressed "an X element in property-value position," `<VAL name <X : value>>` now expresses "a slot named `name` whose value is an X element." The change is motivated by two structural needs the modifier could not express: (a) two-level identity — VAL distinguishes the slot's identity (Id/Key/Rel on the VAL itself) from the occupant's identity (Id/Key/Rel on the contained element), allowing a single position to be both vocabulary-aligned at the slot level and addressable at the occupant level; (b) closed occupant enumeration — VAL admits Properties, Records, Objects, Blocks, Sets, Edges, and References as occupants under a single uniform role, rather than requiring a separate `%`-form for each primitive.
+
+§6.2 adds the VAL/V row. §6.4 drops the `%` modifier row and gains a paragraph pointing readers to VAL. §8.1 adds a VAL column and VAL row to the composition matrix. §8.2 rules 2 (Object exclusion), 9 (modifier transparency), 12 (modifier stacking), and 13 (Set as suffix) are updated to reference VAL rather than `%`. §8.4 drops `%X` from the value-kind family lists. §8.5 validation lists VAL rather than `%O` as the data-layer Object licensing form. §4.2 gains an "occupant of a VAL slot" carve-out paragraph mirroring the Set-member positional exemption, so that an occupant inherits the slot's named-attribute role without needing its own identifier.
+
+Migration: every `%X` element becomes `<VAL #rel name <X : value>>`, with the slot's `#rel` predicate (and any Id/Key) moved to the VAL and the value moved into the occupant. The `VAL*` form is malformed (§7.11 axiom 6); Set-of-VAL semantics are expressed as a Set of the underlying occupant role. Examples throughout the spec, Cookbook, Path, Grammar, Compact Form, and Quick Start companions are migrated. Cookbook Pattern 10 (Embedded Structured Value) and Pattern 11 (Embedded Alternative Representations) are rewritten to demonstrate slot-level and occupant-level alignment respectively.
+
+(41) **EDGE prefix replaced by the @-Edge family (`@OBJ`, `@REL`); §7.4 rewritten as the @-Edge Family with axioms E1–E6.** The `EDGE`/`E` prefix is removed from the closed vocabulary. Where `<EDGE #knows : @bob>` previously expressed a graph-statement element, `<@OBJ #knows : @bob>` now does. `@REL` is promoted from a leaf-like reference to a first-class @-edge whose target is a predicate (REL declaration). The two members of the @-Edge family, `@OBJ` and `@REL`, are enumerated by target role and restricted to *independent graph-entities* — Objects (including concept-Objects per §3.7's concept-as-Object pattern) and REL declarations. All other `@KIND` forms remain in the Reference family (§7.16, pending a separate refinement pass), which retains leaf-like-pointer semantics.
+
+§7.4 is rewritten as "The @-Edge Family" and adds six normative axioms:
+- **E1.** Prefix asserts target role; Resource asserts target identity; the assertion stands even when the Resource is empty (`<@OBJ #knows : >` in Template context declares an Object-edge slot).
+- **E2′.** First-class but dependent: an @-edge is its own entity (carries identity, predicate, attributes) but is owned by and serialized within its source. Dies with source (relational projections SHOULD use `ON DELETE CASCADE`); dangles on target loss.
+- **E3.** Attribute children describe the relationship-entity. When the edge carries identity (E6), attributes belong to the persistent edge-entity, not to any single predication.
+- **E4.** Predicate (`#rel`) is MANDATORY. No unlabeled adjacency — adjacency-if-wanted is a designated `#rel` value, not its absence.
+- **E5.** Family is enumerated by target role and restricted to independent graph-entities. Exactly two members (`@OBJ`, `@REL`); source role is orthogonal.
+- **E6.** Identity (`Id`/`Key`) is optional and orthogonal to predicate. Identity is the edge's *substance* — the persistent entity that endures across predicate/attribute changes and disambiguates multiple edges between the same endpoints. Two @-edges with the same (source, predicate, target) ARE distinct if their identities differ; uniqueness is by identity, not by the triple. Identity-without-predicate is malformed; predicate-without-identity is the common case.
+
+The substance/predication split is the spine: Id is what the edge *is*, `#rel` is what it currently *asserts*, attributes ride on the substance. This delivers named edges, predicate mutation over stable identity, and multi-edge disambiguation — all from E2′ with no RDF-style reification machinery.
+
+Cascade changes:
+- §3.5 (graph statements) updated to use `@OBJ` instead of `EDGE`.
+- §3.6 (trio framing) re-anchored: VAL = embedding, @-Edge = graph relationships, Reference = leaf-like pointing.
+- §3.7 (predicates and vocabularies) updated to describe @-edge children on RELs alongside Extensions.
+- §4.3.2 (reference value-kind) and §4.3 (Resource definition) updated to use `@OBJ` examples.
+- §6.2 (base vocabulary) drops the `EDGE`/`E` row; adds a graph-statement-roles subsection listing `@OBJ`/`@REL`.
+- §6.3.2 (Reference Operator) rewritten to describe the @-Edge / Reference structural split.
+- §7.15 (REL) updated to describe three kinds of vocabulary-metadata children (@-edges, Extensions, References) with the new framing.
+- §7.16 (References) rewritten: family scope explicitly excludes `@OBJ` and `@REL`; transitional-status note added.
+- §8.1 composition matrix: `Edge` column/row renamed to `@-Edge`; REL row gains `@-Edge` admittance (`✗` → `✓`) for vocabulary metadata.
+- §8.2 rule 16 reframed around the @-Edge-vs-Reference split.
+- §8.4 (resource rules) splits the former `EDGE` resource line into separate `@-Edge` and `Reference` lines.
+- Appendix A.5 (canonical form) removes `EDGE` from the prefix list and notes the `E` slot is unassigned.
+- Appendix A.7 (test suite) updated.
+- §11 (Data Persistence) gains an `ON DELETE CASCADE` recommendation per E2′.
+
+The `E` minified slot is currently unassigned; reassignment is deferred to the Reference-family refinement pass where the full minified-letter map can be reconsidered together.
+
+Companion-document updates:
+- **Cookbook Pattern 7 (Edge Between Entities)** rewritten with `@OBJ` syntax and a new example demonstrating edge-as-substance via E6 identity.
+- **Cookbook Pattern 22** retitled "Typed Reference to a Non-Graph-Entity"; examples replaced with `@DEFOBJ`/`@REC` targets to match the new Reference-family scope (graph-entity references are @-edges, covered by Pattern 7).
+- **Path spec** Appendix B.4 and B.6 examples migrated from Edge targets to Property targets to remain neutral with respect to the pending Reference-family refinement (cross-references to specific @-edges are a Reference-side concern).
+- **Grammar / Compact Form** drop `EdgePrefix` production.
+- **Quick Start** §5 retitled "Edges Between Objects" with the new syntax.
+- **Format Comparison** §5 (graph data) updated; @-Edge model now positioned with named-edge / substance-without-reification as a distinguishing feature.
+- **Security Considerations** §2 (reference cycles) updated to use @-edge framing.
+
+Migration: every `<EDGE …>` element becomes `<@OBJ …>`. The `#rel` requirement is unchanged (it was already required for EDGE). Existing `@OBJ`/`@REL` references that *do* carry `#rel` continue to work; those that *don't* carry `#rel` are no longer well-formed @-edges and must either add a `#rel` (becoming proper @-edges) or migrate to the Reference family when its surface form is refined. The `E` minified prefix is unassigned and MUST NOT appear in new documents.
+
+Changes in v0.13.0 from v0.12.0:
+
+(42) **REF family completed; `%` sigil added; the slot-filler trichotomy made structural.** The Reference family is given its own sigil `%`, distinct from the `@` sigil that names the @-Edge family. Every `@KIND` prefix that previously served as a leaf-like reference (`@DEFOBJ`, `@REC`, `@BLK`, `@.STR`, `@_INT`, `@VAL`, value-Property forms, and their Set forms) is renamed to `%KIND`. The `@` sigil is now exclusively the @-Edge sigil, restricted to its two members (`@OBJ`, `@REL`) by §7.4 axiom E5.
+
+The closure rule: the `%` sigil wraps any layer-1 role-prefix to produce a REF-to-that-role. The closed REF family is generated by this single composition:
+
+- `%OBJ`, `%REC`, `%BLK` — REF to an Object, Record, Block
+- `%STR`, `%INT`, `%FLOAT`, `%BOOL`, `%BYTE` — REF to a value Property
+- `%.STR`, `%_INT`, `%NSTR` — REF to a Qualifier, Extension, Node-zone element
+- `%DEFOBJ`, `%DEFSTR`, etc. — REF to a Template
+- `%VAL` — REF to a VAL slot
+- `%@OBJ`, `%@REL` — REF to an @-edge (reification)
+- `%KIND*` — REF to a Set (or, in Set-member position, a Set of REFs)
+
+The genus split is the load-bearing structural commitment: `%` always fills a slot (compositional `#rel`); `@` always asserts a relationship (associative `#rel`); the two sigils are never synonyms. The proof-by-collapse (§7.16 axiom R4): if `<%OBJ #X x : @T>` and `<@OBJ #X : @T>` could both assert "parent X T," the sigils would be interchangeable spellings and the partition would dissolve. They do not — the `%` form is "slot holds a handle, slot semantically aligned with `#X`"; the `@` form is "parent stands in relation `#X` to `T`."
+
+§7.16 is rewritten as "The %-Reference Family" with six normative axioms:
+
+- **R1.** Prefix asserts target role; Resource asserts target identity; resolution dereferences and verifies the role.
+- **R1a.** The role-assertion is a resolution constraint, particularly pronounced for path/key resolution.
+- **R2.** A REF fills a slot; it asserts nothing about its parent.
+- **R3.** A REF is Property-shaped — admits `#rel` (compositional), Qualifiers, Extensions, an `Id` (slot name), and Annotations; admits no structural children.
+- **R4.** `#rel` on a REF is always compositional alignment (slot-level), never associative (parent-relationship). Associative is the exclusive province of @-Edge.
+- **R5.** A REF may target any addressable element by any resolution mode (name, path, key, composed cross-document) — including @-edges by key (reification via `%@OBJ`/`%@REL`).
+- **R6.** A REF has no identity of its own beyond its slot; a REF is never itself a reference target.
+
+The trichotomy and edge framing in §3.6 is rewritten around the genus split: Property fills a slot with a literal; VAL fills a slot with a dependent element; REF fills a slot with a handle to an independent element; @-Edge asserts a relationship its source participates in. The three slot-fillers share Property-shaped elaboration (compositional `#rel`, Qualifiers, Extensions); the @-Edge stands apart with associative `#rel`, attribute children, and identity.
+
+Edge-side fall-out:
+
+- **§7.4 axiom E5 strengthened:** `@OBJ*` and `@REL*` are declared malformed. Each @-edge is a single graph statement (per E2′); multiple edges from one source are expressed as siblings, not as Set members. Multiple-edges-as-a-collection is implicit in the document structure, not collected into a Set.
+- **§8.2 derived rules 14, 14a, 15, 16 rewritten.** New rule 14 narrows the @-Edge family to two members. New rule 14a closes off `@OBJ*`/`@REL*`. Rule 15 enumerates the three malformed sigil compositions: `@@KIND`, `%%KIND`, `@%KIND`. Rule 16 distinguishes Property-shaped (REF) from statement-shaped (@-Edge) composition.
+
+Cascade changes in Core Spec:
+- §3.6 rewritten as "The Slot-Filler Trichotomy and Graph Statements"
+- §4.3.2 (reference value-kind) updated for the two-family split
+- §6.2 base vocabulary: REF row added; reading note updated
+- §6.3 split into §6.3.2 (sigil `@`) and §6.3.3 (sigil `%`); §6 prefix-pattern intro updated to the two-layer grammar
+- §7.16 rewritten as "The %-Reference Family"
+- §8.1 matrix: Reference column/row renamed to REF; Set row admits REF (for Sets of REFs)
+- §8.4 resource rules: REF prefix family clause added
+- §A.5 (canonical form) prefix list updated
+- Closed-enumeration listings in §7 intro and §1.2 reflexivity goal updated
+
+Companion-doc cascade (to be migrated):
+- Cookbook: Pattern 22 rewritten in `%` syntax; reification pattern added (`%@OBJ`); Template-version-chain examples migrated with the conceptual-shift note
+- Path spec: §8.6 expanded; Appendix B examples migrated to `%KIND`
+- Grammar / Compact Form: add `%` sigil production; document layer-2 wrapping
+- Quick Start, Security, Format Comparison: incidental cleanup
+- All companions bumped to v0.13.0 (or next minor)
+
+Migration: every leaf-like `@KIND` reference (no `#rel`, no attribute children) becomes `%KIND` mechanically. `@DEFOBJ`, `@REC`, `@BLK`, `@.STR`, `@_INT`, `@VAL`, `@KIND*` for non-graph-entity targets all migrate. The `@OBJ` and `@REL` forms WITH `#rel` and attribute children continue to work as @-edges with no syntactic change; the conceptual reading shifts (under v0.12, leaf-like vocabulary-metadata links; under v0.13, first-class associative graph statements per E4). Documents using `@OBJ #conformsTo : @Template` patterns where `#conformsTo` is *compositional* (slot-aligning, not relating) migrate to `%DEFOBJ #conformsTo : @Template`; the change is semantically meaningful and documents will need review on a case-by-case basis. The `@OBJ*` and `@REL*` Set forms (rare in practice) are no longer well-formed; multiple edges become siblings.
+
+(43) **§7.15 REL composition widened; "defined by purpose, not by structure" principle made explicit.** A REL is defined by its purpose — naming a first-class predicate — and that purpose is fully discharged by its identifier. The prior matrix held RELs to a stricter standard than any other role ("every child must be semantically load-bearing"); the new matrix admits the full data-carrier set, with structurally-justified exclusions only.
+
+The REL composition row widens from `@-Edge, REF, Extension, Annotation` to add `Property, Record, Block, Set, VAL`. Authors may now attach labels (`<STR rdfs:label : "knows">`), descriptions (`<STR rdfs:comment : "...">`), version markers, authorship, alias Sets, documentation Records, or any other data carrier directly to a REL — the same kinds of children that stand on any Object. Properties on a REL are data carriers whose meaning is consumer-conferred, never by GDX-core; meaninglessness is never disqualifying. RELs are held to no stricter standard than any other element.
+
+The structurally-justified exclusions remain:
+
+- **Object** — vocabulary entities don't contain data-instance Objects; a contextually false claim about what the REL is.
+- **Node** — RELs are structured vocabulary entities, not semi-structured pockets.
+- **Qualifier** — RELs carry no Resource, so there is nothing to refine.
+- **REL (self)** and **Template (`DEF…`) forms** — vocabulary entities don't nest within RELs. The Template exclusion is an explicit carve-out from modifier transparency (§8.2 rule 9(b)): even though `DEFREC` would otherwise be admitted as a Record-modifier (and REL now admits Record), the `DEF…` forms are blocked because they declare another vocabulary entity, and one vocabulary entity does not nest inside another.
+- **Transport-layer roles (Package, Group)** — transport wrappers do not appear inside vocabulary declarations.
+
+**Property-vs-Extension guidance on RELs.** Both are admitted; the choice communicates intent to consumers:
+
+- Use **Property** for data about the predicate (labels, descriptions, version, authorship) — meaning conferred by the reading consumer (documentation tool, vocabulary browser, lookup index).
+- Use **Extension** for a vocabulary-defined semantic axiom (symmetry, transitivity, cardinality bounds) — meaning conferred by the validator or reasoner that recognizes the vocabulary identifier.
+
+Mechanical rule: would a validator/reasoner act on it? → Extension. Is it for humans or downstream lookup? → Property.
+
+**@-edge target convention on RELs.** The @-Edge family axioms (§7.4 E5) restrict @-edge targets to Objects or RELs structurally. The vocabulary convention for @-edges on a REL is to target concept-Objects or other RELs (predicate-axiom statements like domain/range/inverse). This is convention, not structural enforcement; the matrix admits any @OBJ or @REL target, and the concept-vs-data-instance distinction lives in vocabulary practice.
+
+Cascade in Core Spec:
+- §7.15 rewritten with the "purpose, not structure" framing and the full admitted/excluded enumeration
+- §8.1 matrix REL row: Property, Record, Block, Set, VAL added (✓)
+- §8.2 rule 9 updated with the REL-doesn't-admit-Templates carve-out as new clause 9(b); existing Node-zone isolation becomes clause 9(a)
+- Small vocabulary example in §7.15 updated to show Property usage alongside @-edges and Extensions
+
+Migration: existing REL declarations continue to work; the change is additive. New patterns become available — labels, descriptions, alias Sets, documentation Records can sit on a REL directly without Extension wrapping. Existing uses of `<_STR rdfs:label : "...">` (Extension form) on RELs remain syntactically valid, but `rdfs:label` is data about the predicate rather than a semantic axiom — the cleaner expression is `<STR rdfs:label : "...">` (Property form). Authors should review their `_STR`/`_INT` uses on RELs and reclassify by the Property-vs-Extension guidance above when convenient.
+
 
 ## Table of Contents
 
@@ -166,11 +297,11 @@ The following small example, written in Standard Form, illustrates how the data 
     <STR firstName : "Alice">
     <INT age : 24>
     <BOOL active : true>
-    <EDGE #knows : @Bob>
+    <@OBJ #knows : @Bob>
 >
 ```
 
-This declares an Object identified as `Alice` with three typed properties (string, integer, boolean) and an Edge expressing a `knows` relationship to another Object identified as `Bob`. Every element states its role, its value-kind, and its content explicitly. No external schema is required to know that `age` is an integer, that `active` is a boolean, or that the Edge points to another entity — the data model itself carries that information on each element.
+This declares an Object identified as `Alice` with three typed properties (string, integer, boolean) and an @-edge expressing a `knows` relationship to another Object identified as `Bob`. Every element states its role, its value-kind, and its content explicitly. No external schema is required to know that `age` is an integer, that `active` is a boolean, or that the @-edge points to another entity — the data model itself carries that information on each element.
 
 GDX is designed to be easily read, modified, and created by humans. The same data is just as easily produced by tools, parsed by machines, and traversed by graph queries. It carries structured application data, semantic relationships, and stable identity within a single uniform model — properties that established formats and data models typically split across several incompatible designs.
 
@@ -182,7 +313,7 @@ GDX's design choices target capabilities that established formats and data model
 
 **Inline semantic alignment.** The optional `Rel` field on any element names a shared predicate that aligns the element's local identity to a cross-document vocabulary. `<STR #schema:givenName firstName : "Alice">` is locally named `firstName` but semantically identifies as `schema:givenName`. Two systems using different local names can recognize the same concept by matching the predicate. The alignment travels with the data, not in a separate mapping layer. This is RDF's predicate-alignment property without RDF's triple-model overhead; JSON and YAML have no semantic layer at all.
 
-**First-class predicates and vocabulary documents.** A Rel is GDX's predicate primitive: a vocabulary-defined named relationship between two roles, opaque to GDX-core. The same primitive expresses a compositional alignment when borne by a property, an associative predicate when borne by an Edge, and an axiom about the predicate when borne by a REL — one rule, parameterized by role-context (§3.7). On the structural side, the `Rel` field and the `REL` element coordinate to host this primitive: a REL declaration (§7.15) names a predicate as a first-class entity that can carry its own metadata — domain, range, inverse, cardinality, subPropertyOf relationships, application-defined annotations — through Extension elements (§7.10). A GDX document MAY contain RELs alongside Objects, Templates, and concept-bearing Objects to compose a complete vocabulary: predicates with their semantics, schemas with their constraints, and the conceptual entities the vocabulary describes. The system is recursive — RELs may reference other RELs, RELs may carry typed references to domain/range Objects, and the vocabulary itself is just GDX. This gives GDX the ontology-building primitive of RDF/OWL while keeping the data model uniform. GDX has no separate Class or Concept role: when a vocabulary needs to name a concept (a type of entity, an enumeration value, a category), an Object with a conceptual identifier serves that role and is addressable like any other Object.
+**First-class predicates and vocabulary documents.** A Rel is GDX's predicate primitive: a vocabulary-defined named relationship between two roles, opaque to GDX-core. The same primitive expresses a compositional alignment when borne by a property, an associative predicate when borne by an @-edge, and an axiom about the predicate when borne by a REL — one rule, parameterized by role-context (§3.7). On the structural side, the `Rel` field and the `REL` element coordinate to host this primitive: a REL declaration (§7.15) names a predicate as a first-class entity that can carry its own metadata — domain, range, inverse, cardinality, subPropertyOf relationships, application-defined annotations — through @-edge children (`@OBJ`, `@REL`) and Extension elements (§7.10). A GDX document MAY contain RELs alongside Objects, Templates, and concept-bearing Objects to compose a complete vocabulary: predicates with their semantics, schemas with their constraints, and the conceptual entities the vocabulary describes. The system is recursive — RELs may carry @-edges to other RELs (inverse, subPropertyOf) and to domain/range concept-Objects, and the vocabulary itself is just GDX. This gives GDX the ontology-building primitive of RDF/OWL while keeping the data model uniform. GDX has no separate Class or Concept role: when a vocabulary needs to name a concept (a type of entity, an enumeration value, a category), an Object with a conceptual identifier serves that role and is addressable like any other Object.
 
 **Schema is data.** A Template is a GDX element with a `DEF…` prefix. It uses the same syntax as the instances it describes; the same parser reads both; the same query mechanisms address both. There is no separate schema language, no schema compilation, no schema/instance impedance. A Template can travel in the same document as the instances that satisfy it — common in vocabulary documents, integration tests, and self-contained exchange formats. XSD is a separate language from XML; JSON Schema is a separate convention layered over JSON; GDX collapses the distinction.
 
@@ -192,7 +323,7 @@ GDX's design choices target capabilities that established formats and data model
 
 **Self-describing instances without the schema.** When a Template declares metadata for a slot (the slot's `Rel`, a default value, a Key anchor), an instance may omit the metadata and rely on the Template to supply it. Before persistence, materialization (§9.2.4) writes those Template-supplied values into the instance as explicit fields. A materialized instance carries its full identity without needing the Template at read time — searchable by `Rel`, queryable by predicate, parseable in isolation. This solves a problem schema-validated formats have traditionally had: data written against a schema becomes opaque to queries when the schema isn't loaded.
 
-**Reflexivity through typed references.** Any addressable element can be the target of a typed reference (`@KIND`) from any other element. References compose with path expressions (`$path`) and Key anchors (`&key`) to address elements that lack global identifiers. This is the model-level expression of "everything is data": vocabulary documents reference Templates and predicates, configuration documents reference Objects, instances reference each other. The reference is itself a GDX element, validated like any other. JSON's `$ref` convention and XML's `IDREF` are bolt-ons; GDX's references are first-class typed elements.
+**Reflexivity through typed references.** Any addressable element can be the target of a typed reference. GDX provides two reference constructs, partitioned by genus: @-edges (`@OBJ`, `@REL`, §7.4) assert relationships between graph-entities; REFs (`%KIND`, §7.16) fill slots with handles to independently-existing elements. Both compose with path expressions (`$path`) and Key anchors (`&key`) to address elements that lack global identifiers. This is the model-level expression of "everything is data": vocabulary documents @-edge between Templates and predicates, configuration documents REF Objects, instances REF and @-edge each other. References are themselves GDX elements, validated like any other. JSON's `$ref` convention and XML's `IDREF` are bolt-ons; GDX's references are first-class typed elements with a structural partition between relationship-asserting (@) and slot-filling (%).
 
 **Layered validity with clear ownership.** Validity is layered, not monolithic. Three rungs with three different owners (§2.2): GDX-native primitive axioms (an `INT` is an integer — owned by the core), Template structural conformance (instance children align to declared slots — owned by GDX's alignment algorithm), and constraint-vocabulary conformance (instance values satisfy vocabulary-defined constraints — owned by the vocabulary). An element can be GDX-valid, Template-conforming, and constraint-invalid for one vocabulary while constraint-valid for another; the verdicts are independent and the boundaries are visible. XSD, JSON Schema, and OWL each conflate these into a single valid-or-not answer; GDX separates them by ownership.
 
@@ -324,9 +455,9 @@ This section defines the terms used throughout the specification. The key words 
 
 - **Prefix** — the leading token that declares an element's role. Belongs to the closed vocabulary defined in §6.
 
-- **Role** — the structural position an element occupies in the data model *and* the conceptual interpretation that position carries. A role names both the structural shape (what fields and children are admitted) and the meaning (how the element is to be interpreted in relation to its parent and the wider document). The closed enumeration of roles — Object, Record, Block, Edge, Property, Set, Node, Qualifier, Extension, Template, Relation Declaration, Annotation, Package, Group — covers both axes; each role's detail is in §7. Obtained from a prefix by stripping any modifier.
+- **Role** — the structural position an element occupies in the data model *and* the conceptual interpretation that position carries. A role names both the structural shape (what fields and children are admitted) and the meaning (how the element is to be interpreted in relation to its parent and the wider document). The closed enumeration of roles — Object, Record, Block, Property, Set, Node, VAL, @-Edge family (`@OBJ`, `@REL`), Reference family, Qualifier, Extension, Template, Relation Declaration, Annotation, Package, Group — covers both axes; each role's detail is in §7. Obtained from a prefix by stripping any modifier.
 
-- **Modifier** — a sigil or letter prefix-fragment that adapts a base role without changing its composition rules: `*`(Set), `%`(Embedded), `.`(Qualifier), `_`(Extension), `N`(Node), `DEF`(Template).
+- **Modifier** — a sigil or letter prefix-fragment that adapts a base role without changing its composition rules: `*`(Set), `.`(Qualifier), `_`(Extension), `N`(Node), `DEF`(Template).
 
 - **Resource** — the typed scalar value carried by an element, when present. Resource value-kinds are `string`, `int`, `float`, `bool`, `bytes`, and `reference` (§4.3).
 
@@ -414,7 +545,7 @@ This example is contrived to show all six fields together; in practice an elemen
 
 **Id** is the element's name in the document. For Properties and Records, the Id is a local identifier — a field name meaningful within the document. For Objects, the Id is a resource identifier — a path, CURIE, GUID, or IRI that may be referenced from elsewhere. Whether an Id is required depends on the element's role and position; see §4.2 for the runtime rules.
 
-**Resource** is the typed value the element carries. The Resource follows the typed value-kind appropriate to the Prefix family: a `STR` element's Resource is a string; an `INT` element's Resource is an integer; an `EDGE` element's Resource is a reference to another Object. The Resource is optional — an element may declare a slot or a null value with no Resource at all (§4.3.3).
+**Resource** is the typed value the element carries. The Resource follows the typed value-kind appropriate to the Prefix family: a `STR` element's Resource is a string; an `INT` element's Resource is an integer; an `@OBJ` element's Resource is a reference to another Object. The Resource is optional — an element may declare a slot or a null value with no Resource at all (§4.3.3).
 
 **Type** is a reference to a Template the element claims to satisfy. The Type field is the element's schema-level claim about its content. When present, it triggers schema validation against the named Template. When absent, the element is interpreted purely at the structural level. Templates are defined in §9.
 
@@ -435,7 +566,7 @@ GDX makes the split explicit. The identity portion (Prefix, Key, Rel, Id) tells 
 
 ### 3.4 The Implicit Parent-Child Relationship
 
-When one element appears as a child of another, the relationship between them is implicit — GDX does not label parent-child edges. The role of the child element determines what kind of attribute it represents to the parent. A `STR` child of a `REC` parent is a string-valued property of that record; an `EDGE` child of an `OBJ` parent is a directed relationship from that object; a `REC` child of an `OBJ` parent is a structured composite property of that object.
+When one element appears as a child of another, the relationship between them is implicit — GDX does not label parent-child edges. The role of the child element determines what kind of attribute it represents to the parent. A `STR` child of a `REC` parent is a string-valued property of that record; an `@OBJ` child of an `OBJ` parent is a directed @-edge from that object to another Object; a `REC` child of an `OBJ` parent is a structured composite property of that object.
 
 This is a deliberate design choice. Naming the parent-child relation on every element would add a field that the prefix already determines. By making the relationship implicit, GDX avoids redundant labeling while preserving the information: a consumer always knows, from the child's prefix and the parent's role, what the containment relationship means.
 
@@ -443,30 +574,40 @@ Which roles may contain which roles is not a conceptual question but a compositi
 
 ### 3.5 Elements as Graph Statements
 
-The same six-field form supports GDX's graph dimension. The subject of a statement is the parent element; the object is either a child Property's Resource (a literal value) or a child Edge's Resource (a reference to another Object); the predicate is the child's Rel field when present. This produces two forms of graph statement:
+The same six-field form supports GDX's graph dimension. The subject of a statement is the parent element; the object is either a child Property's Resource (a literal value) or a child @-edge's Resource (a reference to another graph-entity); the predicate is the child's Rel field. This produces two forms of graph statement:
 
 - **Literal-valued statement.** `<OBJ Alice>` containing `<STR #gdx:givenName fname : "Alice">` expresses *Alice — gdx:givenName — "Alice"*.
-- **Edge-valued statement.** `<OBJ Alice>` containing `<EDGE #knows : @Bob>` expresses *Alice — knows — Bob*.
+- **Edge-valued statement.** `<OBJ Alice>` containing `<@OBJ #knows : @Bob>` expresses *Alice — knows — Bob*.
 
 The document remains a tree while expressing graph relationships. A reader can navigate it as a tree, traverse it as a graph, or store it as relational rows (§11.2) — all without changing the underlying form. Comparison with RDF and labeled property graphs is in the Format Comparison companion specification.
 
-### 3.6 Embedding, Referencing, and Graph Relationships
+### 3.6 The Slot-Filler Trichotomy and Graph Statements
 
-GDX provides three distinct mechanisms for involving an addressable element from within another element's content. The three answer different questions and have different structural shapes:
+GDX provides four mechanisms for involving an element from within another element's content. They split along one principal distinction (the **spine**) and one **genus split**, and together they form a closed surface for the question "how does this element involve another element?"
 
-**Embedding** (the `%` modifier on a Property prefix) puts the target's content directly into the parent's structure. The embedded element appears in property-value position, carrying its full content inline. The host element holds the target's content. Use embedding when the content belongs *here*.
+**The spine: dependent vs independent existence.** Every role boundary in this cluster is one axis viewed from a different angle. Some elements *contain* other elements that exist only as their content (dependent); others *point at* elements that exist on their own (independent); others *assert a relationship* a parent has with another element. The spine separates VAL (dependent occupant) from REF (independent target); it separates an @-edge from its target (target independent; edge dependent on source).
 
-**Referencing** (the `@` operator on any base) creates a typed pointer to the target. The reference element is leaf-like — it carries an identifier that names the target and may be refined by Qualifiers, but it does not carry its own substructure. The target lives elsewhere; this element is just the pointer. Use referencing when you want to identify the target without including its content.
+**The genus split.** Every construct here either *fills a slot* (answers "what is this slot's value?") or *asserts a relationship* (answers "what relationship does this source have?"). Property, VAL, and REF are slot-fillers — one genus, three species. @-Edge is the relationship-asserter — its own genus.
 
-**Graph relationships** (the `EDGE` role) assert a labeled directed relationship between the parent Object and a target Object. EDGE elements are themselves structured — they may carry their own Properties expressing edge metadata such as weight, confidence, or timestamp. The edge is not just a pointer; it is a thing about the relationship, with attributes of its own. Use EDGE when the relationship itself is a meaningful structural unit in the graph.
+| Construct | Fills slot with | Occupant existence | `#rel` meaning |
+|-----------|------------------|---------------------|-----------------|
+| Property (`STR`, `INT`, …) | a literal value | n/a (value is data) | compositional |
+| VAL (`VAL`/`V`) | a dependent element, inline | exists only here | compositional |
+| REF (`%KIND`) | a handle to an independent element | exists elsewhere | compositional |
+| @-Edge (`@OBJ`, `@REL`) | — (asserts, doesn't fill) | target independent; edge dependent on source | associative |
 
-The three mechanisms answer different questions:
+**The sigils mark the genus.** `%` always fills a slot (compositional `#rel`); `@` always asserts a relationship (associative `#rel`). They are never synonyms — that is what the whole partition rests on. If `<%OBJ #X x : @T>` and `<@OBJ #X : @T>` could both assert "parent X T," the sigils would be interchangeable spellings and the partition would dissolve. They do not, by §7.16 axiom R4 — the `%` form is "slot named `x` holds a handle to `T`, slot semantically aligned with `#X`"; the `@` form is "parent stands in relation `#X` to `T`."
 
-- **Embedding** answers "what content does this property hold?"
-- **Referencing** answers "what should this point at?"
-- **Graph relationships** answer "what relationship exists between these entities, and what attributes does that relationship have?"
+**The three slot-fillers share a shape.** Property, VAL, and REF are all Property-shaped: each admits a `#rel` (compositional), Qualifiers, Extensions, an `Id` (slot name), and Annotations; none carries structural children of its own. What differs is the Resource value-kind — a literal value for Property, an embedded element for VAL (as occupant), a typed handle for REF — and the resulting elaboration on the resolved value.
 
-A reference to an Object (`@OBJ`) and an EDGE to an Object both carry an `@target` reference value, but they are structurally distinct. The reference is a pointer; the edge is a graph-statement element with its own children. Choose based on whether the link itself is a structural participant in your data (use EDGE) or merely an identifier of a target (use `@OBJ`).
+**Use the construct whose question matches yours:**
+
+- "What literal value fills this slot?" → Property
+- "What structured element fills this slot, and lives only here?" → VAL (§7.11)
+- "What independent element does this slot point at?" → REF (§7.16)
+- "What relationship does my source stand in to that target?" → @-Edge (§7.4)
+
+The partition is structural, not stylistic. An @-edge MUST carry a `#rel` (associative) per §7.4 axiom E4 and admits attribute children; a REF carries an optional `#rel` (compositional) per §7.16 axiom R4 and MUST NOT carry structural children. The composition matrix (§8.1) reflects both rows separately.
 
 ### 3.7 Predicates and Vocabularies
 
@@ -474,13 +615,13 @@ A Rel names a relationship between two roles — the role of the element bearing
 
 The Rel itself is a single, constant primitive — a vocabulary-defined named identifier, opaque to GDX-core. It does not change between contexts; the form of statement it expresses is determined by the roles on either end. One rule, parameterized by role-context.
 
-The same predicate `gdx:knows` may appear as a property's `#rel` (naming how a field aligns within its parent), as an Edge's predicate (linking a source to a target), or in a REL declaration carrying further claims about it (stating an axiom about the predicate itself). The identifier doesn't change; the role-combination determines what statement emerges. This is why one construct serves both the developer's semantic-alignment needs and the knowledge-modeler's predicate-axiom needs: they are the same relation between conceptual forms, read at different altitudes.
+The same predicate `gdx:knows` may appear as a property's `#rel` (naming how a field aligns within its parent), as an @-edge's predicate (linking a source to a target), or in a REL declaration carrying further claims about it (stating an axiom about the predicate itself). The identifier doesn't change; the role-combination determines what statement emerges. This is why one construct serves both the developer's semantic-alignment needs and the knowledge-modeler's predicate-axiom needs: they are the same relation between conceptual forms, read at different altitudes.
 
 GDX expresses this primitive through three coordinated structural mechanisms:
 
-**The `Rel` field — predicate alignment on an element.** Any element MAY carry a `#rel` field naming the predicate it represents. The `#rel` is a CURIE or IRI; it identifies a predicate, not a value. A Property `<STR #schema:givenName firstName : "Alice">` says "this property's local name is `firstName`, and it semantically corresponds to the `schema:givenName` predicate." An Edge `<EDGE #gdx:knows : @bob>` says "this edge instantiates the `gdx:knows` predicate, linking the parent to bob." The `#rel` field is lightweight: it names a predicate but says nothing about what the predicate means.
+**The `Rel` field — predicate alignment on an element.** Any element MAY carry a `#rel` field naming the predicate it represents. The `#rel` is a CURIE or IRI; it identifies a predicate, not a value. A Property `<STR #schema:givenName firstName : "Alice">` says "this property's local name is `firstName`, and it semantically corresponds to the `schema:givenName` predicate." An @-edge `<@OBJ #gdx:knows : @bob>` says "this edge instantiates the `gdx:knows` predicate, linking the parent to bob." The `#rel` field is lightweight: it names a predicate but says nothing about what the predicate means.
 
-**The `REL` element — predicate as a first-class entity.** A `REL` element declares a predicate with its own metadata. The metadata is carried by Extension children (§7.10) — domain, range, inverse, symmetry, cardinality, subPropertyOf, and any other vocabulary-defined annotations. A REL declaration is GDX's mechanism for *publishing* a predicate definition that other documents and tools may consult.
+**The `REL` element — predicate as a first-class entity.** A `REL` element declares a predicate with its own metadata. The metadata is carried by @-edge children (§7.4) and Extension children (§7.10) — domain, range, inverse, symmetry, cardinality, subPropertyOf, and any other vocabulary-defined axioms. A REL declaration is GDX's mechanism for *publishing* a predicate definition that other documents and tools may consult.
 
 ```
 <REL gdx:knows
@@ -492,7 +633,7 @@ GDX expresses this primitive through three coordinated structural mechanisms:
 
 The `#rel` field on any element may reference a predicate declared as a REL elsewhere. The relationship is by-name: when the `#rel` identifier matches a REL declaration's identifier in scope, consumers may consult the declaration for predicate semantics. The relationship is not required — a `#rel` identifier without a corresponding REL declaration is valid; it just lacks the metadata a REL would provide.
 
-**References (`@REL`) — predicates referring to other predicates and to concepts.** RELs may carry references to other RELs (inverse, subPropertyOf, equivalentProperty) and to Objects that represent concepts (domain, range). The reference is a typed pointer (§7.16); the RE composed system is recursive — vocabularies can refer to vocabularies, predicates to concepts, concepts to other concepts.
+**`@OBJ` and `@REL` @-edges — predicate-axiom statements between graph-entities.** RELs may carry @-edges to other RELs (inverse, subPropertyOf, equivalentProperty) and to concept-Objects (domain, range). These are first-class graph statements — they make assertions about the predicate as a graph-entity, may carry their own identity (per §7.4 axiom E6), and recursively connect vocabulary: vocabularies refer to vocabularies, predicates to concepts, concepts to other concepts. Leaf-like pointers to non-graph-entities (e.g., a Template that types a range) use the Reference family (§7.16) instead.
 
 **Concept-as-Object.** GDX has no separate Class or Concept role. When a vocabulary needs to name a concept — a type of entity, an enumeration value, a category — an Object with a conceptual identifier serves that role:
 
@@ -588,11 +729,14 @@ Identifier requirements apply to elements in *named-attribute positions* — pos
 The following roles, when in named-attribute position, MUST carry at least one of `Id`, `Key`, or `Rel`:
 
 - Object (`OBJ`/`O`, `DEFOBJ`)
-- Record (`REC`/`R`, `%REC`/`%R`, `DEFREC`, `NREC`/`NR`) when not in Set member position
-- Property (`STR`/`S`, `INT`/`I`, `FLOAT`/`F`, `BOOL`/`L`, `BYTE`/`B`, and their embedded/template variants) when not in Set member position
+- Record (`REC`/`R`, `DEFREC`, `NREC`/`NR`) when not in Set member position
+- Property (`STR`/`S`, `INT`/`I`, `FLOAT`/`F`, `BOOL`/`L`, `BYTE`/`B`, and their template variants) when not in Set member position
 - Template (any `DEF…`)
+- VAL (`VAL`/`V`) when not in Set member position (rare; VAL is typically a named slot)
 
 Elements appearing as members of a Set (§7.13) are in *positional* rather than named-attribute position. They are not required to carry identifiers; they identify themselves by position and value within the Set. Identifiers on Set members are valid and MAY be used when meaningful (for example, to identify individual Records within a Record Set).
+
+An element appearing as the **occupant of a VAL slot** (§7.11) is similarly in a positional rather than named-attribute position with respect to the VAL: the slot is the named-attribute position, and the occupant fills it. The occupant MAY carry its own `Id`, `Key`, or `Rel` for its own purposes (occupant-level identity, addressable from references), but it is NOT required to carry an identifier merely because its role would otherwise require one in a named-attribute position. The two identity levels (slot-level on the VAL, occupant-level on the child) are independent; this separation is what distinguishes VAL from a plain Property whose Resource is the value.
 
 A Prefix is REQUIRED on every element regardless of position. Set members MUST carry their prefix even when their identifier is omitted, because the prefix distinguishes Set members from Qualifiers, Annotations, Extensions, and other elements that may appear within a Set's children.
 
@@ -629,11 +773,11 @@ A conforming implementation MUST round-trip every representation-conforming nume
 
 #### 4.3.2 Reference Value-Kind
 
-A `reference` resource is a directional pointer to another Object by identifier. References are interpreted by a resolver, not by the GDX parser; the parser validates only that the literal is well-formed (§5.2.6).
+A `reference` resource is a directional pointer to another addressable element by identifier (or by path or key, per §5.2.6). References are interpreted by a resolver, not by the GDX parser; the parser validates only that the literal is well-formed (§5.2.6). The kind of target a reference resource may point at is determined by the prefix of the bearing element — `@OBJ` and `@REL` are the @-Edge family whose resource targets an Object or a REL declaration respectively (§7.4); `%KIND` is the REF family whose resource targets an element of role KIND (§7.16).
 
 The resolution scheme is system-defined. Common approaches include local-document resolution (the reference targets an Object within the same document), namespace-relative resolution (the reference targets an Object within a known scope), and global resolution (the reference is a fully qualified URI). The specification does not mandate any particular scheme; resolvers SHOULD attempt local resolution before broader scopes.
 
-For the special case of Edge elements (§7.4), the Resource is always a reference value-kind, and the `#rel` field names the edge type.
+For the special case of @-Edge elements (`@OBJ`, `@REL`, §7.4), the Resource is always a reference value-kind, and the `#rel` field names the edge type.
 
 #### 4.3.3 Absence and Null Values
 
@@ -723,7 +867,7 @@ The sigils `&`, `#`, and `--` MUST be immediately followed by their field conten
 
 When the `:` separator appears with no identity field on the left in a context where an identifier is required, the element is malformed; conforming parsers MUST reject it. When the `--` sigil appears without a type identifier following, the element is malformed.
 
-**Prefix-position characters** (`%`, `.`, `_`, `N`, `DEF`, `@`) and the **suffix-position character** (`*`) are not field sigils — they are part of the prefix token itself and are defined in §6.
+**Prefix-position characters** (`.`, `_`, `N`, `DEF`, `@`) and the **suffix-position character** (`*`) are not field sigils — they are part of the prefix token itself and are defined in §6.
 
 #### 5.1.2 Whitespace Rules
 
@@ -987,14 +1131,13 @@ Because `$` and `&` are not members of `IdContChar`, the boundary between the id
 
 **Parse-time vs. resolution-time validation of role markers.** The parser MUST reject an unknown role keyword (one not in the closed set). At resolution time, the resolver MUST verify that the named element actually has the claimed role; mismatch yields an unresolved reference.
 
-References are commonly used as the Resource of Edge elements (§7.4) or of `@KIND` reference elements (§7.16):
+Reference literals are commonly used as the Resource of @-Edge elements (`@OBJ`, `@REL`, §7.4) and of REF elements (§7.16):
 
 ```
 <OBJ alice
-    <EDGE #knows : @people/bob>
-    <@OBJ employer : @com.acme>
-    <@REC mailing : $/addresses/[1]>
-    <@REC home    : &homeAddress>
+    <@OBJ #knows : @people/bob>           -- @-edge: alice — knows → bob
+    <%REC mailing : $/addresses/[1]>      -- REF: handle to a Record via path
+    <%REC home    : &homeAddress>         -- REF: handle to a Record via key
 >
 ```
 
@@ -1152,7 +1295,7 @@ A richer form adds composition, predicates, and schema:
         <INT #vocab:portNumber databasePort : 5432>
         <STR #vocab:primaryIP ipAddress : 192.168.1.1 --vocab:ipv4format>
         <BOOL tlsEnabled : true>
-        <EDGE #vocab:dependsOn cache : @cache-primary>
+        <@OBJ #vocab:dependsOn cache : @cache-primary>
     >
 >
 ```
@@ -1167,19 +1310,23 @@ An element's **role** is its position and interpretation in the data model. The 
 
 The prefix vocabulary is **closed** and committed against future change. Implementations MUST NOT introduce new prefixes; extensibility is provided through Templates (§9), Extensions, and the predicate vocabulary mechanism. New primitive types, new structural roles, or new domain concerns are expressed by composing existing prefixes with Templates, Extensions, and vocabulary identifiers — never by adding a new prefix.
 
-A prefix in GDX is composed according to the pattern:
+A prefix in GDX is composed according to a two-layer pattern:
 
 ```
-[@?] [refinement-modifier?] [base] [*?]
+[%?] [@?] [refinement-modifier?] [base] [*?]      (layer 1: role-prefix)
+%  + [layer-1 role-prefix]                         (layer 2: REF wrapper)
 ```
 
-Where:
+Where (layer 1, the role-prefix):
 - **base** is one of the core role prefixes (§6.2)
 - **`*` suffix** marks the element as a Set (§6.3.1)
-- **`@` prefix** marks the element as a typed reference (§6.3.2)
-- **refinement-modifier** is one of `.`, `_`, `%`, `N` (§6.4) or the `DEF` declaration-construct (§7.14)
+- **`@` prefix** marks the element as a member of the @-Edge family (§6.3.2); restricted to two members (`@OBJ`, `@REL`)
+- **refinement-modifier** is one of `.`, `_`, `N` (§6.4) or the `DEF` declaration-construct (§7.14)
 
-All four slots are independent. The base is required; the others are optional. Day-to-day GDX use involves the base prefixes plus the `*` suffix when a collection is needed. The `@` operator and the refinement modifiers are specialized constructs used in particular contexts (typed references, vocabulary metadata, schema declarations).
+And (layer 2, the REF wrapper):
+- **`%` prefix** wraps any layer-1 role-prefix to produce a `%KIND` REF — a slot-filler whose Resource is a typed handle to a KIND-element (§6.3.3, §7.16).
+
+The layer-1 slots are independent. The base is required; the others are optional. Day-to-day GDX use involves the base prefixes plus the `*` suffix when a collection is needed. The `@` sigil constructs @-edges; the `%` sigil constructs REFs; the refinement modifiers construct Qualifiers, Extensions, Node-zone elements, and Templates. Three compositions are malformed: `@@KIND` and `@OBJ*`/`@REL*` (Edge-side; §6.3.2), `%%KIND` and `@%KIND` (REF/Edge-side; §6.3.3).
 
 ### 6.1 Canonical and Minified Forms
 
@@ -1224,7 +1371,24 @@ The base prefixes are the core role vocabulary. They group into four categories:
 | `OBJ`     | `O`      | Object | —                   | §7.1   |
 | `REC`     | `R`      | Record | —                   | §7.2   |
 | `BLK`     | —        | Block  | —                   | §7.5   |
-| `EDGE`    | `E`      | Edge   | `reference`         | §7.4   |
+| `VAL`     | `V`      | VAL (element-as-value slot) | — (occupant is a child) | §7.11 |
+
+**Graph-statement roles** — first-class directed relationships (the `@` sigil):
+
+| Canonical | Minified | Role            | Resource value-kind | Detail |
+|-----------|----------|-----------------|---------------------|--------|
+| `@OBJ`    | —        | @-Edge (Object-targeted)  | `reference` (Object) | §7.4 |
+| `@REL`    | —        | @-Edge (REL-targeted)     | `reference` (REL)    | §7.4 |
+
+The @-Edge family has exactly two members (§7.4 axiom E5). The `EDGE` and `E` prefixes used through v0.11.0 were removed in v0.12.0; the `E` minified slot is currently unassigned. The `@OBJ*` and `@REL*` Set forms are malformed — each @-edge is a single graph statement; multiple edges from one source are expressed as siblings.
+
+**Slot-filling reference role** — typed handles to independently-existing elements (the `%` sigil):
+
+| Canonical | Minified | Role | Resource value-kind | Detail |
+|-----------|----------|------|---------------------|--------|
+| `%KIND`   | —        | %-Reference (REF) | `reference` (to KIND) | §7.16 |
+
+The REF family is generated by a single composition rule: `%` wraps any layer-1 role-prefix to produce a REF-to-that-role. The closed family covers every role that can be a reference target — `%OBJ`, `%REC`, `%BLK`, value-Property forms (`%STR`, `%INT`, etc.), refinement-modifier forms (`%.STR`, `%_INT`, `%NSTR`), Templates (`%DEFOBJ`, `%DEFSTR`, etc.), `%VAL`, the reification forms (`%@OBJ`, `%@REL`), and Set forms (`%KIND*`). The compositions `%%KIND`, `@%KIND`, and `@@KIND` are malformed. See §6.3.3 and §7.16.
 
 **Declaration roles** — vocabulary and schema declarations:
 
@@ -1269,43 +1433,75 @@ The `*` suffix MAY combine with refinement modifiers: `.STR*` is a Set of string
 
 Detailed treatment of Sets, including empty-vs-absent semantics, is in §7.13.
 
-#### 6.3.2 The Reference Operator `@`
+#### 6.3.2 The Sigil `@` — @-Edge Family
 
-The `@` prefix marks an element as a typed reference: an element whose Resource is an identifier naming another addressable element. The base names *what kind of thing* is being referenced:
+The `@` prefix marks an element as a member of the **@-Edge family** (§7.4) — a first-class graph-statement element whose Resource is a reference to an independent graph-entity and whose `#rel` predicate asserts a relationship the parent has to that target. The family has exactly two members:
+
+- `@OBJ` — @-edge to an Object (data-Objects, including concept-Objects per §3.7)
+- `@REL` — @-edge to a REL declaration (predicate-to-predicate or REL-to-concept-Object)
+
+@-edges MUST carry `#rel` (associative — asserts a parent-to-target relationship; see §7.4 axiom E4) and MAY carry attribute children, identity (`Id`/`Key`), Qualifiers, Extensions, and Annotations.
 
 ```
-<@OBJ employer : @com.acme>          -- reference to an Object
-<@REL #gdx:inverse : @gdx:reportsTo> -- reference to a REL declaration
-<@DEFOBJ #conformsTo : @Customer>    -- reference to a Template
+<@OBJ #knows : @bob>                  -- @-edge: alice knows bob
+<@OBJ edge-1 #knows : @bob            -- @-edge with identity and attributes
+    <STR since : "2024-01-15">
+>
+<@REL #gdx:inverse : @gdx:knownBy>    -- @-edge: predicate-to-predicate
 ```
 
-The `@` operator composes universally: it may prefix any base or modifier-base composition. The composition `@KIND` reads as "a reference to a KIND-element." Examples:
+Three compositions are malformed:
 
-- `@OBJ` — reference to an Object
-- `@REL` — reference to a REL declaration
-- `@DEFSTR` — reference to a string-Template
-- `@.STR` — reference to a string Qualifier
-- `@STR*` — reference to a Set of strings
-- `@.STR*` — reference to a Set of string Qualifiers
+- **`@@KIND`** — no @-edge-to-@-edge directly. To reify a specific @-edge from outside, use a `%@OBJ` or `%@REL` REF with the edge's key (see §6.3.3 and §7.16).
+- **`@OBJ*`** and **`@REL*`** — no Set-of-@-edges. Each @-edge is a single graph statement (§7.4 axiom E2′); multiple edges from one source are expressed as siblings, not as Set members.
+- **`@%KIND`** — no @-edge-to-REF. @-edges target only independent graph-entities (§7.4 axiom E5); REFs are slot-contents, not graph-entities.
 
-The composition is constrained by two rules:
+Detailed treatment of the @-Edge family is in §7.4.
 
-- **No reference-to-reference.** `@@KIND` compositions are malformed. A reference points at an addressable element directly, not at another reference.
-- **Modifier exemption.** Unlike the refinement modifiers (§6.4), `@` may compose with bases that themselves carry one of those modifiers. `@.STR` (reference to a Qualifier) and `@_BOOL` (reference to an Extension) are valid.
+#### 6.3.3 The Sigil `%` — REF Family
 
-**Reference elements are leaf-like.** A `@KIND` element carries its target identifier as its Resource and MAY carry Qualifiers (and Annotations) as children. It does NOT carry Properties or other structural children. Reference elements are typed pointers — they identify a target without having their own substructure. This distinguishes them from EDGE (§7.4), which is a structured graph-statement element with its own Properties expressing edge metadata.
+The `%` prefix marks an element as a member of the **%-Reference family** (§7.16) — a slot-filler whose Resource is a typed handle to an independently-existing element. The `%` sigil wraps any layer-1 role-prefix to produce a REF-to-that-role:
 
-Detailed treatment of the `@KIND` family, including resolution rules and use cases, is in §7.16.
+```
+% [layer-1 role-prefix]
+```
+
+where the layer-1 role-prefix follows the established pattern `[@?][refinement-modifier?][base][*?]`. The closed REF family is generated by this single composition rule:
+
+- `%OBJ`, `%REC`, `%BLK` — REF to an Object, Record, Block
+- `%STR`, `%INT`, `%FLOAT`, `%BOOL`, `%BYTE` — REF to a value Property
+- `%.STR`, `%_INT`, `%NSTR` — REF to a Qualifier, Extension, Node-zone element
+- `%DEFOBJ`, `%DEFSTR`, etc. — REF to a Template
+- `%VAL` — REF to a VAL slot
+- `%@OBJ`, `%@REL` — REF to an @-edge (reification)
+- `%STR*`, `%DEFOBJ*`, `%@OBJ*` — REF to a Set of the named role
+
+REFs MAY carry a `#rel` (compositional — aligns the slot to a vocabulary predicate; see §7.16 axiom R4), Qualifiers, Extensions, an `Id` (slot name), and Annotations. They MUST NOT carry structural children — that would make a REF a substance rather than a handle.
+
+```
+<%OBJ database : @primary-db>                -- REF: handle to an Object
+<%DEFOBJ #conformsTo : @ServerConfigV2>      -- REF: handle to a Template, slot aligned
+<%REC mailing : @alice$/addresses/[1]>       -- REF: handle to an interior Record
+<%@OBJ source : @alice&knows-bob-2024>       -- REF: handle to an @-edge (reification)
+```
+
+Two compositions are malformed:
+
+- **`%%KIND`** — no REF-to-REF. A REF is not a reference target (§7.16 axiom R6); to point at what a REF points at, write the address of the target directly.
+- **`@%KIND`** — no @-edge-to-REF, as noted in §6.3.2.
+
+The `@` and `%` sigils mark distinct genera and are never synonyms: `@` asserts a relationship (associative `#rel`); `%` fills a slot (compositional `#rel`). See §3.6 for the genus split and §7.16 axiom R4 for the proof-by-collapse.
+
+Detailed treatment of the REF family is in §7.16.
 
 ### 6.4 Refinement Modifiers
 
-Four refinement modifiers compose with value primitives (and in some cases Records and Objects) to produce elements that carry the base's value-kind but function in a refined contextual role. They do not change what value an element carries; they change what the element *does* with that value.
+Three refinement modifiers compose with value primitives (and in some cases Records) to produce elements that carry the base's value-kind but function in a refined contextual role. They do not change what value an element carries; they change what the element *does* with that value.
 
 | Modifier | Name      | Role                                                  | Composes with               |
 |----------|-----------|-------------------------------------------------------|-----------------------------|
 | `.`      | Qualifier | Refines the meaning of the parent element             | value primitives            |
-| `_`      | Extension | Declares a schema constraint on a Template            | value primitives            |
-| `%`      | Embedded  | Places a structural value in property-value position  | value primitives, REC, OBJ  |
+| `_`      | Extension | Carries a vocabulary-defined adjunct assertion        | value primitives            |
 | `N`      | Node-zone | Marks a semi-structured subtree                       | value primitives, REC       |
 
 Examples:
@@ -1316,13 +1512,7 @@ Examples:
 >
 
 <DEFSTR Email
-    <_STR pattern : "^[^@]+@[^@]+$">    -- Extension constraining Email instances
->
-
-<STR contact
-    <%REC details                       -- Embedded Record in property-value position
-        <STR email : "a@example.com">
-    >
+    <_STR pattern : "^[^@]+@[^@]+$">    -- Extension carrying a constraint
 >
 
 <NREC audit                             -- Node-zone container for ad-hoc data
@@ -1330,9 +1520,11 @@ Examples:
 >
 ```
 
-**Refinement modifiers do not stack with each other.** `*%STR`, `%REC*`, `.NSTR`, `N.STR`, `%_STR` and similar combinations are all malformed. Each element carries at most one refinement modifier.
+**Embedded values use the VAL role**, not a refinement modifier. To place a fully first-class element in value position, wrap the occupant in a VAL slot (§7.11). This is a base role rather than a modifier because the embedded value is itself an element with its own role; VAL provides the slot, the occupant carries its own prefix.
 
-**Refinement modifiers MAY combine with `*` and `@`.** `.STR*` is a Set of Qualifiers; `_STR*` is a Set of Extensions; `%REC*` is a Set of Embedded Records. The reference operator `@` may prefix any modifier-base composition: `@.STR`, `@_BOOL`, `@%REC`, `@NSTR`. The pattern `[@?][refinement-modifier?][base][*?]` governs which combinations are well-formed.
+**Refinement modifiers do not stack with each other.** `*.STR`, `.NSTR`, `N.STR`, `_NSTR` and similar combinations are all malformed. Each element carries at most one refinement modifier.
+
+**Refinement modifiers MAY combine with `*` and `@`.** `.STR*` is a Set of Qualifiers; `_STR*` is a Set of Extensions. The reference operator `@` may prefix any modifier-base composition: `@.STR`, `@_BOOL`, `@NSTR`. The pattern `[@?][refinement-modifier?][base][*?]` governs which combinations are well-formed.
 
 **The `DEF` declaration construct** (§7.14) shares the prefix-position slot with the refinement modifiers but is structurally different — it declares a Template rather than refining an element's contextual role. See §7.14 for details.
 
@@ -1342,7 +1534,7 @@ Examples:
 
 This section is the authoritative reference for GDX's closed role vocabulary. Each subsection covers one role, its prefix(es), composition rules, identifier requirements, structural and conceptual identity, and worked examples. Roles are introduced syntactically in §6 (Prefix Vocabulary); this section defines what each role *means* and how it behaves.
 
-The closed enumeration of roles is: Object, Record, Property, Edge, Block, Annotation, Package, Group, Qualifier, Extension, Embedded, Node, Set, Template, Relation Declaration, and Reference (the `@KIND` family). Composition rules between roles — what each may contain and what may contain it — are defined in §8 (Composition Axioms).
+The closed enumeration of roles is: Object, Record, Property, Block, Annotation, Package, Group, Qualifier, Extension, VAL, Node, Set, Template, Relation Declaration, the @-Edge family (`@OBJ`, `@REL`), and the REF family (every `%KIND` form). Composition rules between roles — what each may contain and what may contain it — are defined in §8 (Composition Axioms).
 
 ### 7.1 Object — `OBJ`
 
@@ -1352,7 +1544,7 @@ The closed enumeration of roles is: Object, Record, Property, Edge, Block, Annot
 
 An Object is a **thing with identity** — an independently-identified entity that stands on its own and may be referenced from other elements. Conceptually, an Object is the kind of element that *other* elements refer to: a Person, an Order, a Server, a Document. It is the unit of persistence and exchange, and its identifier (a path, CURIE, GUID, IRI, or other globally meaningful identifier) is what makes that referenceability possible. The specification places no constraint on the identifier scheme.
 
-Structurally, an Object is a container of named children. The root of a GDX document MUST be one or more Objects, Templates, REL declarations, or Packages. Objects may not contain other Objects except through the Embedded modifier (§7.11) or as transport-layer payload (§7.7, §10).
+Structurally, an Object is a container of named children. The root of a GDX document MUST be one or more Objects, Templates, REL declarations, or Packages. Objects may not contain other Objects except as the occupant of a VAL slot (§7.11) or as transport-layer payload (§7.7, §10).
 
 ```
 <OBJ people/alice
@@ -1369,7 +1561,7 @@ Structurally, an Object is a container of named children. The root of a GDX docu
 
 A Record is a **compound property** — a named composite that belongs to its parent's structure rather than standing on its own. Conceptually, a Record is to its parent what a struct or nested object is to a programming-language container: it represents "the parent has an X of shape Y," where Y is a collection of named properties. A Record contributes to its parent's identity rather than carrying its own.
 
-Structurally, a Record is a container of named children, admitting Properties, Sets, Edges, nested Records, Qualifiers, Nodes, and Annotations. A Record's identifier is a local identifier, meaningful within its containing scope — it names the slot the Record fills in its parent, not a globally addressable resource. A Record *contains* its children, in contrast to a Block which merely *labels* a region of children (§7.5). Records may not contain Objects (except through the Embedded modifier, §7.11), Groups, or Extensions.
+Structurally, a Record is a container of named children, admitting Properties, Sets, Edges, nested Records, Qualifiers, Nodes, and Annotations. A Record's identifier is a local identifier, meaningful within its containing scope — it names the slot the Record fills in its parent, not a globally addressable resource. A Record *contains* its children, in contrast to a Block which merely *labels* a region of children (§7.5). Records may not contain Objects (except as the occupant of a VAL slot, §7.11) or Groups.
 
 **Records and Objects share structural shape** (both are composites of named children) but differ conceptually: an Object stands as an identified thing; a Record belongs to its parent as a compound property. The distinction matters for addressability (Objects are globally referenceable by Id; Records require path or key composition to reach — see §5.2.6), for persistence (Objects are the unit of storage; Records are stored as part of their containing Object), and for what may root a document (Objects may root; Records may not).
 
@@ -1404,57 +1596,77 @@ Properties require an identifier when in named-attribute position and may carry 
 <BYTE contentHash : 0xe3b0c44298fc1c14>
 ```
 
-### 7.4 Edge — `EDGE`
+### 7.4 The @-Edge Family — `@OBJ`, `@REL`
 
 | Canonical | Minified | Resource value-kind | Identifier |
 |-----------|----------|---------------------|------------|
-| `EDGE`    | `E`      | `reference`         | `#rel` field required |
+| `@OBJ`    | —        | `reference` (target: Object) | `#rel` field REQUIRED; `Id`/`Key` OPTIONAL |
+| `@REL`    | —        | `reference` (target: REL)    | `#rel` field REQUIRED; `Id`/`Key` OPTIONAL |
 
-An Edge is a **graph statement** — a directed assertion that one entity stands in a named relation to another. Conceptually, an Edge says "the parent is related to the target by this predicate," and like any statement it can carry its own attributes describing how, when, or with what confidence the relation holds. Edges are GDX's first-class representation of labeled property graph (LPG) edges, baked into the same element form as the rest of the data model.
+An **@-edge** is a **first-class but dependent relationship** — a persistent entity owned by and serialized within its source element, asserting a directed, predicate-labeled link to an independent graph-entity that exists elsewhere. The prefix asserts the *target's role*; the Resource asserts the *target's identity*; the `#rel` predicate asserts what the relationship currently means; an optional `Id` or `Key` makes the relationship itself a trackable, reference-able substance; optional attribute children describe that substance.
 
-Structurally, the parent element is the source, the Resource is a reference (`@target-id`) designating the target Object, and the `#rel` field names the edge type.
+@-edges are GDX's labeled-property-graph mechanism. They are how a document carries the assertion that one graph-entity stands in some named relation to another, optionally with attributes refining the relation.
+
+**Family enumeration.** The @-Edge family has exactly two members: `@OBJ` (target is a data-Object, including concept-Objects) and `@REL` (target is a predicate, i.e., a REL declaration). The membership is restricted to *independent graph-entities*. Targets that are not independent graph-entities — Templates (vocabulary-layer artifacts), value Properties (interior to their parent), Qualifiers/Extensions/Annotations (refinement-only), VAL slots (a container, not an entity), Records/Blocks (composite parts of an Object), or any element addressed by path or key into another element's interior — are not @-edges; pointing at such targets is the job of the Reference family (§7.16).
 
 ```
 <OBJ alice
-    <EDGE #knows : @people/bob>
+    <@OBJ #knows : @bob>                              -- simple edge: alice — knows → bob
+    <@OBJ employmentEdge #worksFor : @com.acme        -- edge with identity and attributes
+        <STR startDate : "2024-01-15">
+        <FLOAT confidence : 0.95>
+    >
+>
+
+<REL gdx:knows
+    <@REL #gdx:inverse  : @gdx:knownBy>               -- predicate-to-predicate edge
+    <@OBJ #gdx:domain   : @gdx:Person>                -- predicate-to-concept-Object edge
+    <@OBJ #gdx:range    : @gdx:Person>
 >
 ```
 
-This reads as: alice — knows → bob. The edge is unidirectional in the data model.
+#### Axioms (E1–E6)
 
-Edges accept the same children as Records and MAY carry properties as edge attributes. An edge with attributes is a labeled property graph edge in the full sense:
+**E1 — Prefix asserts target role; Resource asserts target identity.** The `@KIND` prefix declares the role the resolved target MUST occupy: `@OBJ` declares an Object target; `@REL` declares a REL target. The Resource is a reference literal (`@identifier` form per §5.2.6) naming the target. Resolution checks both — the named target MUST exist AND MUST be of the declared role. The prefix asserts the target-role even when the Resource is empty: `<@OBJ #knows : >` in Template context declares "a slot for an Object-edge predicated `knows` belongs here"; in instance context, the empty Resource represents a null edge (per §4.3.3). The prefix is the type assertion; it stands whether or not a Resource is present.
 
-```
-<EDGE #knows : @people/bob
-    <STR since : "2024-01-15">
-    <FLOAT weight : 0.8>
->
-```
+**E2′ — First-class but dependent.** An @-edge is its own entity in the data model — it can carry identity, predicate, and attribute children — but it does not exist independently of its source: it is owned by and serialized within the source element. The edge *relates* its source to its target; it does NOT contain either. An edge dies with its source (delete the source and the edge is gone; relational projections SHOULD model this with `ON DELETE CASCADE` on the source side). An edge dangles if its target is removed (the edge persists as a structurally well-formed element with an unresolved reference; the consumer decides how to handle dangling). This distinguishes @-edges from VAL: VAL *contains* its value as an occupant; an @-edge *points at* its target.
 
-The `#rel` field references a predicate. A predicate may be declared as a first-class `REL` element (§7.15) when domain, range, inverse, or other semantic properties need to be expressed. The core specification makes no claim about the symmetry, transitivity, or other semantic properties of any predicate; those are declared at the REL level and computed by consumers.
+**E3 — Attribute children describe the relationship-entity.** Children of an @-edge — Properties (`STR`, `INT`, …), Qualifiers, and other adjunct elements — describe the edge itself: when it started, its confidence, who recorded it, and so on. When the edge carries identity (per E6), those attributes belong to the persistent edge-entity, not to any single predication; an edge whose `#rel` is rewritten retains its attribute children unless those attributes are also rewritten. Attributes are properties of the edge-as-substance, not of the current predication.
 
-Multiple edges MAY originate from the same source referencing the same target with different `#rel` tags, allowing multiple forms of relationship between the same pair of entities.
+**E4 — Predicate (`#rel`) is mandatory.** Every @-edge MUST carry a `#rel` field. The predicate is the edge's current meaning and is the structural discriminator between @-Edge and Reference: an @-prefixed element without `#rel` is not a well-formed @-edge. Unlabeled adjacency is not supported; this is a deliberate design choice. GDX edges are typed property-graph edges, and "adjacency without a type" is expressed as a designated predicate value (e.g., `<@OBJ #gdx:adjacent : @target>`), not as the absence of a predicate.
 
-**Edge versus `@OBJ`.** Both EDGE and `@OBJ` (§7.16) carry references to Object targets, but they are structurally distinct. EDGE is a graph-statement element with its own children, including Properties that express edge metadata (weight, confidence, timestamp). `@OBJ` is a leaf-like typed pointer — it identifies a target without having its own substructure beyond Qualifiers. Use EDGE when the link is a structural participant in the graph with attributes of its own; use `@OBJ` when the link is just an identifier. See §3.6 for the full comparison.
+**E5 — Family is enumerated by target role and restricted to independent graph-entities.** The family consists of exactly `@OBJ` and `@REL`. The restriction is principled: only Objects (including concept-Objects, since GDX uses concept-as-Object for ontology layering — see §3.7) and REL declarations are independent graph-entities. Source role is orthogonal to membership: any role admitted as a parent of an @-edge by the composition matrix (§8.1) may carry @-edges; the family enumeration is over targets only. The Set forms `@OBJ*` and `@REL*` are **malformed** — each @-edge is a single graph statement (per E2′); multiple edges from one source are expressed as siblings, not as Set members. To address multiple edges as a collection (e.g., for iteration or query), the parent Object's children are filtered by prefix — the structure is implicit in the document, not collected into a Set.
 
-#### 7.4.1 Edge Reference Resolution
+**E6 — Identity is optional and orthogonal to predicate.** An @-edge MAY carry an `Id` and/or a `Key`. Identity is the edge's *substance* — the persistent entity (per E2′) that endures across changes to predicate, attributes, or target, and that disambiguates multiple edges between the same endpoints. The substance/predication distinction is the spine of the model: the `Id` is what the edge *is* (the enduring thing); the `#rel` is what it currently *asserts*; attribute children ride on the substance. Identity-without-predicate is malformed (an edge with no current assertion is not an edge); predicate-without-identity is the common case (most edges are content with anonymous substance). Two @-edges that share the same source, predicate, and target ARE distinct edges if they carry different identities; uniqueness is by identity, not by the (source, predicate, target) triple.
 
-An Edge's Resource is a reference to a target Object. Reference resolution determines whether the named target exists and what Object it identifies. Resolution behavior parallels Template reference resolution (§9.5.2) but operates on Object identifiers rather than Template names.
+**Resolution.** An @-edge's Resource is name-addressed only — `@identifier` per §5.2.6. Bare `$path` and `&key` reference literals address interior elements of other Objects and are handled by the Reference family (§7.16), not by @-Edges. The composed `@Anchor$PathExpression` and `@Anchor&Key` forms similarly address interior locations and are Reference territory. An @-edge resolves to a single named entity; interior-reaching is by definition not an @-edge concern.
 
-The default resolution order for Edge references is normative:
+**Predicate-to-predicate and concept-Object edges.** @-edges from a REL to another REL (vocabulary metadata: inverse, subPropertyOf, equivalentProperty) and from a REL to a concept-Object (domain, range) are first-class edges. They are how a vocabulary document expresses the predicate-axiom layer (§3.7) without leaving the same element form used for everyday data. The substance/predication split applies uniformly: a `<@REL eid #gdx:inverse : @gdx:reportsTo>` edge with identity `eid` is a trackable assertion about predicate relationships, addressable from other documents and editable independently of the predication it currently carries.
 
-1. **Local document.** Object identifiers declared within the same document as the Edge are checked first. An `@bob` reference is satisfied by an `<OBJ bob>` declaration in the same document if one exists.
-2. **Loaded document context.** When the Edge appears in a document being processed alongside other documents (e.g., in a batch import or registry context), Objects from those documents are checked in the order they were loaded.
-3. **Globally-resolvable IRIs.** Object references expressed as full IRIs (e.g., `@https://acme.com/people/alice`) MAY be resolved by a network-aware resolver if the implementation supports it. Implementations are not required to perform network resolution.
+**Composition.** Per §8.1, @-edges are admitted as children of Object, Record, Block, Edge (recursion: an edge's attribute children may themselves be edges), VAL (when the slot's value is an edge-shaped element), Template (declaring an edge slot), and REL (carrying vocabulary metadata about the predicate). Sources of @-edges are determined by where they are admitted; targets are determined by the prefix.
+
+**The substance/predication split as the spine.** Identity is the substance; `#rel` is the predication; attributes ride on the substance. This pattern keeps GDX out of RDF-style reification machinery (no `rdf:Statement` indirection, no quadruple-form rewriting) while delivering everything reification provides: named edges, predicate mutation over stable identity, attribute attachment to the edge rather than to the predication, and multi-edge disambiguation between the same endpoints. All of this follows from E2′ (first-class but dependent) with no new structural machinery.
+
+#### 7.4.1 @-Edge Reference Resolution
+
+An @-edge's Resource is a reference to a target entity (Object for `@OBJ`, REL for `@REL`). Reference resolution determines whether the named target exists and what entity it identifies.
+
+The default resolution order is normative:
+
+1. **Local document.** Identifiers declared within the same document as the @-edge are checked first. An `@bob` reference from an `@OBJ` edge is satisfied by an `<OBJ bob>` declaration in the same document if one exists.
+2. **Loaded document context.** When the @-edge appears in a document being processed alongside other documents (e.g., in a batch import or registry context), entities from those documents are checked in the order they were loaded.
+3. **Globally-resolvable IRIs.** References expressed as full IRIs (e.g., `@https://acme.com/people/alice`) MAY be resolved by a network-aware resolver if the implementation supports it. Implementations are not required to perform network resolution.
 4. **Resolution failure.** If no scope yields a target, the reference is unresolved.
 
-When an Edge reference cannot be resolved:
+The resolver MUST verify that the resolved entity's role matches the @-edge prefix: an `@OBJ` reference resolving to a REL is a role mismatch and yields an unresolved reference; an `@REL` reference resolving to an Object is similarly malformed.
 
-- The Edge is reported as schema-non-conforming (Layer 2). The Edge itself is structurally well-formed (Layer 1); it is the schema-level claim that the reference points to an existing Object that fails.
-- The error MUST identify the unresolved reference and the Edge that carries it.
-- Validation of the rest of the document continues; unresolved Edge references do not halt validation.
+When an @-edge reference cannot be resolved:
 
-A resolution failure means the target named by the reference does not exist in any resolvable scope. The unresolved reference does not become a placeholder, virtual Object, or tombstone in the data model — the data is exactly what was authored, and the validator's report indicates that the reference does not resolve. Applications that want placeholder behavior must construct it at the application layer.
+- The @-edge is reported as schema-non-conforming (Layer 2). The @-edge itself is structurally well-formed (Layer 1); it is the schema-level claim that the reference points to an existing entity of the matching role that fails.
+- The error MUST identify the unresolved reference and the @-edge that carries it.
+- Validation of the rest of the document continues; unresolved references do not halt validation.
+
+A resolution failure means the named target does not exist in any resolvable scope. The unresolved reference does not become a placeholder, virtual entity, or tombstone — the data is exactly what was authored, and the validator's report indicates that the reference does not resolve. Applications that want placeholder behavior must construct it at the application layer.
 
 Implementations MAY support modes where unresolved references are treated as warnings rather than errors, useful for ingesting partial data sets or for documents that intentionally reference targets in other systems. When such modes are supported, the strict mode (errors on unresolved references) SHOULD remain the default.
 
@@ -1574,7 +1786,12 @@ Even when a Template incorporates an Extension into a conformance claim — e.g.
 
 Structurally, the `_` modifier marks an element as an Extension. Extensions MAY appear as children of any element that admits children (the composition matrix §8.1 lists Extension as an admitted child role on all data-bearing and declaration-bearing parents). The Extension carries a vocabulary-defined identifier in its `Id`-position field (the assertion's name) and a typed Resource (the assertion's value, of value-kind matching the Extension's prefix family).
 
-**Extensions carry primitive value-kinds only.** The closed Extension prefix vocabulary admits string, int, float, bool, and bytes (the table below). To express an adjunct statement whose value is a *reference* to another element — for example, "the domain of this predicate is the `gdx:Person` Object" — use a Reference (`@KIND`, §7.16) child with a `#rel` predicate naming the assertion: `<@OBJ #gdx:domain : @gdx:Person>`. Extensions and References together cover the adjunct-statement surface: Extensions for primitive-valued assertions, References for reference-valued assertions. Both attach to elements as vocabulary-keyed children; both are adjunct in nature; the choice between them follows the value-kind of the assertion.
+**Extensions carry primitive value-kinds only.** The closed Extension prefix vocabulary admits string, int, float, bool, and bytes (the table below). To express an adjunct statement whose value is a *reference* to another element, the construct depends on whether the assertion is a graph statement or a slot binding:
+
+- For **graph statements between graph-entities** (Objects, RELs) — e.g., "this predicate has `gdx:Person` as domain," "this REL is the inverse of `gdx:knownBy`" — use an @-edge (`@OBJ` or `@REL`, §7.4) with an associative `#rel`: `<@OBJ #gdx:domain : @gdx:Person>`, `<@REL #gdx:inverse : @gdx:knownBy>`.
+- For **handle slots pointing at non-graph-entities** (Templates, Records, value-Properties, Qualifiers, etc.) — e.g., "this slot holds a handle to the schema that types the range" — use a REF (`%KIND`, §7.16) with optional compositional `#rel`: `<%DEFOBJ #gdx:rangeSchema : @PersonTemplate>`, `<%REC defaultMailing : @global-defaults$/mailing>`.
+
+Extensions, @-edges, and REFs together cover the adjunct-statement surface: Extensions for primitive-valued assertions, @-edges for graph-statement assertions, REFs for handle-valued assertions. All three attach to elements as vocabulary-keyed children; the choice follows the value-kind and genus (slot-filling vs relationship-asserting) of the assertion.
 
 See §7.9 for the contrast with Qualifier — both attach to elements, but Qualifier is *constitutive* (refining what the parent's value means; removing changes meaning), while Extension is *adjunct* (an assertion alongside; removing does not change what the parent is or means). See §7.6 for the contrast with Annotation (REM) — Annotation is free-text without a vocabulary identifier; Extension is vocabulary-keyed and typed.
 
@@ -1632,7 +1849,7 @@ A migration directive attached to a Template:
     <STR firstName>
     <STR lastName>
     <STR email>
-    <@DEFOBJ #gdx:supersedes : @CustomerV1>
+    <%DEFOBJ #gdx:supersedes : @CustomerV1>
     <_STR migrate:from-v1 : "add-email-from-default">
 >
 ```
@@ -1652,47 +1869,89 @@ In each case, GDX records the Extension as a well-formed element; what (if anyth
 
 The first is data ("the temperature value, expressed in celsius"); the second is schema ("any instance of TemperatureReading is required to be in celsius"). The grammar makes the distinction explicit at the prefix level.
 
-### 7.11 Embedded — `%`
+### 7.11 VAL — `VAL` (element-as-value)
 
-An Embedded element is a **structured value in a scalar's position** — a way to put a composite where a single typed value would normally sit, while keeping the composite's full GDX identity. Conceptually, Embedded says "the parent has a value, and the value happens to be structured rather than scalar": an address embedded as a Property's value, an alternative representation of a measurement embedded alongside the canonical one, an Object embedded as a configuration value. Without Embedded, structured values would have to be serialized to strings and re-parsed; Embedded preserves the structure in place.
+A VAL is **an element in value position** — a slot that holds, as its value, a fully first-class element complete with its own role, identity, resource, and children. Where a value-bearing prefix says "my value is a {string, int, …}," VAL says "my value is an element." The alternative — serializing a structure into a string literal — forfeits parsing, validation, addressability, and round-trip integrity; VAL is how GDX keeps a value structured when that value is itself an element.
 
-Structurally, the `%` modifier marks a Property, Record, or Object as eligible to appear in a property-value position — where a scalar value would otherwise sit. The embedded element retains its base role's children and identifier rules.
-
-| Canonical | Minified | Base role |
-|-----------|----------|-----------|
-| `%STR`    | `%S`     | Property  |
-| `%INT`    | `%I`     | Property  |
-| `%FLOAT`  | `%F`     | Property  |
-| `%BOOL`   | `%L`     | Property  |
-| `%BYTE`   | `%B`     | Property  |
-| `%REC`    | `%R`     | Record    |
-| `%OBJ`    | `%O`     | Object    |
+The mechanism distinguishes two levels of identity:
 
 ```
-<STR contact
-    <%REC details
-        <STR email : "a@example.com">
-        <STR phone : "555-0100">
+<REC person
+    <VAL #gdx:legalName nameSlot
+        <STR #gdx:givenName name : "bob">
     >
 >
 ```
 
-The Embedded modifier is particularly useful when a structured value should retain its full GDX identity rather than being serialized to a string and re-parsed:
+Here the VAL `nameSlot` carries `#gdx:legalName` — the slot's alignment in `person`'s structure. The occupant STR carries `#gdx:givenName` — the value's own semantic alignment. These are two distinct alignments at two different levels; a single-element form would collapse one of them. VAL preserves both.
+
+| Canonical | Minified | Resource? | Identifier |
+|-----------|----------|-----------|------------|
+| `VAL`     | `V`      | —         | required (local) when in named-attribute position |
+
+#### Axioms
+
+1. **No Resource of its own.** VAL carries no Resource and no `:` separator; the value is the occupant child, not a literal Resource value.
+
+2. **Exactly one occupant.** VAL holds exactly one *occupant* — the embedded value, which is a structural element of any data-bearing role (see Axiom 3). Annotations, Qualifiers, and Extensions MAY additionally appear as children of the VAL itself, refining the slot rather than the value. Zero occupants or multiple occupants are malformed.
+
+3. **Occupant role.** The occupant may be a Property (any value-kind), Record, Object, Block, Set, Edge (as a graph-statement value), or Reference (as a typed-pointer value). The occupant MUST NOT be a VAL (no double-wrapping), a Template or REL (vocabulary-layer roles are not embeddable as values), a Qualifier, Extension, or Annotation (refinement and adjunct roles are not values), a Node-zone element (Node isolation per §8.2 rule 5), or a transport-layer role (Package/Group).
+
+4. **Two-level identity.** The occupant's identity fields (`Id`, `Key`, `Rel`) are part of the embedded value and describe the value itself. The VAL's own identity fields name the slot the value fills and describe the slot's role in the parent. The occupant is in *positional* context within the VAL (the slot name comes from the VAL, not the occupant); the §4.2 identifier requirements that apply to Properties and Records in named-attribute position are accordingly relaxed for VAL occupants. The occupant MAY be anonymous (slot-named only) or identified (when its own identity carries information — for example, a `Rel` alignment for the value's semantic content).
+
+5. **Object licensing.** VAL is the data-layer licensing point for an Object in non-root position. The §8.2 rule-2 Object-exclusion exception that historically permitted `%O` is provided by VAL: a VAL whose occupant is an Object is the only data-layer form (besides transport-layer Package and Group payload) that may contain an Object as a non-root element.
+
+6. **No `VAL*` form.** Sets of VAL are malformed. Set members are positional and need no slot-wrapping; a Set of `X`-typed values is written `X*` directly.
+
+#### Examples
+
+A simple primitive value with an anonymous occupant:
 
 ```
-<REC colorReading
-    <%OBJ lab
-        <FLOAT l : 50.0>
-        <FLOAT a : 25.3>
-        <FLOAT b : -12.7>
-    >
-    <%OBJ rgb
-        <INT r : 124>
-        <INT g : 89>
-        <INT b : 200>
+<OBJ alice
+    <VAL nickname
+        <STR : "Allie">
     >
 >
 ```
+
+A structured value (Record) as the occupant:
+
+```
+<OBJ order123
+    <VAL deliveryAddress
+        <REC <STR street : "123 Main"> <STR city : "Oakland">>
+    >
+>
+```
+
+An Object embedded as the value of a slot:
+
+```
+<OBJ orderRecord
+    <VAL primaryContact
+        <OBJ contacts/alice
+            <STR firstName : "Alice">
+            <STR email : "alice@example.com">
+        >
+    >
+>
+```
+
+Two-level alignment — slot purpose and occupant content both surfaced:
+
+```
+<OBJ employee
+    <VAL #gdx:emergencyContact contactSlot
+        <OBJ contacts/bob --gdx:Person
+            <STR #gdx:givenName name : "Bob">
+            <STR #gdx:phoneNumber phone : "555-0100">
+        >
+    >
+>
+```
+
+The slot says "this is the employee's emergency-contact slot." The occupant says "the value is a Person Object with these attributes."
 
 ### 7.12 Node — `N`
 
@@ -1823,17 +2082,43 @@ A Template's *fields* are described using regular prefixes (not `DEF…` prefixe
 |-----------|----------|-----------|------------|
 | `REL`     | —        | —         | required (predicate identifier) |
 
-A Relation Declaration is a **predicate as a first-class entity** — the published counterpart to the `#rel` references that Edges and other elements carry. Conceptually, a REL says "this predicate has its own identity, and the metadata describing it lives here": its domain and range, its inverse, whether it is symmetric or transitive, what vocabulary it participates in, what concepts it connects. Without RELs, predicates would be opaque identifiers used inline; with RELs, the predicate vocabulary itself becomes part of the data model.
+A Relation Declaration is a **predicate as a first-class entity** — the published counterpart to the `#rel` predicates that @-edges and other elements carry. Conceptually, a REL says "this predicate has its own identity, and the metadata describing it lives here": its domain and range, its inverse, whether it is symmetric or transitive, what vocabulary it participates in, what concepts it connects, what humans should read about it. Without RELs, predicates would be opaque identifiers used inline; with RELs, the predicate vocabulary itself becomes part of the data model.
 
 Structurally, a `REL` element declares a predicate as a first-class entity. The `REL` element's identifier is the predicate identifier itself (typically a CURIE such as `gdx:knows` or `schema:givenName`). REL has no minified form.
 
-A REL admits two kinds of children:
+**Defined by purpose, not by structure.** A REL's function — naming a first-class predicate — is fully discharged by its identifier. It needs no particular children to be well-formed; the predicate-as-named-entity exists once the REL is declared. Children, when present, supply metadata *about* the predicate: data carriers (labels, descriptions, version info), graph-statement axioms about how the predicate relates to concepts and other predicates, primitive-valued semantic claims (symmetry, cardinality), and handles to vocabulary-layer artifacts. None is required; each contributes only what its consumer interprets. A REL is held to no stricter standard than any other element — Properties stand on a REL exactly as they stand on any Object, with meaning conferred by interpreting consumers and meaninglessness never disqualifying.
 
-- **Extensions** (§7.10) — carry vocabulary-defined predicate semantics: domain, range, inverse, symmetry, cardinality, subPropertyOf, equivalent-property relationships, and any other properties an ontology vocabulary defines for predicates. The set of recognized Extension identifiers is vocabulary-defined; the core spec defines REL structurally but assigns no semantics to specific identifiers.
-- **References** (`@KIND`, §7.16) — typed pointers from this REL to other elements: another REL (for inverse, subPropertyOf, equivalentProperty), an Object (for concept-bearing domain/range targets), a Template (for type-bound range), and so on.
+**Admitted children.** A REL admits:
+
+- **Properties** (`STR`, `INT`, `FLOAT`, `BOOL`, `BYTE` and their variants) — data about the predicate: human-facing labels and descriptions, version markers, authorship, deprecation flags, alias strings. Properties on a REL stand as Properties stand everywhere; GDX-core records them as well-formed typed data, and consumers (documentation tools, vocabulary browsers, lookup indices) decide what to do with them.
+- **Records, Sets, Blocks, VAL** — structured data, collections of data, and organizational containers, by the same principle. A REL with a `<REC documentation>` carrying a structured description block, or a `<STR* aliases>` carrying alias strings, is well-formed; the vocabulary that interprets these structures decides their meaning.
+- **@-edges** (§7.4) — first-class predicate-axiom statements. An `@OBJ` edge to a concept-Object expresses domain or range (`<@OBJ #gdx:domain : @gdx:Person>`); an `@REL` edge to another REL expresses inverse, subPropertyOf, or equivalent-property relationships (`<@REL #gdx:inverse : @gdx:reportsTo>`). These are first-class assertions about the predicate — they may carry their own identity (per §7.4 axiom E6) and attribute children describing the axiom.
+- **Extensions** (§7.10) — primitive-valued vocabulary-defined predicate axioms: symmetry (`<_BOOL gdx:symmetric : true>`), cardinality bounds, transitivity flags, and any other primitive-valued semantic claim a vocabulary defines.
+- **REFs** (§7.16) — typed handles to non-graph-entities: a Template that types the range (`<%DEFOBJ #gdx:rangeSchema : @PersonTemplate>`), a documentation document, a related vocabulary file.
+- **Annotations** (§7.6) — free-text notes for human readers.
+
+**Excluded children.** A REL does NOT admit:
+
+- **Object** — vocabulary entities don't contain data-instance Objects; an Object inside a REL would make a contextually false claim about what the REL is.
+- **Node** — RELs are structured vocabulary entities, not semi-structured pockets.
+- **Qualifier** — RELs carry no Resource, so there is nothing to refine.
+- **REL** and **Template (`DEF…`) forms** — vocabulary entities do not nest within RELs. This is an explicit carve-out from the modifier-transparency rule (§8.2 rule 9): even though REL admits Record and Object base roles would otherwise be admitted via transparency, the `DEF…` Template forms and the `REL` form itself are blocked because they declare vocabulary entities, and nesting one vocabulary entity inside another is structurally false.
+- **Transport-layer roles (Package, Group)** — transport wrappers do not appear inside vocabulary declarations.
+
+**Property vs Extension on a REL.** Both Properties and Extensions are admitted; authors choose based on what the metadata *is*:
+
+- Use a **Property** for data about the predicate that a downstream consumer reads as-is — `rdfs:label`, `rdfs:comment`, version markers, authorship, alias strings, deprecation flags. The Property's meaning, if any, is conferred by the consuming vocabulary, never by GDX-core.
+- Use an **Extension** for a vocabulary-defined semantic axiom about the predicate that a validator or reasoner acts on — `gdx:symmetric`, `gdx:transitive`, cardinality bounds, value-set constraints. The Extension's bindingness is conferred by the validator that recognizes the vocabulary identifier.
+
+The mechanical version: would a validator or reasoner act on it? → Extension. Is it for humans or downstream lookup? → Property. Both are well-formed in either case; the choice is about communicating intent to consumers.
+
+**@-edge target convention.** The @-Edge family axioms (§7.4 E5) restrict @-edge targets to Objects or RELs structurally. The vocabulary convention for @-edges on a REL is to target *concept-Objects* (Objects with conceptual identifiers like `@gdx:Person`) or other RELs — to make predicate-axiom statements like domain/range/inverse. This is convention, not enforcement; the matrix admits any @OBJ or @REL target, and the concept-vs-data-instance distinction lives in vocabulary practice, not in GDX-core.
 
 ```
 <REL gdx:knows
+    <STR rdfs:label : "knows">
+    <STR rdfs:comment : "Asserts an acquaintance relationship between two Persons.">
+    <STR* aliases <STR : "is_acquainted_with"> <STR : "is_connected_to">>
     <@OBJ #gdx:domain : @gdx:Person>
     <@OBJ #gdx:range  : @gdx:Person>
     <_BOOL gdx:symmetric : true>
@@ -1844,13 +2129,13 @@ A REL admits two kinds of children:
 >
 ```
 
-The interplay among the three vocabulary-related elements is:
+The interplay among the three vocabulary-related constructs is:
 
 - The `#rel` field on any element names a predicate by identifier (§3.7). The reference is lightweight — it asserts "this element represents this predicate" without requiring the predicate to be declared anywhere.
 - A `REL` element declares the predicate with its metadata, making the predicate's semantics part of the data model.
-- A `@REL` reference points at a REL declaration from elsewhere (typically from another REL describing a relationship between predicates).
+- An `@REL` @-edge from one REL declaration to another expresses a first-class predicate-to-predicate axiom (inverse, subPropertyOf, etc.).
 
-The three are coordinated by name: when a `#rel` identifier matches a `REL` identifier in scope, the REL's metadata applies to the predicate. When a `@REL` reference matches a `REL` identifier, the reference resolves to that declaration.
+The three are coordinated by name: when a `#rel` identifier matches a `REL` identifier in scope, the REL's metadata applies to the predicate. When an `@REL` @-edge targets a REL identifier, the edge resolves to that declaration as a graph-statement-level link between two predicates.
 
 **Concept-as-Object.** GDX deliberately has no separate Class or Concept role. When a vocabulary needs to name a concept (a type of entity, an enumeration value, a category), an Object with a conceptual identifier serves that role. RELs reference concepts as Objects (`@gdx:Person`, `@gdx:Organization`), and concept Objects may carry their own properties, labels, and relationships like any other Object. This keeps the data model uniform — vocabulary, schema, and data all use the same element form.
 
@@ -1866,18 +2151,22 @@ The three are coordinated by name: when a `#rel` identifier matches a `REL` iden
 >
 
 <REL gdx:knows
+    <STR rdfs:label : "knows">
+    <STR rdfs:comment : "Asserts an acquaintance relationship.">
     <@OBJ #gdx:domain : @gdx:Person>
     <@OBJ #gdx:range  : @gdx:Person>
     <_BOOL gdx:symmetric : true>
 >
 
 <REL gdx:employs
+    <STR rdfs:label : "employs">
     <@OBJ #gdx:domain : @gdx:Organization>
     <@OBJ #gdx:range  : @gdx:Person>
     <@REL #gdx:inverse : @gdx:employedBy>
 >
 
 <REL gdx:employedBy
+    <STR rdfs:label : "employed by">
     <@OBJ #gdx:domain : @gdx:Person>
     <@OBJ #gdx:range  : @gdx:Organization>
 >
@@ -1889,57 +2178,159 @@ The three are coordinated by name: when a `#rel` identifier matches a `REL` iden
 >
 ```
 
-This document defines a small vocabulary: two concept Objects (`gdx:Person`, `gdx:Organization`), three predicates with declared domain/range and inverse relationships, and one Template binding instance shape to the Person concept. The entire vocabulary is GDX; consumers parse it with the same parser they use for instances.
+This document defines a small vocabulary: two concept Objects (`gdx:Person`, `gdx:Organization`), three predicates with declared domain/range, inverse relationships, and human-facing labels, and one Template binding instance shape to the Person concept. The entire vocabulary is GDX; consumers parse it with the same parser they use for instances. The labels on each REL are Properties (data carried for downstream consumers like documentation tools); the domain/range/inverse are @-edges (graph statements); the symmetry flag is an Extension (a vocabulary-defined axiom a reasoner may act on).
 
 A REL declaration MAY appear at the document root (alongside or instead of primary Objects) or within a vocabulary document. Resolution of `#rel` references follows the same mechanism as Type reference resolution (§9.5).
 
-### 7.16 References — `@KIND`
+### 7.16 The %-Reference Family — `%KIND`
 
-A Reference is a **typed pointer to another element** — an element whose content is the identifier (or path or key) of a target rather than a value of its own. Conceptually, a Reference says "the parent has a thing-of-kind-X, and the thing in question is *that* one": an Object's employer, a Template's predecessor version, a configuration's fallback. The Reference is leaf-like — it identifies and stops — distinguishing it from an Edge, which is a graph statement with its own attributes (§3.6).
+A %-Reference is a **slot-filler whose Resource is a typed handle to an independently-existing element**. The slot carries the handle; the target lives elsewhere. A Reference says "this slot holds a handle to that element" — nothing more, nothing less. It asserts no relationship about its parent (that is Edge's job, §7.4), does not contain its target (that is VAL's job, §7.11), and is inert toward the target while elaborated toward its own slot, exactly as any Property is.
 
-Structurally, the `@` operator (§6.3.2) composes with any base or modifier-base composition to produce a typed reference. The resulting element is a leaf-like typed pointer whose Resource is an identifier naming the target.
+#### Family Generation: `%` Wraps Any Role-Prefix
 
-**Element shape.** A `@KIND` element MAY carry an identifier (the name of this reference within its parent's scope), MAY carry a `#rel` field (a predicate naming the link's meaning, useful for vocabulary metadata), and carries its target as a reference literal in Resource position. Children, if any, are limited to Qualifiers and Annotations.
+The closed REF family is generated by a single composition rule: the `%` sigil wraps any *layer-1 role-prefix* to produce a REF-to-that-role. Layer-1 role-prefixes follow the established pattern `[@?][refinement-modifier?][base][*?]`. The two-layer composition is:
 
 ```
-<@OBJ employer : @com.acme>                       -- a typed pointer to an Object
-<@REL #gdx:inverse : @gdx:reportsTo>              -- vocabulary metadata link
-<@DEFOBJ #conformsTo : @Customer>                 -- pointer to a Template
-<@STR* allowedTags : @global-tag-set>             -- pointer to a Set of strings
+%KIND   where KIND is any layer-1 role-prefix
+```
 
-<@OBJ employer : @com.acme
-    <.STR confidence : "verified">                -- Qualifier refining the reference
+Examples spanning the closed family:
+
+- `%OBJ`, `%REC`, `%BLK` — REF to an Object, a Record, a Block
+- `%STR`, `%INT`, `%FLOAT`, `%BOOL`, `%BYTE` — REF to a value Property
+- `%.STR`, `%_INT`, `%NSTR` — REF to a Qualifier, an Extension, a Node-zone element
+- `%DEFOBJ`, `%DEFSTR`, `%DEFREC`, etc. — REF to a Template
+- `%VAL` — REF to a VAL slot
+- `%@OBJ`, `%@REL` — REF to an @-edge (reification; see below)
+- `%STR*`, `%DEFOBJ*`, `%@OBJ*` — REF to a Set of the named role
+
+Three compositions are malformed:
+
+- **`%%KIND`** — no REF-to-REF. A REF is not a reference target (axiom R6); to point at what a REF points at, write the address of the target directly.
+- **`@%KIND`** — no @-edge-to-REF. @-edges target only independent graph-entities (§7.4 axiom E5); REFs are slot-contents.
+- **`@@KIND`** — no @-edge-to-@-edge directly. To reify a specific @-edge, use a `%@OBJ` or `%@REL` REF with the edge's key.
+
+#### Axioms
+
+**R1 — Prefix asserts target role; Resource asserts target identity.** The `%KIND` prefix declares the role the resolved target MUST occupy. `%OBJ` declares an Object target; `%STR` declares a string-Property target; `%@OBJ` declares an Object-edge target; and so on. The Resource is a reference literal (`@id`, `$path`, `&key`, `@anchor$path`, or `@anchor&key` per §5.2.6) naming the target's address. Resolution dereferences the address and verifies the resolved element's role matches the prefix; mismatch yields an unresolved reference (the REF element remains structurally well-formed; the resolution fails).
+
+The prefix is always a *role-to-dereference* (`%OBJ` → points at an Object element), never a *value-kind-to-fetch*. What the slot holds is a handle — the address — not the target's value and not the target's content.
+
+**R1a — The role-assertion is a resolution constraint, particularly pronounced for path/key resolution.** Because path/key targets may be locatable only at resolution time, the role-check piggybacks on the dereference step rather than being verifiable at parse time. The same constraint applies in principle to identifier-mode resolution but can often be verified earlier (when the target is locally declared). The constraint is structural — it stands whether enforcement happens at parse time or resolution time.
+
+**R2 — A REF fills a slot; it asserts nothing about its parent.** The REF's only assertion is "this slot holds a handle to that element." No relationship (vs. @-Edge), no containment (vs. VAL). Removing a REF removes a slot's content — not a relationship, not a contained thing, and never the target (which exists independently and is unaffected by the REF).
+
+**R3 — A REF is Property-shaped.** It carries Property elaboration and nothing more. It MAY carry:
+- a `#rel` field (compositional alignment — see R4),
+- Qualifiers (refining the slot's binding, exactly as on any Property),
+- Extensions (adjunct vocabulary-keyed assertions about the slot or its binding — e.g., provenance about how the handle was selected, audit info about the binding),
+- an `Id` (the slot name within its parent's scope),
+- Annotations.
+
+It MUST NOT carry structural children (Properties, @-edges, Sets, Records, Objects, Blocks, VAL, REL, Template). Structural children would make the REF a substance rather than a handle, collapsing the genus distinction with VAL and Edge.
+
+**R4 — A REF MAY carry a `#rel`; on a REF the `#rel` is always *compositional alignment*.** The `#rel` aligns the slot to a vocabulary predicate (§3.7); it does NOT assert a relationship the parent has. An associative predicate (a relationship a parent has) is the exclusive province of @-Edge. The same `#rel` token aligns-a-slot on `%` and asserts-a-relationship on `@`; this role-parameterization of `#rel` (§3.7) is what keeps the two sigils from collapsing into synonyms.
+
+The structural test (proof by collapse): if `<%OBJ #X x : @T>` and `<@OBJ #X : @T>` could both assert "parent X T," the sigils would be interchangeable spellings and the partition would dissolve. They do not assert the same thing, by R4 — the `%` form is "slot named `x` holds a handle to `T`, slot semantically aligned with `#X`"; the `@` form is "parent stands in relation `#X` to `T`."
+
+**R5 — A REF may target any addressable element, by any resolution mode.** Entities by name (`@id`), interiors by path (`$path`), keyed elements (including @-edges via E6 identity) by key (`&key`), and composed cross-document forms (`@anchor$path`, `@anchor&key`). The full addressable space — including the interior, cross-document, and reification reach that the @-Edge family (entities-by-name-only, §7.4 resolution rule) cannot provide — is Reference territory.
+
+Anchors in composed references remain restricted to globally-addressable entities (Objects, RELs, Templates, transport wrappers — see §5.2.6). The "any addressable element" of R5 refers to the *target*, not the anchor; reaching interior targets is accomplished by anchor-plus-path/key.
+
+**R6 — A REF has no identity of its own beyond the slot it fills.** A handle is not a substance; the only name a REF bears is its slot name (a Property's `Id`), which is the parent's concern. A REF is **never itself a reference target** — to point at what a REF points at, point at the target directly; do not chain through the intermediate REF.
+
+To attach adjunct metadata about a specific binding (provenance, audit, confidence in the resolution), use Extensions *on* the REF (per R3). The asymmetry with @-Edge is intentional: @-edges have identity (E6) and ARE addressable substances; REFs are slot-contents and are NOT. Reification — making a statement *about* a relationship — is the @-Edge's identity-bearing job, accessed from outside via a `%@OBJ` or `%@REL` REF.
+
+#### Element Shape and Composition
+
+A REF element follows the Property composition row in §8.1: admitted under Object, Record, Block, @-Edge (as an attribute child), Template, and VAL (as the occupant). It admits Qualifiers, Extensions, and Annotations as children; it admits no structural children. Its Resource is a reference literal per §5.2.6.
+
+#### Earning Its Keep
+
+REF earns its keep on three jobs no other role can do:
+
+- **Configuration and wiring** — typed slot-content pointing at independently-existing entities: `<%OBJ database : @primary-db>`, `<%OBJ fallback : @secondary-db>`.
+- **Reification** — pointing at an @-edge by its identity to make a statement about the relationship: `<%@OBJ source : @alice&knows-bob-2024>`.
+- **Interior and cross-document addressing** — pointing at Records, Blocks, Qualifiers, Extensions, value-Properties, or any other interior element by path or key: `<%REC home : @com.acme$/locations/[1]>`, `<%.STR unit : @units$/celsius>`.
+
+All three are one shape: a typed handle held in a slot.
+
+#### Examples
+
+Configuration / wiring:
+
+```
+<OBJ ServerConfig
+    <STR name : "web-01">
+    <%OBJ database : @primary-db>
+    <%OBJ fallback : @secondary-db>
+    <%DEFOBJ #conformsTo : @ServerConfigV2>
 >
 ```
 
-**Universal composition.** The `@` operator composes with any role base (or modifier-base composition) except another `@KIND`. The closed prefix pattern is:
+Interior and cross-document addressing:
 
 ```
-@ [refinement-modifier?] [base] [*?]
+<%REC mailing : @alice$/addresses/[1]>
+<%BLK headSection : @article-42$/head>
+<%.STR currencyUnit : @global-defaults$/currency>
 ```
 
-This produces references like `@OBJ`, `@REL`, `@DEFSTR`, `@.STR`, `@_BOOL`, `@%REC`, `@NSTR`, `@STR*`, `@DEFOBJ*`, `@.STR*`, and so on. The composition reads as "a reference to a [KIND] element," where KIND is the rest of the prefix interpreted as a role.
+Reification (REF to an @-edge):
 
-**The `@@` prohibition.** A reference cannot target another reference. `@@STR`, `@@OBJ`, `@@DEFOBJ`, and similar compositions are malformed. References resolve to addressable elements directly, not to other references.
+```
+<OBJ alice
+    <@OBJ knows-bob-2024 #knows : @bob>     -- @-edge with identity
+>
 
-**Resolution.** A reference's Resource is a reference literal (`@identifier`) naming the target. The resolver uses the target-kind declared by the prefix to scope the search: a `@REL` reference resolves against the REL declaration scope; a `@DEFOBJ` reference resolves against the Template scope; a `@OBJ` reference resolves against the Object scope. The resolution algorithm parallels Edge Reference Resolution (§7.4.1) but is scoped by target-kind.
+<OBJ audit-record
+    <%@OBJ source : @alice&knows-bob-2024>  -- REF to the edge by key
+    <STR confidence : "verified">
+    <STR auditedBy : "SecurityTeam">
+>
+```
 
-Identifier-based reference resolution (`@id`) is normative in this specification. Path-based reference resolution (`$path`, `@anchor$path`) and key-based reference resolution (`&key`, `@anchor&key`) are specified in the companion GDX Path Expressions Specification (`GDX-Path.md`). The composed forms `@Anchor$PathExpression` and `@Anchor&Key` express cross-document addressing: the anchor portion resolves a starting element by scope walk, and the path or key portion locates the target within that element's scope.
+The audit-record references the specific @-edge by its key; the edge itself remains owned by `alice` per E2′. The REF asserts only "this slot holds a handle to that @OBJ-edge" — no relationship, no containment, no claim over the edge.
 
-The `Anchor` production carries an optional role marker (`@OBJ:id`, `@REL:id`, `@DEFOBJ:id`, etc.) that disambiguates the role of the resolved element. When the marker is present, the scope walk is restricted to elements of the claimed role. When the marker is absent, the role is inferred from the enclosing `@KIND` reference element's prefix (for plain `@id` references) or defaults to `OBJ` (for composed references). The resolver MUST verify that the resolved element actually has the inferred or claimed role; mismatch yields an unresolved reference.
+Adjunct metadata about a binding (R6 workaround):
 
-A reference whose Resource is any non-`IdRef` literal MUST resolve to exactly one element of the matching role (see `GDX-Path.md` §8).
+```
+<%OBJ employer : @com.acme
+    <_STR audit:bindBy : "import-2024">
+    <_STR audit:source : "hr-system">
+>
+```
 
-**Distinguishing `@OBJ` from EDGE.** Both `@OBJ` and EDGE carry an Object reference, but they are structurally distinct. An `@OBJ` element is a leaf-like typed pointer — it identifies a target without having its own substructure beyond Qualifiers. An EDGE element is a graph-statement element with its own children, including Properties that express edge metadata (weight, confidence, timestamp). Use `@OBJ` when the link is just an identifier; use EDGE when the link itself is a structural participant in the graph with attributes of its own. The full comparison is in §3.6.
+The Extensions describe how this *binding* was made (who selected the handle, when), not the target. The REF itself remains a slot-content; the Extensions ride alongside as adjunct statements about the binding-decision.
 
-**Reflexivity.** The `@` operator gives GDX a referential dimension of self-description: any addressable element can be the target of a reference from any other element. Vocabulary documents can declare relationships between predicates; configuration documents can declare typed pointers to Objects; Templates can declare version-chains to predecessor Templates. The format is self-describing not only structurally (the schema is GDX, transport is GDX) but referentially (elements can refer to other elements by typed identifier).
+Sets of REFs and REFs to Sets:
 
-**Use cases.** Common patterns include:
+```
+<%OBJ* dependencies
+    <%OBJ : @primary-db>
+    <%OBJ : @secondary-db>
+>
 
-- **Vocabulary metadata** — RELs referring to other RELs (inverse, sameAs, subPropertyOf) and to Templates (domain, range): `<@REL #gdx:inverse : @gdx:reportsTo>`
-- **Typed configuration** — Objects referring to other Objects by role: `<@OBJ database : @primary-db>`, `<@OBJ fallback : @secondary-db>`
-- **Schema cross-references** — Templates referring to other Templates (version chains, supersedes-by): `<@DEFOBJ #supersededBy : @CustomerV2>`
-- **Registry patterns** — Sets of typed references: `<@OBJ* acceptedInputs <@OBJ : @type-a> <@OBJ : @type-b>>`
+<%STR* allowedTags : @global-tag-set>
+```
+
+The first is a Set whose member-type is `%OBJ` (multiple REFs collected positionally); the second is a single REF whose target is a Set. The standard Set/Resource disambiguation applies (children fill a Set; a Resource references a Set).
+
+#### Resolution
+
+A REF's Resource is a reference literal per §5.2.6. Resolution behavior parallels @-Edge reference resolution (§7.4.1) with the role-check generalized to the prefix-declared role:
+
+1. **Local document.** Identifiers and paths within the same document are checked first.
+2. **Loaded document context.** When the REF appears alongside other documents (batch import, registry context), those documents are checked in load order.
+3. **Globally-resolvable IRIs.** References expressed as full IRIs MAY be resolved by a network-aware resolver if the implementation supports it.
+4. **Role verification.** The resolver MUST verify the resolved element's role matches the REF prefix. Mismatch yields an unresolved reference.
+5. **Resolution failure.** Unresolved REFs are reported as schema-non-conforming (Layer 2); the REF element itself is structurally well-formed (Layer 1).
+
+A REF whose Resource is any non-`IdRef` literal MUST resolve to exactly one element of the matching role (see `GDX-Path.md` §8).
+
+#### Summary
+
+A %-reference is a slot-filler whose Resource is a typed handle: the content of a slot is the resolved address of an independently-existing target whose role the prefix asserts. The prefix declares the target's role; the Resource gives its address by name, path, or key; resolution dereferences and verifies the role. A REF asserts no relationship about its parent (its `#rel`, if present, aligns the slot — it never associates), does not contain its target (vs. VAL), and is inert toward the target while elaborated toward its own slot, exactly as any Property is.
 
 ---
 
@@ -1949,38 +2340,43 @@ GDX nesting is governed by a single matrix indexed by **role**. The table below 
 
 Modifier-bearing and operator-bearing prefixes are validated as their base role with two refinements:
 
-- **Refinement modifiers** (`.`, `_`, `%`, `N`) and the **`DEF` declaration construct** do not change which roles may contain or be contained by the element, with two exceptions: Extensions (`_X`) may only appear under Templates or REL declarations (rule 7), and Node-zone elements (`NX`) have isolated-subtree semantics (rule 5).
+- **Refinement modifiers** (`.`, `_`, `N`) and the **`DEF` declaration construct** do not change which roles may contain or be contained by the element, with one exception: Node-zone elements (`NX`) have isolated-subtree semantics (rule 5). VAL is a role rather than a modifier (§7.11), governed by its own row in §8.1.
 
-- **The `*` suffix** (Set) and **the `@` operator** (Reference) produce roles whose composition rules are distinct from their bases. A Set follows the Set row; a Reference follows the Reference row.
+- **The `*` suffix** (Set), **the `@` sigil**, and **the `%` sigil** produce roles whose composition rules are distinct from their bases. A Set follows the Set row; `@OBJ` and `@REL` follow the @-Edge row (§7.4); all `%KIND` forms follow the REF row (§7.16).
 
 ### 8.1 Allowed Children Matrix
 
-| Parent ↓ \ Child →  | Object | Record | Block | Property | Set | Node | Edge | Reference | Qualifier | Extension | Annotation | REL | Group |
-|---------------------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| **Object**          |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |
-| **Record**          |   | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |
-| **Block**           |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |
-| **Property**        |   |   |   |   |   | ✓ |   |   | ✓ | ✓ | ✓ |   |   |
-| **Set**             |   |   |   | ✓ |   | ✓ |   |   | ✓ | ✓ | ✓ |   |   |
-| **Node**            |   |   |   |   |   | ✓ |   |   |   |   | ✓ |   |   |
-| **Edge**            |   | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |
-| **Reference**       |   |   |   |   |   |   |   |   | ✓ | ✓ | ✓ |   |   |
-| **Qualifier**       |   |   |   |   |   |   |   |   |   | ✓ | ✓ |   |   |
-| **Extension**       |   |   |   |   |   |   |   |   |   | ✓ | ✓ |   |   |
-| **Annotation**      |   |   |   |   |   |   |   |   |   |   |   |   |   |
-| **Template**        |   | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |
-| **REL**             |   |   |   |   |   |   |   | ✓ |   | ✓ | ✓ |   |   |
-| **Package**         | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   | ✓ | ✓ | ✓ | ✓ |
-| **Group**           | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   | ✓ | ✓ | ✓ | ✓ |
-| **Document root**   | ✓ |   |   |   |   |   |   |   |   |   |   | ✓ |   |
+| Parent ↓ \ Child →  | Object | Record | Block | Property | Set | Node | @-Edge | REF | Qualifier | Extension | Annotation | VAL | REL | Group |
+|---------------------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| **Object**          |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |
+| **Record**          |   | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |
+| **Block**           |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |
+| **Property**        |   |   |   |   |   | ✓ |   |   | ✓ | ✓ | ✓ |   |   |   |
+| **Set**             |   |   |   | ✓ |   | ✓ |   | ✓ | ✓ | ✓ | ✓ |   |   |   |
+| **Node**            |   |   |   |   |   | ✓ |   |   |   |   | ✓ |   |   |   |
+| **@-Edge**          |   | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |
+| **REF**             |   |   |   |   |   |   |   |   | ✓ | ✓ | ✓ |   |   |   |
+| **Qualifier**       |   |   |   |   |   |   |   |   |   | ✓ | ✓ |   |   |   |
+| **Extension**       |   |   |   |   |   |   |   |   |   | ✓ | ✓ |   |   |   |
+| **Annotation**      |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| **VAL**             | ✓ | ✓ | ✓ | ✓ | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |   |
+| **Template**        |   | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |
+| **REL**             |   | ✓ | ✓ | ✓ | ✓ |   | ✓ | ✓ |   | ✓ | ✓ | ✓ |   |   |
+| **Package**         | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   | ✓ | ✓ |   | ✓ | ✓ |
+| **Group**           | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   | ✓ | ✓ |   | ✓ | ✓ |
+| **Document root**   | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
 **Extension admittance is broad.** Extensions are adjunct statements (§7.10) — vocabulary-defined assertions attached to an element that consumers may interpret and act on. Because Extensions don't constitute the element they attach to, they may appear under almost any parent role: data-bearing elements (Object, Record, Property, etc.) for provenance, presentation hints, and other instance-level adjuncts; vocabulary and schema elements (REL, Template) for predicate semantics and schema constraints; transport-layer wrappers (Package, Group) for transport metadata such as signing or routing directives. The Extension column in the matrix shows ✓ for all parent roles that admit children. The exceptions are Annotation (leaf-only) and Node (isolated-subtree per rule 5 — Extensions cannot leak into Node-zone material).
 
-The Template row covers all `DEF…` prefixes, validated by their base role's row. Templates admit both Extensions (carrying constraints that the validator enforces against instances — §9.4) and References (for cross-references to other Templates, e.g., version chains or supersedes-by relationships).
+The Template row covers all `DEF…` prefixes, validated by their base role's row. Templates admit Extensions (carrying constraints that the validator enforces against instances — §9.4), REFs (for cross-references to Templates, configuration handles, interior pointers), and @-edges (declaring edge slots on instances).
 
-The Reference row covers all `@…` prefixes. References are leaf-like with respect to *structural* children — they do NOT carry Properties, Edges, Sets, Records, or Objects of their own. They MAY carry Qualifiers (refining the reference's meaning), Extensions (vocabulary-defined adjunct statements about the reference, such as provenance or confidence), and Annotations. The element identifies its target via the Resource (a reference literal); the target lives elsewhere and is reached through resolution.
+The @-Edge row covers `@OBJ` and `@REL` (§7.4). Per axiom E3, attribute children describe the edge-as-substance. @-edges admit Records, Properties, Sets, Nodes, other @-edges (recursive: an edge's attribute may itself be an edge), REFs (handles in the attribute structure), VAL, and the adjunct triplet (Qualifier/Extension/Annotation).
 
-The REL row admits Extensions (most commonly for predicate semantics: domain, range, inverse, symmetry, cardinality — but any vocabulary-defined assertion about the predicate) and References (typed pointers to other RELs for vocabulary metadata, or to Objects for concept-bearing domain/range targets).
+The REF row covers every `%KIND` form (§7.16) — the closed family generated by `%` wrapping any layer-1 role-prefix. REFs are slot-fillers (Property-shaped): they admit Qualifiers (refining the slot binding), Extensions (adjunct metadata about the binding), and Annotations. They MUST NOT carry structural children (Properties, @-edges, Sets, Records, Objects, Blocks, VAL, REL, Template) — that would make a REF a substance rather than a handle.
+
+The REL row admits the full data-carrier set (Properties, Records, Sets, Blocks, VAL) along with @-edges, REFs, Extensions, and Annotations. The widening reflects the principle that a REL is defined by its *purpose* (naming a first-class predicate) rather than by a canonical structure; data carriers on a REL stand exactly as they stand on any Object, with meaning conferred by interpreting consumers (§7.15). The structurally-justified exclusions are Object (vocabulary entities don't contain data-instance Objects), Node (RELs are structured), Qualifier (RELs carry no Resource), REL (vocabulary entities don't nest), and the Template (`DEF…`) forms (vocabulary entities don't nest — explicit carve-out from rule 9 below). The matrix admits @OBJ and @REL @-edges structurally; the vocabulary convention for predicate-axiom metadata is to target concept-Objects and other RELs (§7.15).
+
+The VAL row admits exactly one occupant of any data-bearing role (Object, Record, Property, Block, Set, @-Edge, REF) plus optional Annotations, Qualifiers, and Extensions as slot-level metadata (§7.11). VAL does NOT admit other VALs (no double-wrapping), Node-zone elements (isolated subtree per §8.2 rule 5), Templates, RELs, transport-layer roles, or refinement/adjunct-only roles (Qualifier/Extension/Annotation alone without an occupant). VAL is admitted by data-container parents (Object, Record, Block, @-Edge) and by Templates as a slot type; it is NOT admitted by Properties (which are scalar leaves), Sets (members are positional and need no slot wrapping), REFs (leaf-like, no structural children), RELs (no data slots), or transport-layer wrappers (which contain Objects directly as payload). A VAL containing a REF as its occupant is structurally valid but degenerate — `<VAL slot <%OBJ : @t>>` is data-model-equivalent to `<%OBJ slot : @t>`; prefer the direct form.
 
 The Package row admits Templates (any `DEF…` prefix) and REL declarations as payload along with Objects. For clarity: a Package may directly contain Object instances (`OBJ`/`O`), Template definitions (`DEF…`), REL declarations (`REL`), Properties (metadata), Records (metadata), Sets (metadata), Annotations, and Groups for transport-internal organization. A Group admits the same children as a Package except for Package itself.
 
@@ -1992,7 +2388,7 @@ The following rules are consequences of the matrix and are repeated here for cla
 
 1. **Root rule.** A document root MUST be an Object, a Template, a REL declaration, or a Package. A document MAY contain multiple top-level elements; each top-level element MUST independently be a root-eligible type.
 
-2. **Object exclusion.** No role other than the Embedded modifier (`%O`, §7.11) and the transport-layer roles (Package, Group) may contain another Object. The `%O` form expresses Object-as-property-value within data-layer composition; Package and Group contain Objects as transport-layer payload, not as ownership relationships.
+2. **Object exclusion.** No role other than VAL (when its occupant is an Object, §7.11) and the transport-layer roles (Package, Group) may contain another Object. VAL expresses Object-as-element-value within data-layer composition; Package and Group contain Objects as transport-layer payload, not as ownership relationships.
 
 3. **Block containment.** A Block may only appear under an Object or another Block. Blocks do not appear in transport-layer roles.
 
@@ -2006,21 +2402,26 @@ The following rules are consequences of the matrix and are repeated here for cla
 
 8. **REL declares predicates.** A REL element may carry Extension children that declare predicate semantics (domain, range, inverse, symmetry, cardinality, etc.). The vocabulary of those Extensions is defined by the GDX Common Vocabulary or by application vocabularies. This is one specific application of rule 7's adjunct-Extension mechanism.
 
-9. **Modifier transparency.** Embedded (`%X`), Template (`DEF…`), Qualifier (`.X`), Extension (`_X`), and Node (`NX`) modifier-bearing prefixes are validated as their base role for composition purposes. The modifier never changes what is allowed inside or what may contain the element, with one exception: Node-zone elements have isolated-subtree semantics (rule 5) and admit only Node-zone elements (or Annotations) as children, regardless of what their base role would admit.
+9. **Modifier transparency.** Template (`DEF…`), Qualifier (`.X`), Extension (`_X`), and Node (`NX`) modifier-bearing prefixes are validated as their base role for composition purposes. The modifier never changes what is allowed inside or what may contain the element, with two exceptions:
+
+    (a) **Node-zone isolation.** Node-zone elements have isolated-subtree semantics (rule 5) and admit only Node-zone elements (or Annotations) as children, regardless of what their base role would admit.
+
+    (b) **REL does not admit Templates.** Although REL admits Record, Property, Set, Block, and VAL (§7.15), the Template (`DEF…`) forms of those roles are NOT admitted under REL. This is an explicit carve-out: vocabulary entities (REL declarations, Template declarations) do not nest within REL declarations, even when modifier transparency would otherwise permit it. The same principle excludes nested `REL` children (already absent from the matrix REL row). The carve-out is principled rather than mechanical: a nested vocabulary declaration inside a REL would make a contextually false claim about what the REL is (§7.15).
+
+    VAL is not a modifier of a base role — it is its own role (§7.11) and is governed by its own row in the composition matrix.
 
 10. **Transport non-nesting.** Packages MUST NOT contain other Packages. Groups MUST NOT contain Packages. Transport-layer roles form a controlled structure: a Package may contain Groups and data-layer items; a Group may contain other Groups and data-layer items.
 
 11. **Transport non-persistence.** Package and Group elements are not persisted as such by storage layers. Their contents (Objects, Templates, REL declarations) are extracted and stored individually; transport-layer metadata MAY be retained as provenance information but the transport wrapping is discarded. See §10 and §11.4.
 
-12. **Refinement modifiers do not stack.** An element carries at most one refinement modifier (`.`, `_`, `%`, `N`) or the `DEF` construct. The following are NOT valid prefixes:
-    - `*%STR` — Set notation is now a suffix (see rule 13); the form would be `%STR*` if it were valid, but `%` and `*` may combine
+12. **Refinement modifiers do not stack.** An element carries at most one refinement modifier (`.`, `_`, `N`) or the `DEF` construct. The following are NOT valid prefixes:
     - `.NSTR` — Qualifier of a Node-zone element
-    - `_%STR` — Extension of an Embedded element
+    - `_.STR` — Extension of a Qualifier
     - `DEFN.STR` — DEF-on-modifier-on-modifier
 
-    The reading pattern for any prefix is `[@?][refinement-modifier?][base][*?]`. At most one of `.`, `_`, `%`, `N`, `DEF` may appear in the prefix-position-element slot; the slot is filled by at most one of these.
+    The reading pattern for any prefix is `[@?][refinement-modifier?][base][*?]`. At most one of `.`, `_`, `N`, `DEF` may appear in the prefix-position-element slot; the slot is filled by at most one of these.
 
-    Where multi-valued semantics on an embedded or template-defined value are needed, the structure is expressed through normal nesting:
+    Where multi-valued semantics on a template-defined value are needed, the structure is expressed through normal nesting:
 
     ```
     <REC* tagSets
@@ -2040,23 +2441,29 @@ The following rules are consequences of the matrix and are repeated here for cla
 
     This restriction keeps the prefix vocabulary closed and bounded. The combinations expressible through nested structure are sufficient for all use cases the specification anticipates.
 
-13. **Set is a suffix.** The `*` Set marker is a suffix on the base prefix: `STR*`, `INT*`, `REC*`, etc. The `*` suffix MAY combine with refinement modifiers (`.STR*`, `_INT*`, `%REC*`, `NSTR*`) and with the `@` reference operator (`@STR*`, `@.STR*`, `@DEFOBJ*`). The `*` suffix does not compose with `DEF` (Templates are not collected as a set in normal usage).
+13. **Set is a suffix.** The `*` Set marker is a suffix on the base prefix: `STR*`, `INT*`, `REC*`, etc. The `*` suffix MAY combine with refinement modifiers (`.STR*`, `_INT*`, `NSTR*`) and with the `%` REF sigil (`%STR*`, `%.STR*`, `%DEFOBJ*`, `%@OBJ*`). The `*` suffix does not compose with `DEF` (Templates are not collected as a Set in normal usage), with VAL (`VAL*` is malformed per §7.11 axiom 6), or with the @-Edge family (`@OBJ*` and `@REL*` are malformed per rule 14a — each @-edge is a single graph statement).
 
-14. **Reference operator is universal.** The `@` operator MAY prefix any base or refinement-modifier-bearing base to produce a typed reference. The `@KIND` composition reads as "a reference to a KIND-element." The `@` operator MAY combine with the `*` suffix: `@KIND*` is a reference to a Set of KIND-elements.
+14. **@-Edge family is closed at two members.** The `@` sigil produces the @-Edge family (§7.4), restricted to two members by axiom E5: `@OBJ` (target is an Object) and `@REL` (target is a REL declaration). The sigil does not compose with other bases or modifier-bases to produce additional edge prefixes; `@REC`, `@BLK`, `@.STR`, `@DEFOBJ`, `@VAL`, and so on are NOT @-edges. To point at any of those roles, use a REF (`%REC`, `%BLK`, `%.STR`, `%DEFOBJ`, `%VAL`, §7.16).
 
-15. **No reference-to-reference.** The `@` operator MUST NOT compose with another `@KIND` prefix. `@@STR`, `@@OBJ`, and similar compositions are malformed. References resolve to addressable elements directly, not to other references.
+14a. **No Sets of @-edges.** The compositions `@OBJ*` and `@REL*` are malformed. Each @-edge is a single graph statement (§7.4 axiom E2′); multiple edges from one source with the same predicate are expressed as siblings (`<@OBJ #knows : @bob> <@OBJ #knows : @carol>`), not as Set members.
 
-16. **References are leaf-like.** A `@KIND` element MAY carry Qualifiers and Annotations as children but MUST NOT carry Properties, Edges, Sets, or other structural children. The reference's content is its target identifier, not a substructure. This distinguishes References from Edges: EDGE elements are structured graph-statement elements with their own Properties; `@OBJ` elements are leaf-like typed pointers. See §3.6 and §7.4.
+15. **Sigil composition prohibitions.** The following compositions are malformed:
+    - `@@KIND` — no @-edge whose target is itself an @-edge. To reify a specific @-edge, use a `%@OBJ` or `%@REL` REF with the edge's key (§7.16 R5).
+    - `%%KIND` — no REF whose target is itself a REF (§7.16 axiom R6). A REF is not a reference target; to point at what a REF points at, address the target directly.
+    - `@%KIND` — no @-edge whose target is a REF. @-edges target independent graph-entities (§7.4 axiom E5); REFs are slot-contents, not graph-entities.
+
+16. **REF is Property-shaped; @-Edge is statement-shaped.** A REF element (any `%KIND`, §7.16) MAY carry a `#rel` (compositional alignment per R4), Qualifiers, Extensions, and Annotations as children, but MUST NOT carry structural children (Properties, @-edges, Sets, Records, Objects, Blocks, VAL, REL, Template). Its Resource is a reference literal; the target lives elsewhere. An @-Edge element (`@OBJ`, `@REL`, §7.4) MUST carry a `#rel` predicate (associative per E4) and MAY carry attribute children describing the edge-as-substance (per E3). The REF and @-Edge composition rows in §8.1 reflect this structural split. See §3.6 for the genus distinction and §7.16 axiom R4 for the proof-by-collapse that establishes the sigil partition.
 
 ### 8.3 Identifier Rules
 
 Per §4.2, the following roles MUST carry at least one identifier (`Id`, `Key`, or `Rel`) when in named-attribute position:
 
 - Object (`OBJ`/`O`, `DEFOBJ`)
-- Record (`REC`/`R`, `%REC`/`%R`, `DEFREC`, `NREC`/`NR`) when not in Set member position
+- Record (`REC`/`R`, `DEFREC`, `NREC`/`NR`) when not in Set member position
 - Property (`STR`/`S`, `INT`/`I`, `FLOAT`/`F`, `BOOL`/`L`, `BYTE`/`B` and their variants) when not in Set member position
 - Template (any `DEF…`)
 - REL (`REL`)
+- VAL (`VAL`/`V`) when not in Set member position and when used as a named slot
 - Block (`BLK`) — Blocks always require an identifier; the identifier names the partition
 - Group (`GRP`) — Groups always require an identifier; the identifier names the partition within a Package
 
@@ -2070,13 +2477,13 @@ Other roles MAY carry identifiers but do not require them.
 
 Per §4.3, when a Resource is present, its value-kind MUST be consistent with the element's prefix family:
 
-- String-family prefixes (`STR`/`S`, `STR*`/`S*`, `%STR`/`%S`, `.STR`/`.S`, `_STR`/`_S`, `NSTR`/`NS`) carry `string` resources.
-- Int-family prefixes (`INT`/`I`, `INT*`/`I*`, `%INT`/`%I`, `.INT`/`.I`, `_INT`/`_I`, `NINT`/`NI`) carry `int` resources.
-- Float-family prefixes (`FLOAT`/`F`, `FLOAT*`/`F*`, `%FLOAT`/`%F`, `.FLOAT`/`.F`, `_FLOAT`/`_F`, `NFLOAT`/`NF`) carry `float` resources.
-- Bool-family prefixes (`BOOL`/`L`, `BOOL*`/`L*`, `%BOOL`/`%L`, `.BOOL`/`.L`, `_BOOL`/`_L`, `NBOOL`/`NL`) carry `bool` resources.
-- Bytes-family prefixes (`BYTE`/`B`, `BYTE*`/`B*`, `%BYTE`/`%B`, `.BYTE`/`.B`, `_BYTE`/`_B`, `NBYTE`/`NB`) carry `bytes` resources.
-- Edge prefixes (`EDGE`/`E`) carry `reference` resources.
-- Reference prefixes (`@KIND` family) carry `reference` resources. The Resource is a reference literal whose target-kind is declared by the prefix (see §7.16).
+- String-family prefixes (`STR`/`S`, `STR*`/`S*`, `.STR`/`.S`, `_STR`/`_S`, `NSTR`/`NS`) carry `string` resources.
+- Int-family prefixes (`INT`/`I`, `INT*`/`I*`, `.INT`/`.I`, `_INT`/`_I`, `NINT`/`NI`) carry `int` resources.
+- Float-family prefixes (`FLOAT`/`F`, `FLOAT*`/`F*`, `.FLOAT`/`.F`, `_FLOAT`/`_F`, `NFLOAT`/`NF`) carry `float` resources.
+- Bool-family prefixes (`BOOL`/`L`, `BOOL*`/`L*`, `.BOOL`/`.L`, `_BOOL`/`_L`, `NBOOL`/`NL`) carry `bool` resources.
+- Bytes-family prefixes (`BYTE`/`B`, `BYTE*`/`B*`, `.BYTE`/`.B`, `_BYTE`/`_B`, `NBYTE`/`NB`) carry `bytes` resources.
+- @-Edge prefixes (`@OBJ`, `@REL`) carry `reference` resources whose target-kind matches the prefix: `@OBJ` resolves to an Object; `@REL` resolves to a REL declaration (see §7.4).
+- REF prefixes (every `%KIND` form, §7.16) carry `reference` resources. The Resource is a reference literal (any of the five forms per §5.2.6) whose resolved-element role is declared by the wrapped layer-1 prefix: `%OBJ` → Object; `%REC` → Record; `%DEFOBJ` → Template; `%@OBJ` → Object-edge; `%STR*` → Set of strings; and so on.
 - Annotation prefix (`REM`) carries `string` resources.
 
 The Resource itself is optional on Resource-bearing roles; an element with no Resource represents a null value (instance context) or a slot declaration (Template context). See §4.3.3.
@@ -2094,7 +2501,7 @@ A conforming parser MUST reject any document containing:
 - An Extension appearing outside a Template parent.
 - A Node containing a non-Node, non-Annotation child.
 - A Set containing a member whose prefix does not match the Set's element type.
-- An Object appearing as a non-root child in a position other than `%O` Embedded form, a Package payload, or a Group payload.
+- An Object appearing as a non-root child in a position other than the occupant of a VAL slot (§7.11), a Package payload, or a Group payload.
 - A Package containing another Package.
 - A Group containing a Package.
 - A Block at the document root or in any position other than as a child of an Object or another Block.
@@ -2529,7 +2936,7 @@ A single table can store an arbitrary GDX document with the following column str
 
 This single-schema approach allows GDX storage without per-document schema migration. Adding a new Object role, Property, or Template requires no schema changes — just additional rows.
 
-Edge references stored as `ResourceValue` strings can be resolved at query time by joining against the `Id` column. For systems where the reference target is known at write time, the reference can be denormalized to a `TargetRowId` column for direct lookup. The resolution strategy is implementation choice; both approaches are conforming.
+@-Edge and Reference targets stored as `ResourceValue` strings can be resolved at query time by joining against the `Id` column. For systems where the reference target is known at write time, the reference can be denormalized to a `TargetRowId` column for direct lookup. The resolution strategy is implementation choice; both approaches are conforming. Per §7.4 axiom E2′, @-edges are owned by their source element and SHOULD be modeled with `ON DELETE CASCADE` on the source foreign key so that deleting a source removes its edges.
 
 Other persistence strategies (document store, graph database, key-value store) follow analogous principles: preserve the data model, preserve element ordering, and preserve the round-trip contract (§11.4).
 
@@ -2604,8 +3011,8 @@ Path-mode reference resolution is normatively specified by the companion GDX Pat
 
 - **The path expression grammar.** Specified in `GDX-Path.md` §3 and §4. Three segment kinds — `IdSegment`, `RelSegment`, `OrdinalSegment` — separated by `/`. Key-based addressing is provided through the `KeyRef` and `IdKeyRef` reference-literal forms rather than as a path segment.
 - **The resolution algorithm.** Specified in `GDX-Path.md` §6. Left-to-right segment traversal from a defined starting element, with per-segment match semantics and explicit handling of zero, one, and multi-match outcomes.
-- **The composition matrix expansion.** Specified in `GDX-Path.md` §9.5 (changes required of this specification). `@REC`, `@BLK`, `@.STR`, `@_INT`, `@%REC`, value-Property targets, and other previously-unresolvable `@KIND` forms become resolvable when the resource is a `PathRef` or `IdPathRef`. Parent-context restrictions are unchanged; only target-addressability expands.
-- **Modifier-stacking interaction.** The `@`-with-modifier-bases pattern (`@.STR`, `@_INT`) now resolves through path-mode references.
+- **The composition matrix expansion.** Specified in `GDX-Path.md` §9.5 (changes required of this specification). `%REC`, `%BLK`, `%.STR`, `%_INT`, `%VAL`, value-Property targets, and other interior elements become resolvable when the resource is a `PathRef` or `IdPathRef`. Parent-context restrictions are unchanged; only target-addressability expands. (Under v0.13.0, these targets are addressed via the REF family `%KIND`; prior to v0.13.0 they were addressed via leaf-like `@KIND` references, now migrated.)
+- **Modifier-stacking interaction.** The `%`-with-modifier-bases pattern (`%.STR`, `%_INT`) resolves through path-mode references.
 
 The composed reference form `@Identifier$PathExpression` is the canonical mechanism for cross-document addressing: the identifier portion resolves a starting element by scope walk (per §7.16), and the path portion traverses structurally from there. This form replaces the speculative path-style identifier convention (e.g., `@/people/alice`) used in earlier revisions; with the v0.11.0 narrowing of `IdStartChar` (§5.4.1), identifiers no longer begin with `/`.
 
@@ -2697,7 +3104,7 @@ For applications requiring byte-for-byte stability (content-addressable storage,
 9. Boolean values appear as `true` or `false` (lowercase spelled-out form). The single-letter forms (`t`, `f`) and uppercase variants are NOT used in canonical output.
 10. Null Properties appear in the bare form (`<STR name>`), not the empty-value form (`<STR name : >`). The empty-value form is accepted on input but normalized to the bare form on canonical output.
 11. Field write order is exactly Prefix · Key · Rel · Id · Resource · Type.
-12. Prefixes appear in **canonical form** — three-letter (or longer where natural) names in uppercase: `STR`, `INT`, `BOOL`, `FLOAT`, `BYTE`, `REC`, `OBJ`, `EDGE`, `GRP`, `STR*`, `INT*`, `.STR`, `_STR`, `%STR`, `%REC`, `%OBJ`, `NSTR`, `NINT`, `NBOOL`, `NFLOAT`, `NBYTE`, `NREC`, `DEFSTR`, `DEFINT`, `DEFBOOL`, `DEFFLOAT`, `DEFBYTE`, `DEFREC`, `DEFOBJ`, `REL`, `REM`, `PKG`, `BLK`. The minified single-letter forms (`S`, `I`, `L`, `F`, `B`, `R`, `O`, `E`, `G`, `S*`, `.S`, `_S`, `%S`, `NS`, etc.) are valid GDX but do not produce strict canonical bytes; conversion to canonical form is required before content addressing.
+12. Prefixes appear in **canonical form** — three-letter (or longer where natural) names in uppercase: `STR`, `INT`, `BOOL`, `FLOAT`, `BYTE`, `REC`, `OBJ`, `GRP`, `STR*`, `INT*`, `.STR`, `_STR`, `VAL`, `NSTR`, `NINT`, `NBOOL`, `NFLOAT`, `NBYTE`, `NREC`, `DEFSTR`, `DEFINT`, `DEFBOOL`, `DEFFLOAT`, `DEFBYTE`, `DEFREC`, `DEFOBJ`, `REL`, `REM`, `PKG`, `BLK`, the @-Edge family (`@OBJ`, `@REL`), and the REF family (every `%KIND` form generated by `%` wrapping a layer-1 role-prefix). The minified single-letter forms (`S`, `I`, `L`, `F`, `B`, `R`, `O`, `G`, `S*`, `.S`, `_S`, `V`, `NS`, etc.) are valid GDX but do not produce strict canonical bytes; conversion to canonical form is required before content addressing. The `E` minified slot is unassigned (formerly the minified form of `EDGE`, now removed in v0.12.0; see changelog entry 41).
 
 Two strict-canonical-form documents that represent the same data model produce byte-identical serializations. This property allows the strict canonical form to serve as the input to content-addressing functions.
 
@@ -2749,7 +3156,7 @@ A conforming implementation SHOULD verify its behavior against a test suite cove
 - Resolution failure: tests confirming unresolved type references produce Layer 2 errors per §9.5.3.
 - Validator modes: strict and lenient mode behavior on the same input documents.
 - Error accumulation: validator returns multiple errors from a single pass (per §9.5.4).
-- Edge reference resolution: tests confirming §7.4.1 behavior for resolved and unresolved Edge `@` references.
+- @-Edge reference resolution: tests confirming §7.4.1 behavior for resolved and unresolved `@OBJ`/`@REL` references, including role-mismatch detection (an `@OBJ` resolving to a REL is unresolved).
 
 **Canonical form tests:**
 
@@ -2764,7 +3171,7 @@ A conforming implementation SHOULD verify its behavior against a test suite cove
 - Documents at the recommended depth limit (positive); documents exceeding it (rejected per §1 of the Security Considerations companion).
 - Documents at the recommended element-count limit (positive); documents exceeding it (rejected).
 - Numeric literals at maximum length (positive); numeric literals exceeding it (rejected per §1 of the Security Considerations companion).
-- Reference cycles in Edge graphs: cycles are valid data; tests confirm parsers accept them and traversal-based operations terminate.
+- Reference cycles in @-Edge graphs: cycles are valid data; tests confirm parsers accept them and traversal-based operations terminate.
 
 **Compact Form tests (when supported):**
 

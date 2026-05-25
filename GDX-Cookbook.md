@@ -1,6 +1,6 @@
 # GDX — Cookbook of Canonical Patterns
 
-- **Status:** Draft v0.11.0 (companion to GDX Core Specification v0.11.0, working draft, pre-1.0)
+- **Status:** Draft v0.13.0 (companion to GDX Core Specification v0.13.0, working draft, pre-1.0)
 - **Date:** 2026-05-20
 - **Editors:** 
 - **Authors:** Julian Mussi
@@ -16,7 +16,7 @@ The vocabulary identifiers used in these examples (`gdx:`, `schema:`, `vocab:`, 
 
 ## Status of This Document
 
-This is the v0.11.0 working draft of the Cookbook, companion to the GDX Core Specification v0.11.0. The patterns documented here have stabilized alongside the core; future revisions will add patterns as common use cases emerge but will not remove existing entries except to merge or restructure them. v0.11.0 migrates leading-slash identifiers in examples to the new hierarchical-local form (no leading `/`); adds Pattern 16 (Parallel Constraint Vocabularies on One Template) demonstrating Layer 2b vocabulary pluralism; adds patterns demonstrating path-mode references (Pattern 23) and key-mode anchor references (Pattern 24); adds Pattern 20 (Adjunct Extension for Non-Schema Metadata) demonstrating Extensions beyond schema constraints; and adds Pattern 26 (Complete Vocabulary Document) showing how RELs with predicate-semantic Extensions, concept Objects, and Templates compose into a self-contained vocabulary.
+This is the v0.13.0 working draft of the Cookbook, companion to the GDX Core Specification v0.13.0. The patterns documented here have stabilized alongside the core; future revisions will add patterns as common use cases emerge but will not remove existing entries except to merge or restructure them. v0.13.0 migrates all leaf-like `@KIND` references to the new `%KIND` REF family (Core Spec §7.16, entry 42 of the v0.13.0 changelog); Pattern 22 is rewritten as "Typed REF — Slot Holding a Handle to an Independent Element" and now includes a reification subsection (REF to an @-edge via `%@OBJ`/`%@REL`); Pattern 27 (Template Version Chain) is updated with the conceptual-shift note (Templates are vocabulary-layer, not graph-entities, so version chains are slot-bindings via `%DEFOBJ`, not graph statements). v0.13.0 also widens REL composition (Core Spec §7.15, entry 43): Pattern 17 (Predicate Declaration) is rewritten to demonstrate Properties (labels, descriptions, alias Sets) alongside @-edges and Extensions on a REL, with Property-vs-Extension choice guidance; Pattern 26 (Complete Vocabulary Document) updated to show the mixed-metadata-kinds pattern on RELs. v0.12.0 migrates `<EDGE …>` examples to `<@OBJ …>` per the @-Edge family (Core Spec §7.4, entry 41 of the v0.12.0 changelog); Pattern 7 (Edge Between Entities) is rewritten to demonstrate the new family including an edge-as-substance example (axiom E6 identity). v0.11.0 migrates leading-slash identifiers in examples to the new hierarchical-local form (no leading `/`); adds Pattern 16 (Parallel Constraint Vocabularies on One Template) demonstrating Layer 2b vocabulary pluralism; adds patterns demonstrating path-mode references (Pattern 23) and key-mode anchor references (Pattern 24); adds Pattern 20 (Adjunct Extension for Non-Schema Metadata) demonstrating Extensions beyond schema constraints; and adds Pattern 26 (Complete Vocabulary Document) showing how RELs with predicate-semantic Extensions, concept Objects, and Templates compose into a self-contained vocabulary.
 
 Changes in v0.10.0 from v0.9.6 reflect Core Specification v0.10.0:
 
@@ -156,21 +156,21 @@ The `&Key` field is NOT used for Template-instance alignment; Keys are a separat
 
 ## 7. Edge Between Entities
 
-Edges express directed relationships between Objects.
+@-edges (`@OBJ`, `@REL`) express directed relationships between graph-entities.
 
 ```
 <OBJ Alice
-    <EDGE #knows : @Bob>
+    <@OBJ #knows : @Bob>
 >
 ```
 
 This reads as: alice — knows → bob.
 
-Edges with attributes carry them as Record-like children:
+@-edges with attributes carry them as Record-like children:
 
 ```
 <OBJ Alice
-    <EDGE #knows : @Bob
+    <@OBJ #knows : @Bob
         <STR since : "2024-01-15">
         <FLOAT weight : 0.8>
     >
@@ -179,7 +179,20 @@ Edges with attributes carry them as Record-like children:
 
 The edge attributes describe the *relationship*, not either endpoint.
 
-EDGE asserts a labeled graph relationship — the link itself is a structural participant with its own attributes. When you want a typed pointer instead (a reference without the graph-statement framing or edge attributes), use the `@KIND` family (§22). Use EDGE when the relationship matters; use `@OBJ` when the link is just an identifier.
+An @-edge with identity is a persistent edge-entity — its substance endures across changes to predicate or attributes, and the edge can be referenced from other documents:
+
+```
+<OBJ Alice
+    <@OBJ employmentEdge #worksFor : @com.acme
+        <STR startDate : "2024-01-15">
+        <FLOAT confidence : 0.95>
+    >
+>
+```
+
+The identifier `employmentEdge` is the edge's substance (per §7.4 axiom E6); the `#worksFor` predicate is its current assertion; the attributes describe the edge itself. Two edges with the same source, predicate, and target are distinct if their identities differ.
+
+An @-edge asserts a graph statement and admits attribute children. When you want a leaf-like typed pointer instead (no graph-statement framing, no attribute children), use the Reference family (§22). Use an @-edge when the relationship matters and the target is a graph-entity (Object or REL); use a Reference for typed pointers to non-graph-entities (Templates, interior elements addressed by path or key).
 
 ## 8. Refining a Property with Constraints
 
@@ -227,41 +240,51 @@ The materialized instance is self-describing. A reader that does not load `com.a
 
 Materialization does not extrapolate beyond what the Template explicitly declares. Missing slots are not invented; Constraint Extensions on the Template (Core Spec §9.4) remain Template-scoped and are not copied into the instance.
 
-## 10. Embedded Structured Value
+## 10. Embedded Structured Value (VAL)
 
-When a structured value must occupy a property-value position, use the Embedded modifier.
+When a structured value must occupy a value-bearing slot, use the VAL role. VAL provides a named slot whose value is itself an element.
 
 ```
-<STR contact
-    <%REC details
-        <STR email : "a@example.com">
-        <STR phone : "555-0100">
+<OBJ contact
+    <VAL details
+        <REC <STR email : "a@example.com"> <STR phone : "555-0100">>
     >
 >
 ```
 
-The `%R` form lets a Record sit where a scalar would normally appear, without losing its structured nature.
+The VAL `details` is the slot in the containing Object; the Record occupant is the structured value the slot holds. The slot stays named in the parent's structure; the occupant carries the structured content with its own role intact.
+
+When the slot itself is semantically aligned (the *slot* corresponds to a vocabulary predicate, distinct from the value's own alignment), put the `#rel` on the VAL:
+
+```
+<OBJ employee
+    <VAL #gdx:emergencyContact contactSlot
+        <OBJ contacts/bob
+            <STR #gdx:givenName name : "Bob">
+            <STR #gdx:phoneNumber phone : "555-0100">
+        >
+    >
+>
+```
+
+The VAL says "this is the employee's emergency-contact slot." The occupant Object says "the value is `contacts/bob`, a Person with these attributes." Two levels of alignment, one structural mechanism.
 
 ## 11. Embedded Alternative Representations
 
-A common case for Embedded is when an entity has multiple equivalent representations that should travel together.
+A common case for VAL is when an entity has multiple equivalent representations that should travel together. Each representation is a complete Object filling a named slot in the parent.
 
 ```
 <REC colorReading
-    <%OBJ lab
-        <FLOAT l : 50.0>
-        <FLOAT a : 25.3>
-        <FLOAT b : -12.7>
+    <VAL lab
+        <OBJ <FLOAT l : 50.0> <FLOAT a : 25.3> <FLOAT b : -12.7>>
     >
-    <%OBJ rgb
-        <INT r : 124>
-        <INT g : 89>
-        <INT b : 200>
+    <VAL rgb
+        <OBJ <INT r : 124> <INT g : 89> <INT b : 200>>
     >
 >
 ```
 
-Each embedded Object is itself a structured entity with its own type identity. Wrapping them in Embedded form keeps each representation intact while letting both belong to a single colorReading record.
+Each VAL names the representation slot (`lab`, `rgb`); each Object occupant is itself a structured entity. The slot identifies which representation the value provides; the occupant carries the structured content. The two-level identity (slot-level on VAL, occupant-level on the contained Object) lets each representation be addressable as a slot in `colorReading` *and* as an Object in its own right when occupant identifiers are present.
 
 ## 12. Width-Bounded Numeric Values
 
@@ -350,17 +373,32 @@ This pattern is useful when a single document needs to satisfy reviewers in diff
 
 ## 17. Predicate Declaration
 
-Use `REL` to declare a predicate as a first-class entity.
+Use `REL` to declare a predicate as a first-class entity. A REL's purpose is fully discharged by its identifier; children are metadata about the predicate, and authors choose what to attach based on what the consumer needs to read.
 
 ```
 <REL gdx:knows>
 
 <REL gdx:manages
-    <_STR vocab:inverse : "gdx:reportsTo">
+    <STR rdfs:label : "manages">
+    <STR rdfs:comment : "Asserts a management relationship between two Persons.">
+    <STR* aliases <STR : "supervises"> <STR : "leads">>
+    <@REL #gdx:inverse : @gdx:reportsTo>
+    <_BOOL gdx:transitive : false>
 >
 ```
 
-The bare REL declares a predicate with no semantic refinements. The second form declares that `gdx:manages` has an inverse predicate `gdx:reportsTo` — a vocabulary-defined refinement that consumers may use to compute inverse-direction queries.
+The bare REL declares a predicate with no metadata. The second form attaches a mix of metadata kinds:
+
+- **Properties** (`<STR rdfs:label …>`, `<STR rdfs:comment …>`, `<STR* aliases …>`) carry data about the predicate — labels, descriptions, alternative names. The values are consumer-conferred: a documentation tool reads `rdfs:label`, a search index reads `aliases`. GDX-core records them as data; nothing in the core interprets them.
+- **@-edges** (`<@REL #gdx:inverse …>`) carry graph-statement assertions about how the predicate relates to other vocabulary entities. The inverse edge is a first-class statement linking `gdx:manages` to `gdx:reportsTo`.
+- **Extensions** (`<_BOOL gdx:transitive …>`) carry primitive-valued vocabulary-defined semantic axioms a validator or reasoner acts on.
+
+**Property vs Extension on a REL.** Both are admitted; choose by what the metadata *is*:
+
+- Property → data for humans or downstream lookup (labels, descriptions, version, authorship)
+- Extension → semantic axiom for a validator or reasoner (symmetry, transitivity, cardinality)
+
+Mechanical rule: would a validator/reasoner act on it? → Extension. Is it for humans or downstream lookup? → Property.
 
 REL declarations may appear at the document root or within vocabulary documents.
 
@@ -434,22 +472,22 @@ A migration directive attached to a Template:
     <STR firstName>
     <STR lastName>
     <STR email>
-    <@DEFOBJ #gdx:supersedes : @CustomerV1>
+    <%DEFOBJ #gdx:supersedes : @CustomerV1>
     <_STR migrate:from-v1 : "add-email-from-default">
     <_STR migrate:default-email : "unknown@example.com">
 >
 ```
 
-A confidence Extension on an Edge:
+A confidence Extension on an @-edge:
 
 ```
-<EDGE #knows : @bob
+<@OBJ #knows : @bob
     <_FLOAT analytics:confidence : 0.87>
     <_STR analytics:source : "co-authorship-graph">
 >
 ```
 
-In each case, GDX records the Extension as a well-formed element; nothing in GDX-core interprets the vocabulary identifier (`acme:source-system`, `ui:color`, `migrate:from-v1`, `analytics:confidence`). A consumer that understands the vocabulary processes the Extension; one that doesn't ignores it. Multiple vocabularies may coexist on the same element — the same `Object`, `Property`, or `Edge` may carry `xsd:`, `acme:`, `ui:`, and `analytics:` Extensions side by side, each processed by its respective consumer.
+In each case, GDX records the Extension as a well-formed element; nothing in GDX-core interprets the vocabulary identifier (`acme:source-system`, `ui:color`, `migrate:from-v1`, `analytics:confidence`). A consumer that understands the vocabulary processes the Extension; one that doesn't ignores it. Multiple vocabularies may coexist on the same element — the same Object, Property, or @-edge may carry `xsd:`, `acme:`, `ui:`, and `analytics:` Extensions side by side, each processed by its respective consumer.
 
 **Extension vs Annotation.** Annotations (Pattern 19) are free-text without a vocabulary identifier; Extensions are vocabulary-keyed and typed. Use Annotation for human commentary that doesn't need machine interpretation; use Extension when a specific consumer needs to recognize the metadata by identifier and act on it programmatically.
 
@@ -467,40 +505,69 @@ Object identifiers are not constrained to any particular scheme. Use whatever fi
 <OBJ https://acme.com/people/alice ...>
 ```
 
-References to these Objects use the `@` prefix:
+@-edges to these Objects use the `@OBJ` prefix:
 
 ```
-<EDGE #knows : @Alice>
-<EDGE #references : @people/alice>
-<EDGE #describes : @7f3a2b9c-4e21-4f88-91d5-abcdef012345>
-<EDGE #cites : @https://acme.com/people/alice>
+<@OBJ #knows : @Alice>
+<@OBJ #references : @people/alice>
+<@OBJ #describes : @7f3a2b9c-4e21-4f88-91d5-abcdef012345>
+<@OBJ #cites : @https://acme.com/people/alice>
 ```
 
 The resolver determines how each reference resolves; the format does not constrain the scheme. Identifiers may not begin with `/` (Core Spec §5.4.1, narrowed in v0.11.0); the leading-slash form is the path-mode reference syntax (see Pattern 21).
 
-## 22. Typed Reference to an Addressable Element
+## 22. Typed REF — Slot Holding a Handle to an Independent Element
 
-When you want a pointer to another element — an Object, a REL declaration, a Template — without making a graph statement about it, use the `@KIND` reference family. The prefix names what is being referenced; the Resource carries the target's identifier.
+When you want a slot whose value is a typed handle to an independently-existing element — a configuration pointing at a service, a schema-bound instance pointing at its Template, a derived view pointing at an interior position in a source document — use the REF family (Core Spec §7.16). REFs are slot-fillers: they identify the target and stop, with no relationship assertion about the parent and no attribute children. REFs use the `%KIND` prefix, distinguishing them from @-edges (`@OBJ`, `@REL`) which assert relationships and belong to graph-entity targets.
+
+Configuration / wiring:
 
 ```
 <OBJ ServerConfig
     <STR name : "web-01">
-    <@OBJ owner : @teams/platform>
-    <@OBJ fallback : @servers/web-02>
+    <%OBJ database : @primary-db>
+    <%OBJ fallback : @secondary-db>
+    <%DEFOBJ #conformsTo : @ServerConfigV2>
+    <%REC sharedDefaults : @global-defaults$/server-defaults>
 >
 ```
 
-Each `@OBJ` element is a typed pointer. Unlike an EDGE, a typed reference is leaf-like — it doesn't carry edge metadata like weight or timestamp. It identifies a target and stops there. The reader (and validator) knows the target's kind from the prefix: `@OBJ` resolves to an Object, `@REL` to a REL declaration, `@DEFOBJ` to an Object Template, and so on.
+`%OBJ` is a REF whose target is an Object; `%DEFOBJ` targets a Template; `%REC` targets a Record at an interior path. The reader and validator know the target's kind from the prefix: `%OBJ` resolves to an Object, `%REC` to a Record, `%BLK` to a Block, `%.STR` to a string Qualifier, `%@OBJ` to an @-edge (reification — see Pattern 25), and so on.
 
-Qualifiers may refine a reference's meaning:
+The closed REF family is generated by a single rule: `%` wraps any role-prefix to produce a REF-to-that-role. Qualifiers may refine the slot binding:
 
 ```
-<@OBJ database : @primary-db
+<%OBJ database : @primary-db
     <.STR role : "read-write">
 >
 ```
 
-The Qualifier annotates the reference itself: "this pointer is the read-write database."
+The Qualifier annotates the slot binding: "this pointer is the read-write database."
+
+**REF vs @-Edge — choosing the right construct.** Both `%OBJ` and `@OBJ` carry a Resource pointing at an Object, but they mean different things:
+
+- `<%OBJ database : @primary-db>` — "this slot named `database` holds a handle to `primary-db`." A slot-content assertion, with no claim about a relationship.
+- `<@OBJ #usesBackend : @primary-db>` — "the parent stands in a `usesBackend` relationship to `primary-db`." A graph statement, asserting the relationship.
+
+Pick `%` when you want a typed handle in a slot; pick `@` when you want GDX to record the relationship as a first-class graph statement.
+
+**Reification — REF to an @-edge.** When an @-edge carries identity (per Core Spec §7.4 axiom E6), it becomes addressable as a persistent substance. A REF prefixed `%@OBJ` or `%@REL` is a handle to such an edge:
+
+```
+<OBJ alice
+    <@OBJ knows-bob-2024 #knows : @bob>     -- @-edge with identity "knows-bob-2024"
+>
+
+<OBJ audit-record
+    <%@OBJ source : @alice&knows-bob-2024>  -- REF to the edge by key
+    <STR confidence : "verified">
+    <STR auditedBy : "SecurityTeam">
+>
+```
+
+The audit-record references the specific edge by its key; the edge itself remains owned by `alice` per axiom E2′. The REF asserts only "this slot holds a handle to that @OBJ-edge" — no claim about a relationship, no claim of ownership. Reification lets external documents make statements *about* a relationship without disturbing the relationship itself.
+
+The two prefixes `%@OBJ` and `%@REL` are the reification forms: a REF whose target is an Object-edge or a REL-edge respectively. This is the canonical mechanism for making statements about graph relationships — the alternative (replicating an edge to make claims about it) loses the identity that makes the assertion specific.
 
 ## 23. Reference to a Non-Identified Element via Path
 
@@ -519,7 +586,7 @@ When the target of a reference is not a globally identifiable Object — when it
 >
 
 <OBJ orders/2026/preferences
-    <@REC defaultShippingTo : $/orders/2026/shipping>
+    <%REC defaultShippingTo : $/orders/2026/shipping>
 >
 ```
 
@@ -528,7 +595,7 @@ The Resource `$/orders/2026/shipping` is a path-mode reference literal. The `$` 
 Cross-document targets compose path-mode with identifier-mode:
 
 ```
-<@REC alicesPreferredAddress : @people/alice$/addresses/[1]>
+<%REC alicesPreferredAddress : @people/alice$/addresses/[1]>
 ```
 
 The `@people/alice` portion resolves the Object by name (per the resolver's scope walk); the `$/addresses/[1]` portion then traverses from that Object to its `addresses` child and then to that child's first element by document order.
@@ -564,7 +631,7 @@ When an element carries a `Key` field, it becomes a location-stable anchor — a
 >
 
 <OBJ compliance/incident-7
-    <@REC originatingEvent : @system/audit-log&entry-12345>
+    <%REC originatingEvent : @system/audit-log&entry-12345>
 >
 ```
 
@@ -576,7 +643,7 @@ When the referencing element shares a document with the Keyed target, the `@Iden
 
 ```
 <OBJ compliance/internal-incident
-    <@REC originating : &entry-12345>
+    <%REC originating : &entry-12345>
 >
 ```
 
@@ -590,7 +657,7 @@ When the anchor is not an Object — for example, a Keyed annotation on a REL de
 >
 
 <OBJ vocabulary/docs
-    <@STR knowsDoc : @REL:gdx:knows&description>
+    <%STR knowsDoc : @REL:gdx:knows&description>
 >
 ```
 
@@ -616,7 +683,7 @@ Schema cross-references between predicates and Templates use the same mechanism:
 
 ```
 <REL gdx:hasAuthor
-    <@DEFOBJ #gdx:range : @Person>
+    <%DEFOBJ #gdx:range : @Person>
 >
 
 <DEFOBJ Person
@@ -624,7 +691,7 @@ Schema cross-references between predicates and Templates use the same mechanism:
 >
 ```
 
-The `@DEFOBJ` child of `gdx:hasAuthor` declares that the predicate's range is the `Person` Template — instances reached through `gdx:hasAuthor` edges should conform to the `Person` contract.
+The `%DEFOBJ` child of `gdx:hasAuthor` declares that the predicate's range is the `Person` Template — instances reached through `gdx:hasAuthor` edges should conform to the `Person` contract. Note: this is a REF (slot pointing at a Template, not a graph statement) because Templates are vocabulary-layer artifacts, not graph-entities; only `@OBJ` and `@REL` are in the @-Edge family. For domain/range pointing at *concept-Objects* (which are Objects and therefore graph-entities), use `@OBJ` instead: `<@OBJ #gdx:domain : @acme:Person>`.
 
 ## 26. Complete Vocabulary Document
 
@@ -647,19 +714,22 @@ A GDX vocabulary document defines the predicates, concepts, and schemas of a dom
 >
 
 <REL acme:knows
+    <STR rdfs:label : "knows">
+    <STR rdfs:comment : "Asserts an acquaintance or social relationship.">
     <@OBJ #acme:domain : @acme:Person>
     <@OBJ #acme:range  : @acme:Person>
     <_BOOL acme:symmetric : true>
-    <STR rdfs:comment : "Asserts an acquaintance or social relationship.">
 >
 
 <REL acme:employs
+    <STR rdfs:label : "employs">
     <@OBJ #acme:domain : @acme:Organization>
     <@OBJ #acme:range  : @acme:Person>
     <@REL #acme:inverse : @acme:employedBy>
 >
 
 <REL acme:employedBy
+    <STR rdfs:label : "employed by">
     <@OBJ #acme:domain : @acme:Person>
     <@OBJ #acme:range  : @acme:Organization>
 >
@@ -679,7 +749,7 @@ A GDX vocabulary document defines the predicates, concepts, and schemas of a dom
 This vocabulary document defines:
 
 - **Three concept Objects** (`acme:Concept`, `acme:Person`, `acme:Organization`), each addressable by other vocabularies and instances. The `acme:Concept` Object plays the role a Class or top-of-hierarchy would in OWL; `rdfs:subClassOf` links subordinate concepts to it.
-- **Three REL declarations** (`acme:knows`, `acme:employs`, `acme:employedBy`) with domain/range Extensions pointing at the concept Objects, plus an inverse Reference between `employs` and `employedBy`.
+- **Three REL declarations** (`acme:knows`, `acme:employs`, `acme:employedBy`) carrying a mix of metadata kinds: Properties for human-facing labels and descriptions (`<STR rdfs:label …>`, `<STR rdfs:comment …>`), @-edges for predicate-axiom statements (`<@OBJ #acme:domain …>`, `<@REL #acme:inverse …>`), and Extensions for primitive-valued semantic axioms (`<_BOOL acme:symmetric …>`). The choice between Property and Extension follows the "data vs axiom" rule (Pattern 17).
 - **Two Templates** (`acme:Person`, `acme:Organization`) that bind instance shape to the concepts. The Template slots carry `#rel` references aligning slot semantics to the vocabulary's predicates.
 
 The document is one GDX file. A consumer reading it gets the predicates, the concept taxonomy, the schemas, and the alignment between them in a single parse. An instance document satisfying `acme:Person` can be validated against the Template, traversed through `acme:knows` edges, and aligned to other vocabularies through `#rdfs:subClassOf` and similar cross-references.
@@ -700,23 +770,25 @@ Templates can reference other Templates to declare version succession, supersess
     <STR firstName>
     <STR lastName>
     <STR email>
-    <@DEFOBJ #gdx:supersedes : @CustomerV1>
+    <%DEFOBJ #gdx:supersedes : @CustomerV1>
 >
 ```
 
-The `@DEFOBJ` element inside `CustomerV2` declares that this Template supersedes `CustomerV1`. A migration tool consuming both documents can follow the chain to understand which Templates are predecessors and which are successors.
+The `%DEFOBJ` element inside `CustomerV2` declares that this Template's `supersedes` slot points at `CustomerV1`. A migration tool consuming both documents can follow the chain to understand which Templates are predecessors and which are successors.
 
 The same mechanism works for marking deprecation:
 
 ```
 <DEFOBJ Customer
-    <@DEFOBJ #gdx:supersededBy : @CustomerV2>
+    <%DEFOBJ #gdx:supersededBy : @CustomerV2>
     <STR firstName>
     <STR lastName>
 >
 ```
 
-These are vocabulary patterns — the specific predicates (`gdx:supersedes`, `gdx:supersededBy`) are defined by the GDX Common Vocabulary or application-specific vocabularies, not by the core specification. What the core specification provides is the `@DEFOBJ` mechanism for typed Template references; the vocabulary provides the predicates that give the references meaning.
+**Note on the conceptual shift.** Template version chains are expressed as REFs (`%DEFOBJ`), not as @-edges. Under the GDX partition, the @-Edge family is restricted to targets that are independent graph-entities — Objects and REL declarations. Templates are vocabulary-layer artifacts; pointing at a Template is slot-filling (a slot whose value is a handle to a Template), not graph-statement-making. Authors who think of version chains as "relationships between Templates" should read the structure as "slots holding handles to predecessor/successor Templates, semantically aligned via `#rel` to the vocabulary's version predicates." The semantic interpretation is up to the consumer (migration tools, schema registries); GDX records the slot bindings, not graph statements about Templates.
+
+These are vocabulary patterns — the specific predicates (`gdx:supersedes`, `gdx:supersededBy`) are defined by the GDX Common Vocabulary or application-specific vocabularies, not by the core specification. What the core specification provides is the `%DEFOBJ` mechanism for typed Template handles; the vocabulary provides the predicates that align the slots to shared meaning.
 
 ## 28. Null, Absent, and Present
 
@@ -950,15 +1022,15 @@ Templates declare the contract; instances claim to satisfy it; validators check.
 
 ## 36. Use as Graph-Structured Data
 
-Adding Edges and IRI-based Object identifiers yields fully graph-structured data with relationships, attributes on relationships, and external resolvability.
+Adding @-edges and IRI-based Object identifiers yields fully graph-structured data with relationships, attributes on relationships, and external resolvability.
 
 ```
 <OBJ https://infra.acme.com/server/web01
     <STR name : "web-01">
-    <EDGE #vocab:dependsOn : @https://infra.acme.com/db/primary
+    <@OBJ #vocab:dependsOn : @https://infra.acme.com/db/primary
         <STR since : "2024-01-15">
     >
-    <EDGE #vocab:routesTo : @https://infra.acme.com/cache/edge>
+    <@OBJ #vocab:routesTo : @https://infra.acme.com/cache/edge>
 >
 ```
 

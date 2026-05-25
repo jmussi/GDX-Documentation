@@ -1,6 +1,6 @@
 # GDX — Security Considerations
 
-- **Status:** Draft v0.11.0 (companion to GDX Core Specification v0.11.0, working draft, pre-1.0)
+- **Status:** Draft v0.13.0 (companion to GDX Core Specification v0.13.0, working draft, pre-1.0)
 - **Date:** 2026-05-20
 - **Editors:** 
 - **Authors:** Julian Mussi
@@ -43,7 +43,7 @@ These limits exist to prevent denial-of-service attacks against parsers processi
 
 ## 2. Reference Cycle Exploitation
 
-GDX permits Edge references between Objects, allowing arbitrary graph structures including cycles. Cycles are valid data and MUST be supported by parsers and storage layers. The security risk arises when adversarial documents use cycles to attack consumers that traverse references without cycle detection — for example, a service that loads referenced Objects to display them, or that walks Edge networks to compute derived data.
+GDX permits @-edges (`@OBJ`, `@REL`) between graph-entities, allowing arbitrary graph structures including cycles. Cycles are valid data and MUST be supported by parsers and storage layers. The security risk arises when adversarial documents use cycles to attack consumers that traverse references without cycle detection — for example, a service that loads referenced Objects to display them, or that walks @-edge networks to compute derived data.
 
 Attack vectors:
 
@@ -56,20 +56,21 @@ Mitigations:
 - Implementations SHOULD impose a maximum reference traversal depth as a defense-in-depth measure even when cycle detection is implemented.
 - Resolvers SHOULD detect cycles in Template chains during effective-shape computation (though Template inheritance is not part of GDX, future Common Vocabulary or application Templates may reference each other; cycles in such reference chains should be detected).
 
-## 3. Embedded Reference Expansion
+## 3. VAL Occupant Nesting
 
-Embedded values (`%STR`/`%S`, `%REC`/`%R`, etc., per §7.11 of the Core Specification) inline content from referenced sources at parse time. A document that contains many Embedded references, each resolving to content with further Embedded references, can cause exponential expansion analogous to the "billion laughs" attack against XML.
+VAL slots (`VAL`/`V`, per §7.11 of the Core Specification) carry exactly one occupant element each, and the occupant may itself contain further VAL slots. A maliciously-constructed document may use deeply-nested VAL chains to amplify traversal cost on consumers that recursively descend into slot occupants — analogous to deep-tree resource-exhaustion (§1) but with the additional consideration that each VAL contributes two element layers (the slot and its occupant) rather than one.
+
+GDX's VAL role inlines its occupant directly in the document text; it does NOT expand external references at parse time. Consequently, the classical "billion laughs"-style amplification attack (where each expansion resolves a reference that yields further expansions) does not apply to VAL as specified. Implementations that layer reference-expansion semantics on top of VAL (e.g., a vocabulary-defined "include this referenced fragment as a slot occupant" extension) MUST treat such expansions as their own attack surface and impose limits comparable to those recommended in §1.
 
 Mitigations:
 
-- Implementations supporting Embedded references SHOULD impose a maximum expansion depth (suggested default: 20 levels).
-- Implementations SHOULD impose a maximum total expanded size (suggested default: 100x the original document size, or an absolute byte limit).
-- Implementations SHOULD detect cycles in Embedded reference chains and reject documents that would expand infinitely.
-- For untrusted input, implementations MAY disable Embedded reference expansion entirely, treating Embedded references as opaque data.
+- The §1 nesting-depth and element-count limits apply directly to VAL chains; no separate VAL-specific limit is normatively required.
+- Consumers walking VAL trees SHOULD count each VAL and each occupant against any element-traversal budget.
+- Reference resolvers MUST NOT silently substitute an occupant fetched from an external source for a VAL occupant declared in the document; any vocabulary-defined inclusion mechanism is out of scope for this specification and is the responsibility of the consuming application.
 
 ## 4. Network Resolution
 
-The default Type and Edge reference resolution orders (Core Spec §9.5.2 and §7.4.1) include "globally-resolvable IRIs" as a fallback resolution scope. Implementations that resolve such references over the network expose themselves to several risks:
+The default Type and @-Edge reference resolution orders (Core Spec §9.5.2 and §7.4.1) include "globally-resolvable IRIs" as a fallback resolution scope. Implementations that resolve such references over the network expose themselves to several risks:
 
 - **Information disclosure.** Network requests to URLs in untrusted documents can leak information about the processing system to attacker-controlled servers (timing, request patterns, internal IP addresses).
 - **Server-side request forgery (SSRF).** Documents containing IRIs targeting internal network addresses can use the parser as a proxy to reach systems otherwise inaccessible to the attacker.

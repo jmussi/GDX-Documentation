@@ -1,6 +1,6 @@
 # GDX Standard Form — Grammar Specification
 
-- **Status:** Draft v0.7 (working draft)
+- **Status:** Draft v0.9 (working draft)
 - **Date:** 2026-05-20
 - **Companion to:** GDX Core Specification v0.11.0
 - **Authors:** Julian Mussi
@@ -126,9 +126,12 @@ The element forms recognized at the grammar level, organized by role category:
 ObjectElement       ::= "<" WS? ObjectPrefix ElementBody WS? ">"
 RecordElement       ::= "<" WS? RecordPrefix ElementBody WS? ">"
 PropertyElement     ::= "<" WS? PropertyPrefix ElementBody WS? ">"
-EdgeElement         ::= "<" WS? EdgePrefix ElementBody WS? ">"
 BlockElement        ::= "<" WS? BlockPrefix ElementBody WS? ">"
 AnnotationElement   ::= "<" WS? AnnotationPrefix ElementBody WS? ">"
+
+(* @-Edge elements (@OBJ, @REL) are produced by the Reference operator
+   composing with ObjectPrefix or RelPrefix and follow §7.4 of the Core
+   Specification. They do not have a separate EdgeElement production. *)
 
 (* Refinement-modifier compositions *)
 QualifierElement    ::= "<" WS? QualifierComposition ElementBody WS? ">"
@@ -451,24 +454,40 @@ Note that `<I I : 42>` parses unambiguously: the first token after `<` is the pr
 
 The Prefix production matches one of the closed vocabulary tokens defined in Core Specification §6. GDX prefix tokens have two equivalent textual forms — **canonical** (three-letter or longer where natural) and **minified** (single-letter where applicable). Both forms are recognized on input; serializers produce one or the other based on configuration.
 
-A GDX prefix follows the composition pattern:
+A GDX prefix follows a two-layer composition pattern:
 
 ```
-[@?] [refinement-modifier?] [base] [*?]
+Layer 1 (role-prefix):  [@?] [refinement-modifier?] [base] [*?]
+Layer 2 (REF wrapper):  "%" + [layer-1 role-prefix]
 ```
 
-Where:
-- `@` is the optional Reference operator (prefix position)
-- `refinement-modifier` is one of `.`, `_`, `%`, `N`, `DEF` (at most one)
+Where (layer 1):
+- `@` is the optional @-Edge sigil; restricted to `@OBJ` and `@REL` (Core Spec §7.4 axiom E5)
+- `refinement-modifier` is one of `.`, `_`, `N`, `DEF` (at most one); VAL is a base prefix, not a modifier
 - `base` is a core role name
 - `*` is the optional Set suffix
+
+Where (layer 2):
+- `%` is the REF sigil; wraps any layer-1 role-prefix to produce a `%KIND` REF (Core Spec §7.16)
+
+Three composition prohibitions: `@@KIND` (no @-edge to @-edge), `@OBJ*`/`@REL*` (no Set of @-edges, per E5), `%%KIND` (no REF to REF, per R6), `@%KIND` (no @-edge to REF, per E5).
 
 Prefix recognition is case-insensitive. The grammar productions below show prefixes in their uppercase canonical case for clarity; conforming parsers MUST accept the same tokens in any combination of upper and lower case (`STR`, `Str`, `str`, `sTR` are all valid). Identifiers (Id, Key, Rel) remain case-sensitive (§6).
 
 ```ebnf
-Prefix              ::= ReferencePrefix? ModifierBase SetSuffix?
+Prefix              ::= RefSigil? RolePrefix
+                      | RolePrefix
 
-ReferencePrefix     ::= "@"
+RefSigil            ::= "%"
+
+RolePrefix          ::= EdgeSigil? ModifierBase SetSuffix?
+
+EdgeSigil           ::= "@"
+                        (* Restricted: EdgeSigil MUST compose only with
+                           ObjectPrefix or RelPrefix, per Core Spec §7.4 E5.
+                           Other compositions (e.g., @REC, @DEFOBJ) are
+                           malformed when carrying EdgeSigil; those targets
+                           are reached via RefSigil. *)
 
 ModifierBase        ::= RefinementBase
                       | TemplatePrefix
@@ -476,29 +495,34 @@ ModifierBase        ::= RefinementBase
                       | AnnotationPrefix
                       | TransportPrefix
                       | BlockPrefix
-                      | EdgePrefix
+                      | ValPrefix
                       | BasePrefix
 
 SetSuffix           ::= "*"
+                        (* Restricted: does not combine with EdgeSigil
+                           (no @OBJ* / @REL* per E5) or with ValPrefix
+                           (no VAL* per §7.11 axiom 6). *)
 
 (* Refinement-modifier composition with bases. At most one refinement
    modifier may appear; refinement modifiers do not stack with each other. *)
 
 RefinementBase      ::= QualifierComposition
                       | ExtensionComposition
-                      | EmbeddedComposition
                       | NodeComposition
 
 QualifierComposition ::= "." PropertyPrefix
 
 ExtensionComposition ::= "_" PropertyPrefix
 
-EmbeddedComposition  ::= "%" PropertyPrefix
-                       | "%" RecordPrefix
-                       | "%" ObjectPrefix
-
 NodeComposition      ::= "N" PropertyBase
                        | "N" RecordBase
+
+(* VAL (element-as-value slot) — canonical | minified.
+   VAL is a base prefix in its own right; the occupant is the VAL's
+   single child element (see Core Spec §7.11) and is not part of the
+   prefix grammar. The `*` suffix does not compose with VAL. *)
+
+ValPrefix           ::= "VAL"  | "V"
 
 (* Bare base prefixes — canonical | minified *)
 
@@ -523,9 +547,11 @@ PropertyBase        ::= "STR"   | "S"
 
 RecordBase          ::= "REC"   | "R"
 
-(* Data-layer specialty prefixes *)
-
-EdgePrefix          ::= "EDGE" | "E"
+(* The EDGE/E prefix used through Core Spec v0.11.0 is removed in v0.12.0;
+   the @-Edge family (@OBJ, @REL — see Core Spec §7.4) replaces it. The
+   `E` minified slot is currently unassigned. @-Edges and References are
+   produced by the `@` operator (§7.2 below) composing with the @-Edge
+   family members or with other base prefixes respectively. *)
 
 (* Template prefixes — canonical only, no minified form *)
 
@@ -557,24 +583,30 @@ PackagePrefix       ::= "PKG"
 GroupPrefix         ::= "GRP"
 ```
 
-**The Reference operator** `@` composes with any `ModifierBase`, optionally followed by `SetSuffix`. The composition produces a `@KIND` reference prefix where the KIND is the modifier-base (and optional set-suffix) being referenced. Examples:
+**The @-Edge sigil** `@` composes only with `ObjectPrefix` or `RelPrefix`, producing the two members of the @-Edge family. Examples:
 
-- `@OBJ` — reference to an Object
-- `@REL` — reference to a REL declaration
-- `@DEFSTR` — reference to a string-Template
-- `@.STR` — reference to a string-Qualifier
-- `@_INT` — reference to an int-Extension
-- `@%REC` — reference to an Embedded Record
-- `@STR*` — reference to a Set of strings
-- `@.STR*` — reference to a Set of string-Qualifiers
+- `@OBJ` — @-edge to an Object
+- `@REL` — @-edge to a REL declaration
 
-The Reference operator MUST NOT compose with another Reference operator. `@@`-prefixed compositions are malformed.
+Compositions of `@` with other ModifierBase forms (e.g., `@REC`, `@DEFOBJ`, `@.STR`) are malformed under v0.13.0; those targets are reached via the REF sigil instead. The `@` sigil also does not compose with `SetSuffix` (no `@OBJ*`/`@REL*`) or with itself (no `@@KIND`).
 
-**Recognition note.** Implementations MUST match the longest valid prefix at prefix position. When both `STR` and `S` could match (because `S` is a valid prefix and `STR` extends it), the longer match wins: `<STRangle>` is invalid (no element separator after `STRangle`), but `<STR angle>` parses with prefix `STR` and identifier `angle`. Similarly, when both `STR*` and `STR` could match at prefix position, the longer match (`STR*`) wins.
+**The REF sigil** `%` wraps any layer-1 role-prefix to produce a `%KIND` REF. Examples:
+
+- `%OBJ`, `%REC`, `%BLK` — REF to an Object, Record, Block
+- `%STR`, `%INT`, `%FLOAT`, `%BOOL`, `%BYTE` — REF to a value Property
+- `%.STR`, `%_INT`, `%NSTR` — REF to a Qualifier, Extension, Node-zone element
+- `%DEFOBJ`, `%DEFSTR`, etc. — REF to a Template
+- `%VAL` — REF to a VAL slot
+- `%@OBJ`, `%@REL` — REF to an @-edge (reification)
+- `%STR*`, `%DEFOBJ*`, `%@OBJ*` — REF to a Set of the named role
+
+The REF sigil does not stack with itself (no `%%KIND`) and does not compose under `@` (no `@%KIND`).
+
+**Recognition note.** Implementations MUST match the longest valid prefix at prefix position. When both `STR` and `S` could match (because `S` is a valid prefix and `STR` extends it), the longer match wins: `<STRangle>` is invalid (no element separator after `STRangle`), but `<STR angle>` parses with prefix `STR` and identifier `angle`. Similarly, when both `STR*` and `STR` could match at prefix position, the longer match (`STR*`) wins. The two-sigil case (`%@OBJ`) is parsed left-to-right: the leading `%` is recognized first, then the wrapped role-prefix follows.
 
 A token in prefix position not matching the above is malformed.
 
-**On the closed vocabulary.** The prefix vocabulary is closed and committed against future change. The composition pattern (`[@?][refinement-modifier?][base][*?]`) defines which compositions are valid; the spec describes the pattern rather than enumerating every prefix. New primitive types, structural roles, or domain concerns are expressed by composing existing prefixes with Templates, Extensions, and vocabulary identifiers — never by adding new modifiers, operators, or bases. The closed vocabulary enables uniform parser behavior across all implementations. See Core Specification §6.
+**On the closed vocabulary.** The prefix vocabulary is closed and committed against future change. The two-layer composition pattern (layer 1: `[@?][refinement-modifier?][base][*?]`; layer 2: `%` + layer-1) defines which compositions are valid; the spec describes the pattern rather than enumerating every prefix. New primitive types, structural roles, or domain concerns are expressed by composing existing prefixes with Templates, Extensions, and vocabulary identifiers — never by adding new modifiers, operators, or bases. The closed vocabulary enables uniform parser behavior across all implementations. See Core Specification §6.
 
 ### 7.2 Character Classes
 
@@ -617,7 +649,7 @@ The sigils `&`, `#`, `--`, and `@` MUST be immediately followed by their content
 <STR &  1 : "x">       // whitespace after & is malformed
 <STR #  schema:foo>    // whitespace after # is malformed
 <REC address --  Foo>  // whitespace after -- is malformed
-<EDGE #knows : @  Bob>  // whitespace after @ is malformed
+<@OBJ #knows : @  Bob>  // whitespace after @ is malformed
 ```
 
 ### 8.2 Sigil-Preceding Whitespace
@@ -750,10 +782,12 @@ UriReference    ::= UriScheme "://" UriChars
 // The grammar shows uppercase canonical case for clarity.
 
 // --- Base prefixes ---
+// The EDGE/E prefix used through Core Spec v0.11.0 is removed in v0.12.0;
+// the @-Edge family (@OBJ, @REL — see Core Spec §7.4) replaces it. The
+// `E` minified slot is currently unassigned.
 
 ObjectPrefix     ::= "OBJ"  | "O"
 RecordPrefix     ::= "REC"  | "R"
-EdgePrefix       ::= "EDGE" | "E"
 
 PropertyPrefix   ::= "STR"   | "S"
                    | "INT"   | "I"
@@ -777,16 +811,18 @@ BasePrefix       ::= ObjectPrefix
 
 QualifierComposition ::= "." PropertyPrefix
 ExtensionComposition ::= "_" PropertyPrefix
-EmbeddedComposition  ::= "%" PropertyPrefix
-                       | "%" RecordPrefix
-                       | "%" ObjectPrefix
 NodeComposition      ::= "N" PropertyBase
                        | "N" RecordBase
 
 RefinementBase   ::= QualifierComposition
                    | ExtensionComposition
-                   | EmbeddedComposition
                    | NodeComposition
+
+// --- VAL (element-as-value slot) — canonical | minified ---
+// VAL is a base prefix; its occupant is a child element, not part of
+// the prefix grammar. The `*` Set suffix does not compose with VAL.
+
+ValPrefix        ::= "VAL"  | "V"
 
 // --- Template prefixes (canonical only) ---
 
@@ -811,7 +847,7 @@ GroupPrefix      ::= "GRP"
 
 TransportPrefix  ::= PackagePrefix | GroupPrefix
 
-// --- ModifierBase: anything that can carry an @ prefix or * suffix ---
+// --- ModifierBase ---
 
 ModifierBase     ::= RefinementBase
                    | TemplatePrefix
@@ -819,19 +855,29 @@ ModifierBase     ::= RefinementBase
                    | AnnotationPrefix
                    | TransportPrefix
                    | BlockPrefix
-                   | EdgePrefix
+                   | ValPrefix
                    | BasePrefix
 
-// --- Special operators ---
+// --- Special operators (two sigils + Set suffix) ---
 
 SetSuffix        ::= "*"
-ReferencePrefix  ::= "@"
+EdgeSigil        ::= "@"        // composes only with ObjectPrefix | RelPrefix
+RefSigil         ::= "%"        // wraps any layer-1 role-prefix
 
-// --- Composed Prefix ---
-// Reference operator cannot apply to another Reference (no @@).
-// Set suffix may compose with most ModifierBase forms.
+// --- Layer 1 role-prefix (the "what role does this name?" surface) ---
+// EdgeSigil composes only with ObjectPrefix | RelPrefix; other combinations
+// (@REC, @DEFOBJ, @.STR, etc.) are malformed under v0.13.0 — those targets
+// are reached via RefSigil instead.
+// SetSuffix does not combine with EdgeSigil (no @OBJ*/@REL*) or with VAL
+// (no VAL*).
 
-Prefix           ::= ReferencePrefix? ModifierBase SetSuffix?
+RolePrefix       ::= EdgeSigil? ModifierBase SetSuffix?
+
+// --- Layer 2 prefix composition (the full Prefix surface) ---
+// RefSigil cannot apply to itself (no %%KIND) and EdgeSigil cannot
+// apply to a RefSigil-wrapped form (no @%KIND).
+
+Prefix           ::= RefSigil? RolePrefix
 
 
 // ===== Suffix Vocabularies =====

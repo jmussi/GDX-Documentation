@@ -1,6 +1,6 @@
 # GDX Compact Form — Grammar Specification
 
-- **Status:** Draft v0.4 (working draft)
+- **Status:** Draft v0.6 (working draft)
 - **Date:** 2026-05-20
 - **Companion to:** GDX Core Specification v0.11.0, GDX Standard Grammar v0.7, GDX Path Expressions v0.1
 - **Authors:** Julian Mussi
@@ -156,7 +156,7 @@ O alice --Customer
   S firstName : "Alice"
   S lastName : "Smith"
   I age : 24
-  E #gdx:knows : @bob
+  @OBJ #gdx:knows : @bob
 ```
 
 This document contains a Template, a REL declaration, and an Object — three top-level elements, each independent. Blank lines between them are convention and improve readability but are not required.
@@ -330,7 +330,7 @@ L active : true
 L compact : t
 B hash : 0x4a3f8c2b
 B encoded : 0zSGVsbG8sIHdvcmxkIQ==
-E #knows : @bob
+@OBJ #knows : @bob
 ```
 
 The lexical productions for each literal type are inherited from the Standard Grammar. Compact Form does not modify them.
@@ -346,23 +346,22 @@ The lexical productions for each literal type are inherited from the Standard Gr
 The `@anchor` production may carry an optional role marker (`@OBJ:id`, `@REL:id`, `@DEFOBJ:id`, etc.) drawn from the closed prefix vocabulary; when omitted, composed references default to an Object anchor.
 
 ```
-E #knows : @bob                          // identifier-mode
-@OBJ employer : @com.acme                // identifier-mode on a @KIND reference element
-@REC mailing : $/people/alice/address    // path-mode
-@REC home : @people/bob$/contacts/[1]    // composed name + path (OBJ default)
-@REC shipping : &shippingAddress         // key-mode (current document)
-@REC origEvent : @system/log&entry-12345 // composed name + key (OBJ default)
-@STR desc : @REL:my-rel&description      // composed name + key, REL anchor
-@STR slotDoc : @DEFOBJ:com.acme.Customer&firstName-doc  // Template anchor
+@OBJ #knows : @bob                       // @-edge, identifier-mode target
+%REC mailing : $/people/alice/address    // REF, path-mode
+%REC home : @people/bob$/contacts/[1]    // REF, composed name + path (OBJ default)
+%REC shipping : &shippingAddress         // REF, key-mode (current document)
+%REC origEvent : @system/log&entry-12345 // REF, composed name + key (OBJ default)
+%STR desc : @REL:my-rel&description      // REF, composed name + key, REL anchor
+%STR slotDoc : @DEFOBJ:com.acme.Customer&firstName-doc  // REF, Template anchor
 ```
 
-`@KIND` reference elements (Core Spec §7.16) appear in Compact Form with the prefix in the usual position:
+@-edges (Core Spec §7.4) and REFs (Core Spec §7.16) appear in Compact Form with the prefix in the usual position:
 
 ```
 O alice
   S name : "Alice"
-  @OBJ employer : @com.acme
-  E #knows : @bob
+  %DEFOBJ #conformsTo : @Customer
+  @OBJ #knows : @bob
 ```
 
 ### 4.2 Multi-Line String Literals
@@ -758,7 +757,7 @@ O alice --Customer
   S firstName : "Alice"
   S email : "alice@example.com"
   I age : 24
-  E #gdx:knows : @bob
+  @OBJ #gdx:knows : @bob
 ```
 
 Standard:
@@ -784,7 +783,7 @@ Standard:
     <S firstName : "Alice">
     <S email : "alice@example.com">
     <I age : 24>
-    <E #gdx:knows : @bob>
+    <@OBJ #gdx:knows : @bob>
 >
 ```
 
@@ -984,10 +983,12 @@ ReferencePrefix ::= "@"
 SetSuffix       ::= "*"
 
 // ModifierBase and the sub-prefix vocabulary (ObjectPrefix, RecordPrefix,
-// PropertyPrefix, EdgePrefix, BlockPrefix, RefinementBase including
-// QualifierComposition/ExtensionComposition/EmbeddedComposition/NodeComposition,
+// PropertyPrefix, BlockPrefix, RefinementBase including
+// QualifierComposition/ExtensionComposition/NodeComposition, ValPrefix,
 // TemplatePrefix, RelPrefix, AnnotationPrefix, PackagePrefix, GroupPrefix)
 // are inherited from the Standard Grammar (Appendix A, §7.1).
+// The EDGE/E prefix is removed in Core v0.12.0; @-Edge elements are
+// produced by the @ operator composing with ObjectPrefix or RelPrefix.
 //
 // The composition pattern is the same in Compact Form as in Standard Form;
 // only the surrounding delimiters and indentation rules differ.
