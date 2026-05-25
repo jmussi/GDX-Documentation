@@ -1,6 +1,6 @@
 # GDX — Quick Start
 
-- **Status:** Draft v0.12.0 (companion to GDX Core Specification v0.12.0, working draft, pre-1.0)
+- **Status:** Draft v0.13.0 (companion to GDX Core Specification v0.13.0, working draft, pre-1.0)
 - **Date:** 2026-05-20
 - **Editors:** 
 - **Authors:** Julian Mussi
@@ -125,7 +125,7 @@ For references to elements that don't have a global identifier — a Record insi
     >
 >
 
-<@REC residence : $/alice/mailing>
+<%REC residence : $/alice/mailing>
 ```
 
 The `$/alice/mailing` traverses the document tree: into `alice`, then into `mailing`. Path-mode and identifier-mode compose with `$` for cross-document targets — `@bob$/contacts/[1]` resolves the Object `bob` and then takes its first contact. Path expressions are defined in the companion GDX Path Expressions Specification.

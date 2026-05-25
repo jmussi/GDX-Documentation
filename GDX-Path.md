@@ -1,6 +1,6 @@
 # GDX Path Expressions — Specification
 
-- **Status:** Draft v0.2 (working draft)
+- **Status:** Draft v0.3 (working draft)
 - **Date:** 2026-05-20
 - **Companion to:** GDX Core Specification v0.11.0
 - **Authors:** Julian Mussi
@@ -12,7 +12,7 @@ This document defines the GDX Path Expression — a syntax and resolution model 
 
 The path grammar is uniform across all consuming contexts. This specification defines the syntax and per-segment selection semantics; the cardinality and failure semantics for any given consumer (references, delta operations, queries) are specified by the consuming layer. This document normatively defines address-mode behavior — the cardinality contract used by `@KIND` reference elements (Core Specification §7.16). Query-mode and delta-mode behaviors are reserved for future companion specifications.
 
-This specification resolves the `$PathExpression` reservation in Core Specification §12.4 (Path-Mode Reference Resolution). It defines the five reference-literal forms recognized in `@KIND` reference resources: `IdRef` (`@Anchor`), `PathRef` (`$PathExpression`), `KeyRef` (`&Key`), `IdPathRef` (`@Anchor$PathExpression`), and `IdKeyRef` (`@Anchor&Key`). The composed forms `IdPathRef` and `IdKeyRef` express cross-document addressing by structural path or by Key-based anchor respectively. The `Anchor` production carries an optional role marker (`@OBJ:id`, `@REL:id`, `@DEFOBJ:id`, etc.) drawn from the closed prefix vocabulary; when omitted, composed references default to an Object anchor.
+This specification resolves the `$PathExpression` reservation in Core Specification §12.4 (Path-Mode Reference Resolution). It defines the five reference-literal forms recognized in `%KIND` REF resources and `@OBJ`/`@REL` @-Edge resources: `IdRef` (`@Anchor`), `PathRef` (`$PathExpression`), `KeyRef` (`&Key`), `IdPathRef` (`@Anchor$PathExpression`), and `IdKeyRef` (`@Anchor&Key`). The composed forms `IdPathRef` and `IdKeyRef` express cross-document addressing by structural path or by Key-based anchor respectively. The `Anchor` production carries an optional role marker (`@OBJ:id`, `@REL:id`, `@DEFOBJ:id`, etc.) drawn from the closed prefix vocabulary; when omitted, composed references default to an Object anchor.
 
 This document does not address query-mode semantics (wildcards, filters, descendant axis, projections), delta/patch operations, or filter expression languages. The syntactic territory those features require is enumerated as reserved (§9) so that v1 path expressions remain forward-compatible.
 
@@ -263,10 +263,10 @@ The optional `AnchorRole` prefix on an `@`-reference makes the role of the resol
 The role marker is most useful in composed references, where the anchor's role differs from the terminal target's role:
 
 ```
-<@STR description : @REL:my-rel&annotation-3>
+<%STR description : @REL:my-rel&annotation-3>
 ```
 
-Here the enclosing `@STR` says the terminal target is a string Property. The `@REL:my-rel` portion says the anchor is a REL named `my-rel`. The `&annotation-3` portion looks up a Keyed element within the REL's subtree. Without the role marker, the anchor would default to Object, and the reference would be unresolvable.
+Here the enclosing `%STR` says the terminal target is a string Property. The `@REL:my-rel` portion says the anchor is a REL named `my-rel`. The `&annotation-3` portion looks up a Keyed element within the REL's subtree. Without the role marker, the anchor would default to Object, and the reference would be unresolvable.
 
 **Parse-time validation.** The parser checks that `AnchorRole` is one of the keywords in the closed set above. An unknown role keyword (e.g., `@FOO:bar`) is malformed and MUST be rejected.
 
@@ -384,7 +384,7 @@ Path evaluation yielding any of the following MUST be treated as an unresolved r
 
 1. **Zero elements.** No element matched the path at some segment.
 2. **Multiple elements.** Match set cardinality is greater than one at the terminal segment.
-3. **One element of non-matching role.** The terminal element exists, but its role does not match the enclosing `@KIND`. For example, `<@REC x : $/orders/123>` where the path resolves to an Object is unresolved, because the prefix declares the target as a Record.
+3. **One element of non-matching role.** The terminal element exists, but its role does not match the enclosing prefix. For example, `<%REC x : $/orders/123>` where the path resolves to an Object is unresolved, because the prefix declares the target as a Record.
 
 A reference may additionally be unresolved by the `@Identifier` portion of an `IdPathRef`: if name-mode resolution fails (no scope yields a target for the identifier), the path is not evaluated and the entire reference is unresolved.
 
@@ -473,11 +473,12 @@ Core Spec §9.2 is amended with an explicit alignment rule: an instance child sa
 
 `@KIND` reference elements become resolvable against targets that were previously not addressable by the identifier-mode grammar. The composition matrix expands as follows:
 
-- `@REC`, `@BLK` — resolvable when the Resource is a `PathRef`, `KeyRef`, `IdPathRef`, or `IdKeyRef` whose terminal element is a Record or Block, respectively.
-- `@.STR`, `@.INT`, `@.FLOAT`, `@.BOOL`, `@.BYTE` — resolvable when the path or key terminal is a Qualifier of the corresponding value-kind.
-- `@_BOOL`, `@_INT`, `@_STR`, `@_FLOAT`, `@_BYTE` — resolvable when the path or key terminal is an Extension of the corresponding value-kind (Extensions are valid only under Templates; the reference must resolve within a Template subtree).
-- `@VAL` — resolvable when the path or key terminal is a VAL slot (Core Spec §7.11). Resolution targets the VAL element itself, not its occupant; to address the occupant, the path must include a further segment selecting it.
-- `@STR`, `@INT`, `@FLOAT`, `@BOOL`, `@BYTE` to value Properties — resolvable when the path or key terminal is a value Property of the corresponding value-kind. (Distinct from references to Objects of those names, which is not a legal composition; `@STR` to an Object is malformed.)
+- `%REC`, `%BLK` — resolvable when the Resource is a `PathRef`, `KeyRef`, `IdPathRef`, or `IdKeyRef` whose terminal element is a Record or Block, respectively.
+- `%.STR`, `%.INT`, `%.FLOAT`, `%.BOOL`, `%.BYTE` — resolvable when the path or key terminal is a Qualifier of the corresponding value-kind.
+- `%_BOOL`, `%_INT`, `%_STR`, `%_FLOAT`, `%_BYTE` — resolvable when the path or key terminal is an Extension of the corresponding value-kind.
+- `%VAL` — resolvable when the path or key terminal is a VAL slot (Core Spec §7.11). Resolution targets the VAL element itself, not its occupant; to address the occupant, the path must include a further segment selecting it.
+- `%STR`, `%INT`, `%FLOAT`, `%BOOL`, `%BYTE` to value Properties — resolvable when the path or key terminal is a value Property of the corresponding value-kind. (Distinct from references to Objects of those names, which is not a legal composition; `%STR` to an Object resolves to "non-matching role" and yields an unresolved reference.)
+- `%@OBJ`, `%@REL` — resolvable when the path or key terminal is an @-edge of the corresponding family. The @-edge MUST carry identity (Core Spec §7.4 axiom E6) to be key-addressable; path-addressable edges are reached by IdSegment/RelSegment/OrdinalSegment traversal from a globally-addressable anchor.
 
 Parent-context restrictions on where `@KIND` references may appear (Core Spec §8.1) are unchanged. Only the addressability of the **target** expands; the rules for where a reference element may sit in its parent's children are governed by the existing composition matrix.
 
@@ -619,7 +620,7 @@ NONZERO_DIGIT     ::= "1".."9"
     >
 >
 
-<@REC x : $/people/alice/mailing>
+<%REC x : $/people/alice/mailing>
 ```
 
 The `$` introduces a `PathRef`. The path `/people/alice/mailing` traverses from the document root through three `IdSegment` selectors. The reference resolves to the `<REC mailing>` element.
@@ -627,18 +628,18 @@ The `$` introduces a `PathRef`. The path `/people/alice/mailing` traverses from 
 ### B.2 Cross-Document Reference to a Record (Name-Resolved Start)
 
 ```
-<@REC home : @gdx:bob$/contacts/[1]>
+<%REC home : @gdx:bob$/contacts/[1]>
 ```
 
-The `@gdx:bob` portion resolves the Object whose Id is `gdx:bob` by scope walk. The `$/contacts/[1]` portion then traverses from that Object to its `contacts` child (matched by `IdSegment`), and then to the first child of `contacts` by document order (matched by `OrdinalSegment`). The reference resolves to that first child, which must be of role Record for the `@REC` prefix to be satisfied.
+The `@gdx:bob` portion resolves the Object whose Id is `gdx:bob` by scope walk. The `$/contacts/[1]` portion then traverses from that Object to its `contacts` child (matched by `IdSegment`), and then to the first child of `contacts` by document order (matched by `OrdinalSegment`). The reference resolves to that first child, which must be of role Record for the `%REC` prefix to be satisfied.
 
 ### B.3 Cross-Document Reference (IRI-Resolved Start)
 
 ```
-<@.STR street : @https://acme.com/people/alice$/address/[2]>
+<%.STR street : @https://acme.com/people/alice$/address/[2]>
 ```
 
-The IRI `https://acme.com/people/alice` resolves (if the implementation supports network resolution) to a remote Object. The path `/address/[2]` traverses from that Object to its `address` child (by Id), and then to the second child of `address` by document order. The reference resolves to a string Qualifier, satisfying the `@.STR` prefix.
+The IRI `https://acme.com/people/alice` resolves (if the implementation supports network resolution) to a remote Object. The path `/address/[2]` traverses from that Object to its `address` child (by Id), and then to the second child of `address` by document order. The reference resolves to a string Qualifier, satisfying the `%.STR` prefix.
 
 ### B.4 Rel-Based Selection Within Current Document
 
@@ -647,7 +648,7 @@ The IRI `https://acme.com/people/alice` resolves (if the implementation supports
     <STR #gdx:givenName name : "Alice">
 >
 
-<@STR alignedName : $/people/alice/#gdx:givenName>
+<%STR alignedName : $/people/alice/#gdx:givenName>
 ```
 
 The path resolves through two `IdSegment` selectors to `<OBJ people/alice>`, then selects its child by Rel field. The reference resolves to the string Property.
@@ -657,7 +658,7 @@ This example assumes only one child of `<OBJ people/alice>` carries `Rel` `gdx:g
 ### B.5 Mixed Selectors
 
 ```
-<@REC postal : @gdx:bob$/contacts/[1]/#gdx:postalAddress>
+<%REC postal : @gdx:bob$/contacts/[1]/#gdx:postalAddress>
 ```
 
 The `@gdx:bob` portion name-resolves the Object. The path then applies, in order:
@@ -676,14 +677,14 @@ Each segment uses exactly one selector kind, as required by the one-selector-per
     <STR #gdx:nickname formal : "Alicia">
 >
 
-<@STR x : $/people/alice/#gdx:nickname>     // unresolved: terminal match set has cardinality 2
+<%STR x : $/people/alice/#gdx:nickname>     // unresolved: terminal match set has cardinality 2
 ```
 
 The path is syntactically well-formed and parses correctly. However, the terminal `RelSegment` matches two Properties. In address mode (§7), the resolver MUST NOT pick a first match; the reference is unresolved. To resolve to a specific Property, the author must refine the path — for example by Ordinal:
 
 ```
-<@STR first  : $/people/alice/[1]>   // first child by order
-<@STR second : $/people/alice/[2]>   // second child by order
+<%STR first  : $/people/alice/[1]>   // first child by order
+<%STR second : $/people/alice/[2]>   // second child by order
 ```
 
 ### B.7 Reference to a Qualifier
@@ -695,10 +696,10 @@ The path is syntactically well-formed and parses correctly. However, the termina
     >
 >
 
-<@.STR currencyRef : $/products/123/price/currency>
+<%.STR currencyRef : $/products/123/price/currency>
 ```
 
-The path traverses Object → Property → Qualifier. The terminal element is the `<.STR currency>` Qualifier; the enclosing `@.STR` prefix matches its role (string Qualifier). The reference resolves successfully.
+The path traverses Object → Property → Qualifier. The terminal element is the `<.STR currency>` Qualifier; the enclosing `%.STR` prefix matches its role (string Qualifier). The reference resolves successfully.
 
 ### B.8 Reference to a VAL Slot
 
@@ -709,10 +710,10 @@ The path traverses Object → Property → Qualifier. The terminal element is th
     >
 >
 
-<@VAL d : $/orders/42/delivery>
+<%VAL d : $/orders/42/delivery>
 ```
 
-The path resolves to the VAL slot. The `@VAL` prefix matches the role. To reach the occupant Record instead, the path would extend by one more segment selecting the Record (e.g., by ordinal: `$/orders/42/delivery/[1]`).
+The path resolves to the VAL slot. The `%VAL` prefix matches the role. To reach the occupant Record instead, the path would extend by one more segment selecting the Record (e.g., by ordinal: `$/orders/42/delivery/[1]`).
 
 ### B.9 Key-Based Reference to a Non-Identified Element
 
@@ -731,7 +732,7 @@ The path resolves to the VAL slot. The `@VAL` prefix matches the role. To reach 
 >
 
 <OBJ compliance/incident-7
-    <@REC originating : @system/audit-log&entry-12345>
+    <%REC originating : @system/audit-log&entry-12345>
 >
 ```
 
@@ -751,7 +752,7 @@ The Key-based form is location-stable: if the log document is restructured (entr
 >
 
 <OBJ compliance/internal-incident
-    <@REC originating : &entry-12345>
+    <%REC originating : &entry-12345>
 >
 ```
 
@@ -767,7 +768,7 @@ When the anchor of a composed reference is not an Object — for example, a REL 
 >
 
 <REL other-rel
-    <@STR descRef : @REL:my-rel&description>
+    <%STR descRef : @REL:my-rel&description>
 >
 ```
 
@@ -776,7 +777,7 @@ The reference `@REL:my-rel&description` is an `IdKeyRef` with an explicit `Ancho
 The same pattern applies when the anchor is a Template, a Package, or a Group:
 
 ```
-<@STR slotDoc : @DEFOBJ:com.acme.Customer&firstName-doc>
+<%STR slotDoc : @DEFOBJ:com.acme.Customer&firstName-doc>
 <@OBJ entry   : @PKG:vendor-pack&primary-product>
 ```
 

@@ -1,6 +1,6 @@
 # GDX Compact Form — Grammar Specification
 
-- **Status:** Draft v0.5 (working draft)
+- **Status:** Draft v0.6 (working draft)
 - **Date:** 2026-05-20
 - **Companion to:** GDX Core Specification v0.11.0, GDX Standard Grammar v0.7, GDX Path Expressions v0.1
 - **Authors:** Julian Mussi
@@ -347,20 +347,20 @@ The `@anchor` production may carry an optional role marker (`@OBJ:id`, `@REL:id`
 
 ```
 @OBJ #knows : @bob                       // @-edge, identifier-mode target
-@REC mailing : $/people/alice/address    // Reference, path-mode
-@REC home : @people/bob$/contacts/[1]    // Reference, composed name + path (OBJ default)
-@REC shipping : &shippingAddress         // Reference, key-mode (current document)
-@REC origEvent : @system/log&entry-12345 // Reference, composed name + key (OBJ default)
-@STR desc : @REL:my-rel&description      // Reference, composed name + key, REL anchor
-@STR slotDoc : @DEFOBJ:com.acme.Customer&firstName-doc  // Reference, Template anchor
+%REC mailing : $/people/alice/address    // REF, path-mode
+%REC home : @people/bob$/contacts/[1]    // REF, composed name + path (OBJ default)
+%REC shipping : &shippingAddress         // REF, key-mode (current document)
+%REC origEvent : @system/log&entry-12345 // REF, composed name + key (OBJ default)
+%STR desc : @REL:my-rel&description      // REF, composed name + key, REL anchor
+%STR slotDoc : @DEFOBJ:com.acme.Customer&firstName-doc  // REF, Template anchor
 ```
 
-@-edges and References (Core Spec §7.4 and §7.16) appear in Compact Form with the prefix in the usual position:
+@-edges (Core Spec §7.4) and REFs (Core Spec §7.16) appear in Compact Form with the prefix in the usual position:
 
 ```
 O alice
   S name : "Alice"
-  @DEFOBJ #conformsTo : @Customer
+  %DEFOBJ #conformsTo : @Customer
   @OBJ #knows : @bob
 ```
 
