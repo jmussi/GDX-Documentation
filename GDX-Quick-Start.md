@@ -1,6 +1,6 @@
 # GDX — Quick Start
 
-- **Status:** Draft v0.11.0 (companion to GDX Core Specification v0.11.0, working draft, pre-1.0)
+- **Status:** Draft v0.12.0 (companion to GDX Core Specification v0.12.0, working draft, pre-1.0)
 - **Date:** 2026-05-20
 - **Editors:** 
 - **Authors:** Julian Mussi
@@ -96,14 +96,14 @@ A Set holds multiple values of the same role:
 
 The `*` suffix on the prefix turns it into a Set. `STR*` is "Set of strings." The members carry the same prefix (`STR`) but no identifier — they identify themselves by position and value.
 
-## 5. References Between Objects
+## 5. Edges Between Objects
 
-Objects can reference other Objects, forming graph relationships:
+Objects can carry @-edges to other Objects, forming graph relationships:
 
 ```
 <OBJ alice
     <STR firstName : "Alice">
-    <EDGE #knows : @bob>
+    <@OBJ #knows : @bob>
 >
 
 <OBJ bob
@@ -111,7 +111,7 @@ Objects can reference other Objects, forming graph relationships:
 >
 ```
 
-The Edge `EDGE #knows : @bob` says: from `alice`, there is a `knows` relationship to `bob`. The `#` introduces the predicate (`knows`); the `@` introduces a reference to another Object's identifier.
+The @-edge `<@OBJ #knows : @bob>` says: from `alice`, there is a `knows` relationship to `bob`. The `@OBJ` prefix declares the target is an Object; the `#` introduces the predicate (`knows`); the `@bob` Resource is a reference to another Object's identifier.
 
 This is the graph dimension of GDX: tree-structured documents with explicit relationships between elements that aren't parent-child.
 

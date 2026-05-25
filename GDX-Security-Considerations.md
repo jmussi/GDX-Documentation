@@ -1,6 +1,6 @@
 # GDX — Security Considerations
 
-- **Status:** Draft v0.11.0 (companion to GDX Core Specification v0.11.0, working draft, pre-1.0)
+- **Status:** Draft v0.12.0 (companion to GDX Core Specification v0.12.0, working draft, pre-1.0)
 - **Date:** 2026-05-20
 - **Editors:** 
 - **Authors:** Julian Mussi
@@ -43,7 +43,7 @@ These limits exist to prevent denial-of-service attacks against parsers processi
 
 ## 2. Reference Cycle Exploitation
 
-GDX permits Edge references between Objects, allowing arbitrary graph structures including cycles. Cycles are valid data and MUST be supported by parsers and storage layers. The security risk arises when adversarial documents use cycles to attack consumers that traverse references without cycle detection — for example, a service that loads referenced Objects to display them, or that walks Edge networks to compute derived data.
+GDX permits @-edges (`@OBJ`, `@REL`) between graph-entities, allowing arbitrary graph structures including cycles. Cycles are valid data and MUST be supported by parsers and storage layers. The security risk arises when adversarial documents use cycles to attack consumers that traverse references without cycle detection — for example, a service that loads referenced Objects to display them, or that walks @-edge networks to compute derived data.
 
 Attack vectors:
 
@@ -70,7 +70,7 @@ Mitigations:
 
 ## 4. Network Resolution
 
-The default Type and Edge reference resolution orders (Core Spec §9.5.2 and §7.4.1) include "globally-resolvable IRIs" as a fallback resolution scope. Implementations that resolve such references over the network expose themselves to several risks:
+The default Type and @-Edge reference resolution orders (Core Spec §9.5.2 and §7.4.1) include "globally-resolvable IRIs" as a fallback resolution scope. Implementations that resolve such references over the network expose themselves to several risks:
 
 - **Information disclosure.** Network requests to URLs in untrusted documents can leak information about the processing system to attacker-controlled servers (timing, request patterns, internal IP addresses).
 - **Server-side request forgery (SSRF).** Documents containing IRIs targeting internal network addresses can use the parser as a proxy to reach systems otherwise inaccessible to the attacker.

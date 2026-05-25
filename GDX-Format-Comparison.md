@@ -1,6 +1,6 @@
 # GDX — Format Comparison
 
-- **Status:** Draft v0.11.0 (companion to GDX Core Specification v0.11.0, working draft, pre-1.0)
+- **Status:** Draft v0.12.0 (companion to GDX Core Specification v0.12.0, working draft, pre-1.0)
 - **Date:** 2026-05-20
 - **Editors:** 
 - **Authors:** Julian Mussi
@@ -270,17 +270,17 @@ For applications where schema and data should share a format and travel together
 ```
 <OBJ alice
     <STR name : "Alice">
-    <EDGE #knows : @bob
+    <@OBJ #knows : @bob
         <STR since : "2024-01-15">
     >
-    <EDGE #knows : @carol
+    <@OBJ #knows : @carol
         <STR since : "2024-03-22">
     >
 >
 
 <OBJ bob
     <STR name : "Bob">
-    <EDGE #knows : @carol
+    <@OBJ #knows : @carol
         <STR since : "2024-02-08">
     >
 >
@@ -363,10 +363,10 @@ CREATE (bob)-[:KNOWS {since: '2024-02-08'}]->(carol)
 
 Graph data exposes a real format-design tension: how do you express edges, particularly edges with attributes? The four formats above each handle it differently:
 
-- **GDX** uses Edge elements (`EDGE`/`E`) as children of the source Object. The Edge's `#rel` field names the predicate (`knows`), the Resource is a reference to the target (`@bob`), and the Edge's children carry the edge attributes (`since`). The pattern naturally extends to multiple edges per source and edges with rich attribute structure. GDX is essentially a property-graph format in this dimension.
+- **GDX** uses the @-Edge family (`@OBJ`, `@REL`) as children of the source element. The edge's `#rel` field names the predicate (`knows`), the Resource is a reference to the target (`@bob`), and the edge's children carry the edge attributes (`since`). The pattern naturally extends to multiple edges per source and edges with rich attribute structure, and an optional identity on the edge (per Core Spec §7.4 axiom E6) gives the edge itself a persistent substance that survives changes to its predicate and attributes — named edges without RDF-style reification. GDX is essentially a property-graph format in this dimension.
 - **RDF basic** expresses simple subject-predicate-object triples cleanly but lacks a native way to attach attributes to a triple. The historical workarounds (reification, n-ary relations) are verbose and rarely used in practice.
 - **RDF-star** adds the `<< s p o >>` syntax to address this, allowing properties on triples directly. This is now standardized as RDF 1.2 and mirrors the property-graph model.
-- **Property graph databases** (Neo4j, Neptune, etc.) treat edge attributes as first-class. GDX's Edge model is essentially the same shape; GDX adds the document-friendly serialization that property graph databases typically lack.
+- **Property graph databases** (Neo4j, Neptune, etc.) treat edge attributes as first-class. GDX's @-Edge model is essentially the same shape; GDX adds the document-friendly serialization that property graph databases typically lack and a name-by-identity substance/predication split that property graph databases handle case-by-case.
 - **JSON** has no native graph notion. Embedded references (`{"target": "bob"}`) are convention; the consumer must know to traverse them. References across documents require additional convention (JSON Pointer, URI fragments, etc.). For small graphs this works; for large graphs it becomes unwieldy.
 
 GDX occupies a useful position in this space: it expresses property-graph semantics natively (edges with attributes), supports graph traversal through reference resolution, and serializes as a document-friendly text format. For systems that want graph semantics without committing to a graph database stack, GDX provides a natural representation.

@@ -1,6 +1,6 @@
 # GDX Standard Form — Grammar Specification
 
-- **Status:** Draft v0.7 (working draft)
+- **Status:** Draft v0.8 (working draft)
 - **Date:** 2026-05-20
 - **Companion to:** GDX Core Specification v0.11.0
 - **Authors:** Julian Mussi
@@ -126,9 +126,12 @@ The element forms recognized at the grammar level, organized by role category:
 ObjectElement       ::= "<" WS? ObjectPrefix ElementBody WS? ">"
 RecordElement       ::= "<" WS? RecordPrefix ElementBody WS? ">"
 PropertyElement     ::= "<" WS? PropertyPrefix ElementBody WS? ">"
-EdgeElement         ::= "<" WS? EdgePrefix ElementBody WS? ">"
 BlockElement        ::= "<" WS? BlockPrefix ElementBody WS? ">"
 AnnotationElement   ::= "<" WS? AnnotationPrefix ElementBody WS? ">"
+
+(* @-Edge elements (@OBJ, @REL) are produced by the Reference operator
+   composing with ObjectPrefix or RelPrefix and follow §7.4 of the Core
+   Specification. They do not have a separate EdgeElement production. *)
 
 (* Refinement-modifier compositions *)
 QualifierElement    ::= "<" WS? QualifierComposition ElementBody WS? ">"
@@ -476,7 +479,6 @@ ModifierBase        ::= RefinementBase
                       | AnnotationPrefix
                       | TransportPrefix
                       | BlockPrefix
-                      | EdgePrefix
                       | ValPrefix
                       | BasePrefix
 
@@ -526,9 +528,11 @@ PropertyBase        ::= "STR"   | "S"
 
 RecordBase          ::= "REC"   | "R"
 
-(* Data-layer specialty prefixes *)
-
-EdgePrefix          ::= "EDGE" | "E"
+(* The EDGE/E prefix used through Core Spec v0.11.0 is removed in v0.12.0;
+   the @-Edge family (@OBJ, @REL — see Core Spec §7.4) replaces it. The
+   `E` minified slot is currently unassigned. @-Edges and References are
+   produced by the `@` operator (§7.2 below) composing with the @-Edge
+   family members or with other base prefixes respectively. *)
 
 (* Template prefixes — canonical only, no minified form *)
 
@@ -620,7 +624,7 @@ The sigils `&`, `#`, `--`, and `@` MUST be immediately followed by their content
 <STR &  1 : "x">       // whitespace after & is malformed
 <STR #  schema:foo>    // whitespace after # is malformed
 <REC address --  Foo>  // whitespace after -- is malformed
-<EDGE #knows : @  Bob>  // whitespace after @ is malformed
+<@OBJ #knows : @  Bob>  // whitespace after @ is malformed
 ```
 
 ### 8.2 Sigil-Preceding Whitespace
@@ -753,10 +757,12 @@ UriReference    ::= UriScheme "://" UriChars
 // The grammar shows uppercase canonical case for clarity.
 
 // --- Base prefixes ---
+// The EDGE/E prefix used through Core Spec v0.11.0 is removed in v0.12.0;
+// the @-Edge family (@OBJ, @REL — see Core Spec §7.4) replaces it. The
+// `E` minified slot is currently unassigned.
 
 ObjectPrefix     ::= "OBJ"  | "O"
 RecordPrefix     ::= "REC"  | "R"
-EdgePrefix       ::= "EDGE" | "E"
 
 PropertyPrefix   ::= "STR"   | "S"
                    | "INT"   | "I"
@@ -825,7 +831,6 @@ ModifierBase     ::= RefinementBase
                    | AnnotationPrefix
                    | TransportPrefix
                    | BlockPrefix
-                   | EdgePrefix
                    | ValPrefix
                    | BasePrefix
 

@@ -1,6 +1,6 @@
 # GDX — Cookbook of Canonical Patterns
 
-- **Status:** Draft v0.11.0 (companion to GDX Core Specification v0.11.0, working draft, pre-1.0)
+- **Status:** Draft v0.12.0 (companion to GDX Core Specification v0.12.0, working draft, pre-1.0)
 - **Date:** 2026-05-20
 - **Editors:** 
 - **Authors:** Julian Mussi
@@ -16,7 +16,7 @@ The vocabulary identifiers used in these examples (`gdx:`, `schema:`, `vocab:`, 
 
 ## Status of This Document
 
-This is the v0.11.0 working draft of the Cookbook, companion to the GDX Core Specification v0.11.0. The patterns documented here have stabilized alongside the core; future revisions will add patterns as common use cases emerge but will not remove existing entries except to merge or restructure them. v0.11.0 migrates leading-slash identifiers in examples to the new hierarchical-local form (no leading `/`); adds Pattern 16 (Parallel Constraint Vocabularies on One Template) demonstrating Layer 2b vocabulary pluralism; adds patterns demonstrating path-mode references (Pattern 23) and key-mode anchor references (Pattern 24); adds Pattern 20 (Adjunct Extension for Non-Schema Metadata) demonstrating Extensions beyond schema constraints; and adds Pattern 26 (Complete Vocabulary Document) showing how RELs with predicate-semantic Extensions, concept Objects, and Templates compose into a self-contained vocabulary.
+This is the v0.12.0 working draft of the Cookbook, companion to the GDX Core Specification v0.12.0. The patterns documented here have stabilized alongside the core; future revisions will add patterns as common use cases emerge but will not remove existing entries except to merge or restructure them. v0.12.0 migrates `<EDGE …>` examples to `<@OBJ …>` per the @-Edge family (Core Spec §7.4, entry 41 of the v0.12.0 changelog); Pattern 7 (Edge Between Entities) is rewritten to demonstrate the new family including an edge-as-substance example (axiom E6 identity); Pattern 22 is retitled "Typed Reference to a Non-Graph-Entity" with `@DEFOBJ`/`@REC` examples reflecting the Reference family scope (graph-entity references are @-edges, covered by Pattern 7). v0.11.0 migrates leading-slash identifiers in examples to the new hierarchical-local form (no leading `/`); adds Pattern 16 (Parallel Constraint Vocabularies on One Template) demonstrating Layer 2b vocabulary pluralism; adds patterns demonstrating path-mode references (Pattern 23) and key-mode anchor references (Pattern 24); adds Pattern 20 (Adjunct Extension for Non-Schema Metadata) demonstrating Extensions beyond schema constraints; and adds Pattern 26 (Complete Vocabulary Document) showing how RELs with predicate-semantic Extensions, concept Objects, and Templates compose into a self-contained vocabulary.
 
 Changes in v0.10.0 from v0.9.6 reflect Core Specification v0.10.0:
 
@@ -156,21 +156,21 @@ The `&Key` field is NOT used for Template-instance alignment; Keys are a separat
 
 ## 7. Edge Between Entities
 
-Edges express directed relationships between Objects.
+@-edges (`@OBJ`, `@REL`) express directed relationships between graph-entities.
 
 ```
 <OBJ Alice
-    <EDGE #knows : @Bob>
+    <@OBJ #knows : @Bob>
 >
 ```
 
 This reads as: alice — knows → bob.
 
-Edges with attributes carry them as Record-like children:
+@-edges with attributes carry them as Record-like children:
 
 ```
 <OBJ Alice
-    <EDGE #knows : @Bob
+    <@OBJ #knows : @Bob
         <STR since : "2024-01-15">
         <FLOAT weight : 0.8>
     >
@@ -179,7 +179,20 @@ Edges with attributes carry them as Record-like children:
 
 The edge attributes describe the *relationship*, not either endpoint.
 
-EDGE asserts a labeled graph relationship — the link itself is a structural participant with its own attributes. When you want a typed pointer instead (a reference without the graph-statement framing or edge attributes), use the `@KIND` family (§22). Use EDGE when the relationship matters; use `@OBJ` when the link is just an identifier.
+An @-edge with identity is a persistent edge-entity — its substance endures across changes to predicate or attributes, and the edge can be referenced from other documents:
+
+```
+<OBJ Alice
+    <@OBJ employmentEdge #worksFor : @com.acme
+        <STR startDate : "2024-01-15">
+        <FLOAT confidence : 0.95>
+    >
+>
+```
+
+The identifier `employmentEdge` is the edge's substance (per §7.4 axiom E6); the `#worksFor` predicate is its current assertion; the attributes describe the edge itself. Two edges with the same source, predicate, and target are distinct if their identities differ.
+
+An @-edge asserts a graph statement and admits attribute children. When you want a leaf-like typed pointer instead (no graph-statement framing, no attribute children), use the Reference family (§22). Use an @-edge when the relationship matters and the target is a graph-entity (Object or REL); use a Reference for typed pointers to non-graph-entities (Templates, interior elements addressed by path or key).
 
 ## 8. Refining a Property with Constraints
 
@@ -450,16 +463,16 @@ A migration directive attached to a Template:
 >
 ```
 
-A confidence Extension on an Edge:
+A confidence Extension on an @-edge:
 
 ```
-<EDGE #knows : @bob
+<@OBJ #knows : @bob
     <_FLOAT analytics:confidence : 0.87>
     <_STR analytics:source : "co-authorship-graph">
 >
 ```
 
-In each case, GDX records the Extension as a well-formed element; nothing in GDX-core interprets the vocabulary identifier (`acme:source-system`, `ui:color`, `migrate:from-v1`, `analytics:confidence`). A consumer that understands the vocabulary processes the Extension; one that doesn't ignores it. Multiple vocabularies may coexist on the same element — the same `Object`, `Property`, or `Edge` may carry `xsd:`, `acme:`, `ui:`, and `analytics:` Extensions side by side, each processed by its respective consumer.
+In each case, GDX records the Extension as a well-formed element; nothing in GDX-core interprets the vocabulary identifier (`acme:source-system`, `ui:color`, `migrate:from-v1`, `analytics:confidence`). A consumer that understands the vocabulary processes the Extension; one that doesn't ignores it. Multiple vocabularies may coexist on the same element — the same Object, Property, or @-edge may carry `xsd:`, `acme:`, `ui:`, and `analytics:` Extensions side by side, each processed by its respective consumer.
 
 **Extension vs Annotation.** Annotations (Pattern 19) are free-text without a vocabulary identifier; Extensions are vocabulary-keyed and typed. Use Annotation for human commentary that doesn't need machine interpretation; use Extension when a specific consumer needs to recognize the metadata by identifier and act on it programmatically.
 
@@ -477,30 +490,30 @@ Object identifiers are not constrained to any particular scheme. Use whatever fi
 <OBJ https://acme.com/people/alice ...>
 ```
 
-References to these Objects use the `@` prefix:
+@-edges to these Objects use the `@OBJ` prefix:
 
 ```
-<EDGE #knows : @Alice>
-<EDGE #references : @people/alice>
-<EDGE #describes : @7f3a2b9c-4e21-4f88-91d5-abcdef012345>
-<EDGE #cites : @https://acme.com/people/alice>
+<@OBJ #knows : @Alice>
+<@OBJ #references : @people/alice>
+<@OBJ #describes : @7f3a2b9c-4e21-4f88-91d5-abcdef012345>
+<@OBJ #cites : @https://acme.com/people/alice>
 ```
 
 The resolver determines how each reference resolves; the format does not constrain the scheme. Identifiers may not begin with `/` (Core Spec §5.4.1, narrowed in v0.11.0); the leading-slash form is the path-mode reference syntax (see Pattern 21).
 
-## 22. Typed Reference to an Addressable Element
+## 22. Typed Reference to a Non-Graph-Entity
 
-When you want a pointer to another element — an Object, a REL declaration, a Template — without making a graph statement about it, use the `@KIND` reference family. The prefix names what is being referenced; the Resource carries the target's identifier.
+When you want a pointer to a Template, an interior element of an Object (Record, Block, value-Property), a Qualifier value, or another non-graph-entity, use the Reference family (Core Spec §7.16). References are leaf-like — they identify the target and stop, with no `#rel` predicate and no attribute children. Pointers to graph-entities (Objects, REL declarations) are @-edges instead and belong to the @-Edge family (Pattern 7).
 
 ```
 <OBJ ServerConfig
     <STR name : "web-01">
-    <@OBJ owner : @teams/platform>
-    <@OBJ fallback : @servers/web-02>
+    <@DEFOBJ #conformsTo : @ServerConfigV2>
+    <@REC sharedDefaults : @global-defaults$/server-defaults>
 >
 ```
 
-Each `@OBJ` element is a typed pointer. Unlike an EDGE, a typed reference is leaf-like — it doesn't carry edge metadata like weight or timestamp. It identifies a target and stops there. The reader (and validator) knows the target's kind from the prefix: `@OBJ` resolves to an Object, `@REL` to a REL declaration, `@DEFOBJ` to an Object Template, and so on.
+`@DEFOBJ` is a Reference to a Template; `@REC` is a Reference to a Record at an interior path of another Object. The Reference family covers every `@KIND` except `@OBJ` and `@REL` (which target graph-entities and are @-edges). The reader and validator know the target's kind from the prefix: `@DEFOBJ` resolves to a Template, `@REC` to a Record, `@BLK` to a Block, `@.STR` to a string Qualifier, and so on.
 
 Qualifiers may refine a reference's meaning:
 
@@ -960,15 +973,15 @@ Templates declare the contract; instances claim to satisfy it; validators check.
 
 ## 36. Use as Graph-Structured Data
 
-Adding Edges and IRI-based Object identifiers yields fully graph-structured data with relationships, attributes on relationships, and external resolvability.
+Adding @-edges and IRI-based Object identifiers yields fully graph-structured data with relationships, attributes on relationships, and external resolvability.
 
 ```
 <OBJ https://infra.acme.com/server/web01
     <STR name : "web-01">
-    <EDGE #vocab:dependsOn : @https://infra.acme.com/db/primary
+    <@OBJ #vocab:dependsOn : @https://infra.acme.com/db/primary
         <STR since : "2024-01-15">
     >
-    <EDGE #vocab:routesTo : @https://infra.acme.com/cache/edge>
+    <@OBJ #vocab:routesTo : @https://infra.acme.com/cache/edge>
 >
 ```
 

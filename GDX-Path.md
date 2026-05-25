@@ -1,6 +1,6 @@
 # GDX Path Expressions — Specification
 
-- **Status:** Draft v0.1 (working draft)
+- **Status:** Draft v0.2 (working draft)
 - **Date:** 2026-05-20
 - **Companion to:** GDX Core Specification v0.11.0
 - **Authors:** Julian Mussi
@@ -349,7 +349,7 @@ For each segment in order, the resolver computes the **match set** — the set o
 
 A segment match operates only on the **direct children** of the current element. Path expressions in v1 provide no descendant-axis operator; descendant traversal is reserved (§9).
 
-The match operates on all children regardless of their role or modifier: a segment may match a Property, a Record, a Block, an Edge, a Set, a Qualifier, an Extension, a Node-zone element, an Object (in transport-layer contexts), or any other element type. The role of the matched element is checked against the consumer's role requirement (§7 for address mode); the segment match itself is role-agnostic.
+The match operates on all children regardless of their role or modifier: a segment may match a Property, a Record, a Block, an @-edge (`@OBJ`, `@REL`), a Set, a Qualifier, an Extension, a Node-zone element, a VAL slot, an Object (in transport-layer contexts), or any other element type. The role of the matched element is checked against the consumer's role requirement (§7 for address mode); the segment match itself is role-agnostic.
 
 ### 6.2 Match Set Cardinality
 
@@ -644,15 +644,15 @@ The IRI `https://acme.com/people/alice` resolves (if the implementation supports
 
 ```
 <OBJ people/alice
-    <EDGE #gdx:knows : @people/bob>
+    <STR #gdx:givenName name : "Alice">
 >
 
-<@EDGE primary : $/people/alice/#gdx:knows>
+<@STR alignedName : $/people/alice/#gdx:givenName>
 ```
 
-The path resolves through two `IdSegment` selectors to `<OBJ people/alice>`, then selects its child by Rel field. The reference resolves to the Edge.
+The path resolves through two `IdSegment` selectors to `<OBJ people/alice>`, then selects its child by Rel field. The reference resolves to the string Property.
 
-This example assumes only one Edge child of `<OBJ people/alice>` carries `Rel` `gdx:knows`. If multiple Edges shared that Rel, the path would match multiple elements and the address-mode resolver would treat the reference as unresolved (§7).
+This example assumes only one child of `<OBJ people/alice>` carries `Rel` `gdx:givenName`. If multiple Properties shared that Rel, the path would match multiple elements and the address-mode resolver would treat the reference as unresolved (§7).
 
 ### B.5 Mixed Selectors
 
@@ -672,18 +672,18 @@ Each segment uses exactly one selector kind, as required by the one-selector-per
 
 ```
 <OBJ people/alice
-    <EDGE #gdx:knows : @people/bob>
-    <EDGE #gdx:knows : @people/carol>
+    <STR #gdx:nickname casual : "Ali">
+    <STR #gdx:nickname formal : "Alicia">
 >
 
-<@EDGE x : $/people/alice/#gdx:knows>     // unresolved: terminal match set has cardinality 2
+<@STR x : $/people/alice/#gdx:nickname>     // unresolved: terminal match set has cardinality 2
 ```
 
-The path is syntactically well-formed and parses correctly. However, the terminal `RelSegment` matches two Edges. In address mode (§7), the resolver MUST NOT pick a first match; the reference is unresolved. To resolve to a specific Edge, the author must refine the path — for example by Ordinal:
+The path is syntactically well-formed and parses correctly. However, the terminal `RelSegment` matches two Properties. In address mode (§7), the resolver MUST NOT pick a first match; the reference is unresolved. To resolve to a specific Property, the author must refine the path — for example by Ordinal:
 
 ```
-<@EDGE first  : $/people/alice/[1]>   // first child by order, assuming it is the desired Edge
-<@EDGE second : $/people/alice/[2]>   // second child by order
+<@STR first  : $/people/alice/[1]>   // first child by order
+<@STR second : $/people/alice/[2]>   // second child by order
 ```
 
 ### B.7 Reference to a Qualifier
