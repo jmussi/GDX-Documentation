@@ -234,6 +234,35 @@ Companion-doc cascade (to be migrated):
 
 Migration: every leaf-like `@KIND` reference (no `#rel`, no attribute children) becomes `%KIND` mechanically. `@DEFOBJ`, `@REC`, `@BLK`, `@.STR`, `@_INT`, `@VAL`, `@KIND*` for non-graph-entity targets all migrate. The `@OBJ` and `@REL` forms WITH `#rel` and attribute children continue to work as @-edges with no syntactic change; the conceptual reading shifts (under v0.12, leaf-like vocabulary-metadata links; under v0.13, first-class associative graph statements per E4). Documents using `@OBJ #conformsTo : @Template` patterns where `#conformsTo` is *compositional* (slot-aligning, not relating) migrate to `%DEFOBJ #conformsTo : @Template`; the change is semantically meaningful and documents will need review on a case-by-case basis. The `@OBJ*` and `@REL*` Set forms (rare in practice) are no longer well-formed; multiple edges become siblings.
 
+(43) **§7.15 REL composition widened; "defined by purpose, not by structure" principle made explicit.** A REL is defined by its purpose — naming a first-class predicate — and that purpose is fully discharged by its identifier. The prior matrix held RELs to a stricter standard than any other role ("every child must be semantically load-bearing"); the new matrix admits the full data-carrier set, with structurally-justified exclusions only.
+
+The REL composition row widens from `@-Edge, REF, Extension, Annotation` to add `Property, Record, Block, Set, VAL`. Authors may now attach labels (`<STR rdfs:label : "knows">`), descriptions (`<STR rdfs:comment : "...">`), version markers, authorship, alias Sets, documentation Records, or any other data carrier directly to a REL — the same kinds of children that stand on any Object. Properties on a REL are data carriers whose meaning is consumer-conferred, never by GDX-core; meaninglessness is never disqualifying. RELs are held to no stricter standard than any other element.
+
+The structurally-justified exclusions remain:
+
+- **Object** — vocabulary entities don't contain data-instance Objects; a contextually false claim about what the REL is.
+- **Node** — RELs are structured vocabulary entities, not semi-structured pockets.
+- **Qualifier** — RELs carry no Resource, so there is nothing to refine.
+- **REL (self)** and **Template (`DEF…`) forms** — vocabulary entities don't nest within RELs. The Template exclusion is an explicit carve-out from modifier transparency (§8.2 rule 9(b)): even though `DEFREC` would otherwise be admitted as a Record-modifier (and REL now admits Record), the `DEF…` forms are blocked because they declare another vocabulary entity, and one vocabulary entity does not nest inside another.
+- **Transport-layer roles (Package, Group)** — transport wrappers do not appear inside vocabulary declarations.
+
+**Property-vs-Extension guidance on RELs.** Both are admitted; the choice communicates intent to consumers:
+
+- Use **Property** for data about the predicate (labels, descriptions, version, authorship) — meaning conferred by the reading consumer (documentation tool, vocabulary browser, lookup index).
+- Use **Extension** for a vocabulary-defined semantic axiom (symmetry, transitivity, cardinality bounds) — meaning conferred by the validator or reasoner that recognizes the vocabulary identifier.
+
+Mechanical rule: would a validator/reasoner act on it? → Extension. Is it for humans or downstream lookup? → Property.
+
+**@-edge target convention on RELs.** The @-Edge family axioms (§7.4 E5) restrict @-edge targets to Objects or RELs structurally. The vocabulary convention for @-edges on a REL is to target concept-Objects or other RELs (predicate-axiom statements like domain/range/inverse). This is convention, not structural enforcement; the matrix admits any @OBJ or @REL target, and the concept-vs-data-instance distinction lives in vocabulary practice.
+
+Cascade in Core Spec:
+- §7.15 rewritten with the "purpose, not structure" framing and the full admitted/excluded enumeration
+- §8.1 matrix REL row: Property, Record, Block, Set, VAL added (✓)
+- §8.2 rule 9 updated with the REL-doesn't-admit-Templates carve-out as new clause 9(b); existing Node-zone isolation becomes clause 9(a)
+- Small vocabulary example in §7.15 updated to show Property usage alongside @-edges and Extensions
+
+Migration: existing REL declarations continue to work; the change is additive. New patterns become available — labels, descriptions, alias Sets, documentation Records can sit on a REL directly without Extension wrapping. Existing uses of `<_STR rdfs:label : "...">` (Extension form) on RELs remain syntactically valid, but `rdfs:label` is data about the predicate rather than a semantic axiom — the cleaner expression is `<STR rdfs:label : "...">` (Property form). Authors should review their `_STR`/`_INT` uses on RELs and reclassify by the Property-vs-Extension guidance above when convenient.
+
 
 ## Table of Contents
 
@@ -2053,18 +2082,43 @@ A Template's *fields* are described using regular prefixes (not `DEF…` prefixe
 |-----------|----------|-----------|------------|
 | `REL`     | —        | —         | required (predicate identifier) |
 
-A Relation Declaration is a **predicate as a first-class entity** — the published counterpart to the `#rel` predicates that @-edges and other elements carry. Conceptually, a REL says "this predicate has its own identity, and the metadata describing it lives here": its domain and range, its inverse, whether it is symmetric or transitive, what vocabulary it participates in, what concepts it connects. Without RELs, predicates would be opaque identifiers used inline; with RELs, the predicate vocabulary itself becomes part of the data model.
+A Relation Declaration is a **predicate as a first-class entity** — the published counterpart to the `#rel` predicates that @-edges and other elements carry. Conceptually, a REL says "this predicate has its own identity, and the metadata describing it lives here": its domain and range, its inverse, whether it is symmetric or transitive, what vocabulary it participates in, what concepts it connects, what humans should read about it. Without RELs, predicates would be opaque identifiers used inline; with RELs, the predicate vocabulary itself becomes part of the data model.
 
 Structurally, a `REL` element declares a predicate as a first-class entity. The `REL` element's identifier is the predicate identifier itself (typically a CURIE such as `gdx:knows` or `schema:givenName`). REL has no minified form.
 
-A REL admits three kinds of children for its vocabulary metadata:
+**Defined by purpose, not by structure.** A REL's function — naming a first-class predicate — is fully discharged by its identifier. It needs no particular children to be well-formed; the predicate-as-named-entity exists once the REL is declared. Children, when present, supply metadata *about* the predicate: data carriers (labels, descriptions, version info), graph-statement axioms about how the predicate relates to concepts and other predicates, primitive-valued semantic claims (symmetry, cardinality), and handles to vocabulary-layer artifacts. None is required; each contributes only what its consumer interprets. A REL is held to no stricter standard than any other element — Properties stand on a REL exactly as they stand on any Object, with meaning conferred by interpreting consumers and meaninglessness never disqualifying.
 
-- **@-edges** (§7.4) — first-class predicate-axiom statements. An `@OBJ` edge to a concept-Object expresses domain or range (`<@OBJ #gdx:domain : @gdx:Person>`); an `@REL` edge to another REL expresses inverse, subPropertyOf, or equivalent-property relationships (`<@REL #gdx:inverse : @gdx:reportsTo>`). These are first-class assertions about the predicate — they can carry their own identity (per §7.4 axiom E6) and attribute children describing the axiom.
-- **Extensions** (§7.10) — primitive-valued vocabulary-defined predicate semantics: symmetry (`<_BOOL gdx:symmetric : true>`), cardinality bounds, transitivity flags, and any other primitive-valued axiom a vocabulary defines. Extensions carry primitive value-kinds only; reference-valued metadata uses the @-edge or Reference forms.
-- **REFs** (§7.16) — leaf-like typed handles to non-graph-entities: a Template that types the range (`<%DEFOBJ #gdx:rangeSchema : @PersonTemplate>`), a vocabulary metadata document, and so on.
+**Admitted children.** A REL admits:
+
+- **Properties** (`STR`, `INT`, `FLOAT`, `BOOL`, `BYTE` and their variants) — data about the predicate: human-facing labels and descriptions, version markers, authorship, deprecation flags, alias strings. Properties on a REL stand as Properties stand everywhere; GDX-core records them as well-formed typed data, and consumers (documentation tools, vocabulary browsers, lookup indices) decide what to do with them.
+- **Records, Sets, Blocks, VAL** — structured data, collections of data, and organizational containers, by the same principle. A REL with a `<REC documentation>` carrying a structured description block, or a `<STR* aliases>` carrying alias strings, is well-formed; the vocabulary that interprets these structures decides their meaning.
+- **@-edges** (§7.4) — first-class predicate-axiom statements. An `@OBJ` edge to a concept-Object expresses domain or range (`<@OBJ #gdx:domain : @gdx:Person>`); an `@REL` edge to another REL expresses inverse, subPropertyOf, or equivalent-property relationships (`<@REL #gdx:inverse : @gdx:reportsTo>`). These are first-class assertions about the predicate — they may carry their own identity (per §7.4 axiom E6) and attribute children describing the axiom.
+- **Extensions** (§7.10) — primitive-valued vocabulary-defined predicate axioms: symmetry (`<_BOOL gdx:symmetric : true>`), cardinality bounds, transitivity flags, and any other primitive-valued semantic claim a vocabulary defines.
+- **REFs** (§7.16) — typed handles to non-graph-entities: a Template that types the range (`<%DEFOBJ #gdx:rangeSchema : @PersonTemplate>`), a documentation document, a related vocabulary file.
+- **Annotations** (§7.6) — free-text notes for human readers.
+
+**Excluded children.** A REL does NOT admit:
+
+- **Object** — vocabulary entities don't contain data-instance Objects; an Object inside a REL would make a contextually false claim about what the REL is.
+- **Node** — RELs are structured vocabulary entities, not semi-structured pockets.
+- **Qualifier** — RELs carry no Resource, so there is nothing to refine.
+- **REL** and **Template (`DEF…`) forms** — vocabulary entities do not nest within RELs. This is an explicit carve-out from the modifier-transparency rule (§8.2 rule 9): even though REL admits Record and Object base roles would otherwise be admitted via transparency, the `DEF…` Template forms and the `REL` form itself are blocked because they declare vocabulary entities, and nesting one vocabulary entity inside another is structurally false.
+- **Transport-layer roles (Package, Group)** — transport wrappers do not appear inside vocabulary declarations.
+
+**Property vs Extension on a REL.** Both Properties and Extensions are admitted; authors choose based on what the metadata *is*:
+
+- Use a **Property** for data about the predicate that a downstream consumer reads as-is — `rdfs:label`, `rdfs:comment`, version markers, authorship, alias strings, deprecation flags. The Property's meaning, if any, is conferred by the consuming vocabulary, never by GDX-core.
+- Use an **Extension** for a vocabulary-defined semantic axiom about the predicate that a validator or reasoner acts on — `gdx:symmetric`, `gdx:transitive`, cardinality bounds, value-set constraints. The Extension's bindingness is conferred by the validator that recognizes the vocabulary identifier.
+
+The mechanical version: would a validator or reasoner act on it? → Extension. Is it for humans or downstream lookup? → Property. Both are well-formed in either case; the choice is about communicating intent to consumers.
+
+**@-edge target convention.** The @-Edge family axioms (§7.4 E5) restrict @-edge targets to Objects or RELs structurally. The vocabulary convention for @-edges on a REL is to target *concept-Objects* (Objects with conceptual identifiers like `@gdx:Person`) or other RELs — to make predicate-axiom statements like domain/range/inverse. This is convention, not enforcement; the matrix admits any @OBJ or @REL target, and the concept-vs-data-instance distinction lives in vocabulary practice, not in GDX-core.
 
 ```
 <REL gdx:knows
+    <STR rdfs:label : "knows">
+    <STR rdfs:comment : "Asserts an acquaintance relationship between two Persons.">
+    <STR* aliases <STR : "is_acquainted_with"> <STR : "is_connected_to">>
     <@OBJ #gdx:domain : @gdx:Person>
     <@OBJ #gdx:range  : @gdx:Person>
     <_BOOL gdx:symmetric : true>
@@ -2075,7 +2129,7 @@ A REL admits three kinds of children for its vocabulary metadata:
 >
 ```
 
-The interplay among the three vocabulary-related elements is:
+The interplay among the three vocabulary-related constructs is:
 
 - The `#rel` field on any element names a predicate by identifier (§3.7). The reference is lightweight — it asserts "this element represents this predicate" without requiring the predicate to be declared anywhere.
 - A `REL` element declares the predicate with its metadata, making the predicate's semantics part of the data model.
@@ -2097,18 +2151,22 @@ The three are coordinated by name: when a `#rel` identifier matches a `REL` iden
 >
 
 <REL gdx:knows
+    <STR rdfs:label : "knows">
+    <STR rdfs:comment : "Asserts an acquaintance relationship.">
     <@OBJ #gdx:domain : @gdx:Person>
     <@OBJ #gdx:range  : @gdx:Person>
     <_BOOL gdx:symmetric : true>
 >
 
 <REL gdx:employs
+    <STR rdfs:label : "employs">
     <@OBJ #gdx:domain : @gdx:Organization>
     <@OBJ #gdx:range  : @gdx:Person>
     <@REL #gdx:inverse : @gdx:employedBy>
 >
 
 <REL gdx:employedBy
+    <STR rdfs:label : "employed by">
     <@OBJ #gdx:domain : @gdx:Person>
     <@OBJ #gdx:range  : @gdx:Organization>
 >
@@ -2120,7 +2178,7 @@ The three are coordinated by name: when a `#rel` identifier matches a `REL` iden
 >
 ```
 
-This document defines a small vocabulary: two concept Objects (`gdx:Person`, `gdx:Organization`), three predicates with declared domain/range and inverse relationships, and one Template binding instance shape to the Person concept. The entire vocabulary is GDX; consumers parse it with the same parser they use for instances.
+This document defines a small vocabulary: two concept Objects (`gdx:Person`, `gdx:Organization`), three predicates with declared domain/range, inverse relationships, and human-facing labels, and one Template binding instance shape to the Person concept. The entire vocabulary is GDX; consumers parse it with the same parser they use for instances. The labels on each REL are Properties (data carried for downstream consumers like documentation tools); the domain/range/inverse are @-edges (graph statements); the symmetry flag is an Extension (a vocabulary-defined axiom a reasoner may act on).
 
 A REL declaration MAY appear at the document root (alongside or instead of primary Objects) or within a vocabulary document. Resolution of `#rel` references follows the same mechanism as Type reference resolution (§9.5).
 
@@ -2303,7 +2361,7 @@ Modifier-bearing and operator-bearing prefixes are validated as their base role 
 | **Annotation**      |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
 | **VAL**             | ✓ | ✓ | ✓ | ✓ | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |   |
 | **Template**        |   | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |
-| **REL**             |   |   |   |   |   |   | ✓ | ✓ |   | ✓ | ✓ |   |   |   |
+| **REL**             |   | ✓ | ✓ | ✓ | ✓ |   | ✓ | ✓ |   | ✓ | ✓ | ✓ |   |   |
 | **Package**         | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   | ✓ | ✓ |   | ✓ | ✓ |
 | **Group**           | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   | ✓ | ✓ |   | ✓ | ✓ |
 | **Document root**   | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
@@ -2316,7 +2374,7 @@ The @-Edge row covers `@OBJ` and `@REL` (§7.4). Per axiom E3, attribute childre
 
 The REF row covers every `%KIND` form (§7.16) — the closed family generated by `%` wrapping any layer-1 role-prefix. REFs are slot-fillers (Property-shaped): they admit Qualifiers (refining the slot binding), Extensions (adjunct metadata about the binding), and Annotations. They MUST NOT carry structural children (Properties, @-edges, Sets, Records, Objects, Blocks, VAL, REL, Template) — that would make a REF a substance rather than a handle.
 
-The REL row admits @-edges (for vocabulary metadata: predicate-to-predicate `@REL` edges expressing inverse, subPropertyOf, etc.; predicate-to-concept `@OBJ` edges expressing domain/range), Extensions (for primitive-valued predicate-semantic axioms such as `_BOOL gdx:symmetric`), and REFs (typed handles to Templates or other non-graph-entities — e.g., a `%DEFOBJ` pointing at a Template that types the range). The combination is what makes a REL declaration a complete vocabulary statement about a predicate — see §7.15.
+The REL row admits the full data-carrier set (Properties, Records, Sets, Blocks, VAL) along with @-edges, REFs, Extensions, and Annotations. The widening reflects the principle that a REL is defined by its *purpose* (naming a first-class predicate) rather than by a canonical structure; data carriers on a REL stand exactly as they stand on any Object, with meaning conferred by interpreting consumers (§7.15). The structurally-justified exclusions are Object (vocabulary entities don't contain data-instance Objects), Node (RELs are structured), Qualifier (RELs carry no Resource), REL (vocabulary entities don't nest), and the Template (`DEF…`) forms (vocabulary entities don't nest — explicit carve-out from rule 9 below). The matrix admits @OBJ and @REL @-edges structurally; the vocabulary convention for predicate-axiom metadata is to target concept-Objects and other RELs (§7.15).
 
 The VAL row admits exactly one occupant of any data-bearing role (Object, Record, Property, Block, Set, @-Edge, REF) plus optional Annotations, Qualifiers, and Extensions as slot-level metadata (§7.11). VAL does NOT admit other VALs (no double-wrapping), Node-zone elements (isolated subtree per §8.2 rule 5), Templates, RELs, transport-layer roles, or refinement/adjunct-only roles (Qualifier/Extension/Annotation alone without an occupant). VAL is admitted by data-container parents (Object, Record, Block, @-Edge) and by Templates as a slot type; it is NOT admitted by Properties (which are scalar leaves), Sets (members are positional and need no slot wrapping), REFs (leaf-like, no structural children), RELs (no data slots), or transport-layer wrappers (which contain Objects directly as payload). A VAL containing a REF as its occupant is structurally valid but degenerate — `<VAL slot <%OBJ : @t>>` is data-model-equivalent to `<%OBJ slot : @t>`; prefer the direct form.
 
@@ -2344,7 +2402,13 @@ The following rules are consequences of the matrix and are repeated here for cla
 
 8. **REL declares predicates.** A REL element may carry Extension children that declare predicate semantics (domain, range, inverse, symmetry, cardinality, etc.). The vocabulary of those Extensions is defined by the GDX Common Vocabulary or by application vocabularies. This is one specific application of rule 7's adjunct-Extension mechanism.
 
-9. **Modifier transparency.** Template (`DEF…`), Qualifier (`.X`), Extension (`_X`), and Node (`NX`) modifier-bearing prefixes are validated as their base role for composition purposes. The modifier never changes what is allowed inside or what may contain the element, with one exception: Node-zone elements have isolated-subtree semantics (rule 5) and admit only Node-zone elements (or Annotations) as children, regardless of what their base role would admit. VAL is not a modifier of a base role — it is its own role (§7.11) and is governed by its own row in the composition matrix.
+9. **Modifier transparency.** Template (`DEF…`), Qualifier (`.X`), Extension (`_X`), and Node (`NX`) modifier-bearing prefixes are validated as their base role for composition purposes. The modifier never changes what is allowed inside or what may contain the element, with two exceptions:
+
+    (a) **Node-zone isolation.** Node-zone elements have isolated-subtree semantics (rule 5) and admit only Node-zone elements (or Annotations) as children, regardless of what their base role would admit.
+
+    (b) **REL does not admit Templates.** Although REL admits Record, Property, Set, Block, and VAL (§7.15), the Template (`DEF…`) forms of those roles are NOT admitted under REL. This is an explicit carve-out: vocabulary entities (REL declarations, Template declarations) do not nest within REL declarations, even when modifier transparency would otherwise permit it. The same principle excludes nested `REL` children (already absent from the matrix REL row). The carve-out is principled rather than mechanical: a nested vocabulary declaration inside a REL would make a contextually false claim about what the REL is (§7.15).
+
+    VAL is not a modifier of a base role — it is its own role (§7.11) and is governed by its own row in the composition matrix.
 
 10. **Transport non-nesting.** Packages MUST NOT contain other Packages. Groups MUST NOT contain Packages. Transport-layer roles form a controlled structure: a Package may contain Groups and data-layer items; a Group may contain other Groups and data-layer items.
 

@@ -16,7 +16,7 @@ The vocabulary identifiers used in these examples (`gdx:`, `schema:`, `vocab:`, 
 
 ## Status of This Document
 
-This is the v0.13.0 working draft of the Cookbook, companion to the GDX Core Specification v0.13.0. The patterns documented here have stabilized alongside the core; future revisions will add patterns as common use cases emerge but will not remove existing entries except to merge or restructure them. v0.13.0 migrates all leaf-like `@KIND` references to the new `%KIND` REF family (Core Spec §7.16, entry 42 of the v0.13.0 changelog); Pattern 22 is rewritten as "Typed REF — Slot Holding a Handle to an Independent Element" and now includes a reification subsection (REF to an @-edge via `%@OBJ`/`%@REL`); Pattern 27 (Template Version Chain) is updated with the conceptual-shift note (Templates are vocabulary-layer, not graph-entities, so version chains are slot-bindings via `%DEFOBJ`, not graph statements). v0.12.0 migrates `<EDGE …>` examples to `<@OBJ …>` per the @-Edge family (Core Spec §7.4, entry 41 of the v0.12.0 changelog); Pattern 7 (Edge Between Entities) is rewritten to demonstrate the new family including an edge-as-substance example (axiom E6 identity). v0.11.0 migrates leading-slash identifiers in examples to the new hierarchical-local form (no leading `/`); adds Pattern 16 (Parallel Constraint Vocabularies on One Template) demonstrating Layer 2b vocabulary pluralism; adds patterns demonstrating path-mode references (Pattern 23) and key-mode anchor references (Pattern 24); adds Pattern 20 (Adjunct Extension for Non-Schema Metadata) demonstrating Extensions beyond schema constraints; and adds Pattern 26 (Complete Vocabulary Document) showing how RELs with predicate-semantic Extensions, concept Objects, and Templates compose into a self-contained vocabulary.
+This is the v0.13.0 working draft of the Cookbook, companion to the GDX Core Specification v0.13.0. The patterns documented here have stabilized alongside the core; future revisions will add patterns as common use cases emerge but will not remove existing entries except to merge or restructure them. v0.13.0 migrates all leaf-like `@KIND` references to the new `%KIND` REF family (Core Spec §7.16, entry 42 of the v0.13.0 changelog); Pattern 22 is rewritten as "Typed REF — Slot Holding a Handle to an Independent Element" and now includes a reification subsection (REF to an @-edge via `%@OBJ`/`%@REL`); Pattern 27 (Template Version Chain) is updated with the conceptual-shift note (Templates are vocabulary-layer, not graph-entities, so version chains are slot-bindings via `%DEFOBJ`, not graph statements). v0.13.0 also widens REL composition (Core Spec §7.15, entry 43): Pattern 17 (Predicate Declaration) is rewritten to demonstrate Properties (labels, descriptions, alias Sets) alongside @-edges and Extensions on a REL, with Property-vs-Extension choice guidance; Pattern 26 (Complete Vocabulary Document) updated to show the mixed-metadata-kinds pattern on RELs. v0.12.0 migrates `<EDGE …>` examples to `<@OBJ …>` per the @-Edge family (Core Spec §7.4, entry 41 of the v0.12.0 changelog); Pattern 7 (Edge Between Entities) is rewritten to demonstrate the new family including an edge-as-substance example (axiom E6 identity). v0.11.0 migrates leading-slash identifiers in examples to the new hierarchical-local form (no leading `/`); adds Pattern 16 (Parallel Constraint Vocabularies on One Template) demonstrating Layer 2b vocabulary pluralism; adds patterns demonstrating path-mode references (Pattern 23) and key-mode anchor references (Pattern 24); adds Pattern 20 (Adjunct Extension for Non-Schema Metadata) demonstrating Extensions beyond schema constraints; and adds Pattern 26 (Complete Vocabulary Document) showing how RELs with predicate-semantic Extensions, concept Objects, and Templates compose into a self-contained vocabulary.
 
 Changes in v0.10.0 from v0.9.6 reflect Core Specification v0.10.0:
 
@@ -373,17 +373,32 @@ This pattern is useful when a single document needs to satisfy reviewers in diff
 
 ## 17. Predicate Declaration
 
-Use `REL` to declare a predicate as a first-class entity.
+Use `REL` to declare a predicate as a first-class entity. A REL's purpose is fully discharged by its identifier; children are metadata about the predicate, and authors choose what to attach based on what the consumer needs to read.
 
 ```
 <REL gdx:knows>
 
 <REL gdx:manages
-    <_STR vocab:inverse : "gdx:reportsTo">
+    <STR rdfs:label : "manages">
+    <STR rdfs:comment : "Asserts a management relationship between two Persons.">
+    <STR* aliases <STR : "supervises"> <STR : "leads">>
+    <@REL #gdx:inverse : @gdx:reportsTo>
+    <_BOOL gdx:transitive : false>
 >
 ```
 
-The bare REL declares a predicate with no semantic refinements. The second form declares that `gdx:manages` has an inverse predicate `gdx:reportsTo` — a vocabulary-defined refinement that consumers may use to compute inverse-direction queries.
+The bare REL declares a predicate with no metadata. The second form attaches a mix of metadata kinds:
+
+- **Properties** (`<STR rdfs:label …>`, `<STR rdfs:comment …>`, `<STR* aliases …>`) carry data about the predicate — labels, descriptions, alternative names. The values are consumer-conferred: a documentation tool reads `rdfs:label`, a search index reads `aliases`. GDX-core records them as data; nothing in the core interprets them.
+- **@-edges** (`<@REL #gdx:inverse …>`) carry graph-statement assertions about how the predicate relates to other vocabulary entities. The inverse edge is a first-class statement linking `gdx:manages` to `gdx:reportsTo`.
+- **Extensions** (`<_BOOL gdx:transitive …>`) carry primitive-valued vocabulary-defined semantic axioms a validator or reasoner acts on.
+
+**Property vs Extension on a REL.** Both are admitted; choose by what the metadata *is*:
+
+- Property → data for humans or downstream lookup (labels, descriptions, version, authorship)
+- Extension → semantic axiom for a validator or reasoner (symmetry, transitivity, cardinality)
+
+Mechanical rule: would a validator/reasoner act on it? → Extension. Is it for humans or downstream lookup? → Property.
 
 REL declarations may appear at the document root or within vocabulary documents.
 
@@ -699,19 +714,22 @@ A GDX vocabulary document defines the predicates, concepts, and schemas of a dom
 >
 
 <REL acme:knows
+    <STR rdfs:label : "knows">
+    <STR rdfs:comment : "Asserts an acquaintance or social relationship.">
     <@OBJ #acme:domain : @acme:Person>
     <@OBJ #acme:range  : @acme:Person>
     <_BOOL acme:symmetric : true>
-    <STR rdfs:comment : "Asserts an acquaintance or social relationship.">
 >
 
 <REL acme:employs
+    <STR rdfs:label : "employs">
     <@OBJ #acme:domain : @acme:Organization>
     <@OBJ #acme:range  : @acme:Person>
     <@REL #acme:inverse : @acme:employedBy>
 >
 
 <REL acme:employedBy
+    <STR rdfs:label : "employed by">
     <@OBJ #acme:domain : @acme:Person>
     <@OBJ #acme:range  : @acme:Organization>
 >
@@ -731,7 +749,7 @@ A GDX vocabulary document defines the predicates, concepts, and schemas of a dom
 This vocabulary document defines:
 
 - **Three concept Objects** (`acme:Concept`, `acme:Person`, `acme:Organization`), each addressable by other vocabularies and instances. The `acme:Concept` Object plays the role a Class or top-of-hierarchy would in OWL; `rdfs:subClassOf` links subordinate concepts to it.
-- **Three REL declarations** (`acme:knows`, `acme:employs`, `acme:employedBy`) with domain/range Extensions pointing at the concept Objects, plus an inverse Reference between `employs` and `employedBy`.
+- **Three REL declarations** (`acme:knows`, `acme:employs`, `acme:employedBy`) carrying a mix of metadata kinds: Properties for human-facing labels and descriptions (`<STR rdfs:label …>`, `<STR rdfs:comment …>`), @-edges for predicate-axiom statements (`<@OBJ #acme:domain …>`, `<@REL #acme:inverse …>`), and Extensions for primitive-valued semantic axioms (`<_BOOL acme:symmetric …>`). The choice between Property and Extension follows the "data vs axiom" rule (Pattern 17).
 - **Two Templates** (`acme:Person`, `acme:Organization`) that bind instance shape to the concepts. The Template slots carry `#rel` references aligning slot semantics to the vocabulary's predicates.
 
 The document is one GDX file. A consumer reading it gets the predicates, the concept taxonomy, the schemas, and the alignment between them in a single parse. An instance document satisfying `acme:Person` can be validated against the Template, traversed through `acme:knows` edges, and aligned to other vocabularies through `#rdfs:subClassOf` and similar cross-references.
