@@ -12,256 +12,22 @@ This document defines the GDX abstract data model, the GDX prefix vocabulary and
 
 ## Status of This Document
 
-This is the v0.9 working draft.
-
-Changes in v0.9.7 from v0.9.6: §1 (Introduction) restructured into §1.1 What GDX Is, §1.2 Existing Approaches, §1.3 GDX Design Goals, §1.4 Where GDX Fits, §1.5 Scope. Conventions and Terminology promoted back to top-level §2, scoped to term definitions only (Core Terms, Conformance Layers, Vocabulary Terms, Identifier Schemes). The GDX Element and Core Data Model renumbered to §3 and §4. §6 renamed to "Element Kinds." Field Sigils and Separators (previously in §2.7 of Conventions) absorbed into §3.4. No normative semantics change.
-
-Changes in v0.9.8 from v0.9.7: the technical term "Kind" (naming the closed enumeration of Object, Record, Edge, etc.) renamed to "Role" throughout. "Kind" was ambiguous against generic English usage and competed with "value-kind." §6 renamed from "Element Kinds" to "Element Roles"; §6.3 from "Kinds in Detail" to "Roles in Detail." §4.1 renamed from "Field Roles" to "Element Fields" to avoid collision with the new technical term; its column header changed from "Role" to "Purpose." The §3.4 sigil table column header changed from "Role" to "Purpose" for the same reason. Sub-subsection numbering in §4.3 corrected from the stale §3.3.x to §4.3.x. The term "value-kind" (the value-category of a Resource) is preserved unchanged; only the structural-position concept renamed. No normative semantics change.
-
-Changes in v0.9.9 from v0.9.8 sharpen the conceptual / data-model / text-form boundary across §3, §4, §5. Each section now has a distinct focus, signaled by its title: §3 "GDX Concepts" defines what GDX expresses; §4 "The GDX Abstract Data Model" defines what an implementation represents at runtime; §5 "Canonical Text Form" defines how elements are written. Substantial content moved between sections to eliminate the three-way overlap that had accumulated. The Sigils and Separators subsection moved from §3.4 to §5.1.1 (sigils are textual mechanics, not conceptual). The Real-Number Representation subsection from §4.3.2 merged into §5.2.3 Float Literals (suffix mechanics are textual). The two textual forms of null values (bare and empty-value) moved from §4.3.4 to a new §5.1.3, while the three-state Property semantics (Absent/Null/Present-with-value) remain in §4. A new §3.4 "The Implicit Parent-Child Relationship" promotes a conceptual point previously buried in §3.2's closing paragraph. Cross-references throughout the spec updated accordingly. No normative semantics change.
-
-Changes in v0.9.10 from v0.9.9 are corrections: (1) §8.4 Resource Rules erroneously listed DEF prefixes (`DEFSTR`, `DEFINT`, etc.) as Resource-bearing; Templates declare a contract for instances and do not carry an instance value themselves. The DEF prefixes have been removed from the resource-family bullets and added to the list of roles that do not carry Resources. (2) Appendix C.2 was reframed from "Reference Cycle Detection" (a generic implementation-correctness concern) to "Reference Cycle Exploitation," emphasizing the adversarial framing consistent with the rest of Appendix C. (3) Several Quick Start examples in Appendix D (§D.1, §D.2, §D.3, §D.4, §D.6, §D.7, §D.8) were updated to wrap their content in an Object or Template root; the previous examples placed bare Properties, Records, or Sets at the document root, which violates the conformance requirement that a document's root MUST be an Object, Template, REL declaration, or Package (§8). No normative semantics change.
-
-Changes in v0.10.0 from v0.9.10 are substantial:
-
-(1) **Reference operator `@` added.** The `@` prefix produces typed references, joining the existing modifier vocabulary. The `@KIND` family composes universally with role bases and modifier-bearing bases (subject to a `@@` prohibition: references cannot target other references). The composition reads as "a reference to a KIND-element." Closed-vocabulary expansion: the §6 specification describes the composition pattern rather than enumerating every cell; valid `@KIND` prefixes are derived from the pattern. This adds the reflexivity primitive — any addressable element can be referenced by any other element through a typed pointer.
-
-(2) **Set notation moved to suffix.** The Set marker `*` is now a suffix: `STR*`, `REC*`, `*INT` notation is replaced by `INT*`. This is a breaking change. The suffix position reflects Set's structural distinction from the refinement modifiers — `*` is value-kind-redirecting (creates a collection) rather than value-kind-preserving. The suffix also unlocks compositions previously forbidden by the no-modifier-stacking rule: `.STR*` (Set of Qualifiers), `_INT*` (Set of Extensions), `@STR*` (reference to a Set) are all valid.
-
-(3) **§3 trio framing added.** New §3.6 "Embedding, Referencing, and Graph Relationships" articulates the three distinct mechanisms for involving an addressable element from within another: `%X` for inline embedding, `@X` for typed references, EDGE for graph statements. Each has a distinct structural shape and use case.
-
-(4) **§6 restructured around the composition pattern.** The §6 intro introduces the prefix pattern `[@?][refinement-modifier?][base][*?]`. §6.1 (Canonical/Minified Forms) and §6.2 (Base Vocabulary) cover the core role vocabulary. §6.3 (Special Operators) introduces the `*` suffix and `@` operator. §6.4 (Refinement Modifiers) covers `.`, `_`, `%`, `N`. §7 (Roles in Detail) is the detailed per-role treatment, renumbered from old §6.3.x with `@KIND` added as §7.16. The base vocabulary is grouped by category: value primitives, structural roles, declaration roles, transport roles.
-
-(5) **Reference literal grammar reserves `$` for path expressions.** The reference literal grammar accepts `@Identifier` (normative in this revision) and reserves `$PathExpression` for a future revision. Path-mode resolution is an open issue (§12).
-
-(6) **§7.4 EDGE clarified.** A note distinguishes EDGE (structured graph-statement element with its own children) from `@OBJ` (leaf-like typed pointer). Both carry references to Objects but have different structural shapes.
-
-(7) **§8.1 Composition Matrix expanded.** New Reference column and row reflect the leaf-like nature of `@KIND` elements (Qualifiers and Annotations as children only). REL and Template rows admit Reference children for vocabulary metadata.
-
-(8) **§8.2 rules updated.** Rule 12 reframed to describe the refinement-modifier-non-stacking constraint precisely. New rules 13 (Set as suffix), 14 (universal `@` composition), 15 (`@@` prohibition), 16 (References are leaf-like).
-
-(9) **Migration impact.** All `*PREFIX` notation in existing documents must migrate to `PREFIX*`. The `@KIND` family is additive and does not affect existing documents. EDGE is unchanged. Templates and RELs are unchanged.
-
-(10) **Appendix split.** The previously-included Appendices B (Format Comparison), C (Security Considerations), and D (Quick Start) have been extracted into separate companion specifications, joining the existing Grammar, Compact Form, and Cookbook companions. The previously-included Appendix A (Conformance) remains in the core specification as normative content. Cross-references throughout the spec updated to point at the new companion documents. The split reduces the core specification by approximately 700 lines and clarifies the boundary between normative content (this specification, Appendix A, Grammar) and non-normative content (Format Comparison, Security Considerations, Quick Start, Cookbook).
-
-Changes in v0.11.0 from v0.10.0:
-
-(1) **Path-mode and key-mode reference resolution are now normative.** The `$PathExpression` form reserved in v0.10.0 §12.4 is fully specified in a new companion document, the GDX Path Expressions Specification (`GDX-Path.md`). The path grammar supports three segment kinds — `IdSegment` (bareword, matches `Id`), `RelSegment` (`#R`, matches `Rel`), and `OrdinalSegment` (`[N]`, matches by 1-based document order). The `&Key` reference literal provides key-based addressing through the location-stable `Key` anchor. Five reference-literal forms are recognized: `IdRef` (`@Anchor`), `PathRef` (`$PathExpression`), `KeyRef` (`&Key`), `IdPathRef` (`@Anchor$PathExpression`), and `IdKeyRef` (`@Anchor&Key`). The composed forms express cross-document addressing. The `@Anchor` production carries an optional role marker (`@OBJ:id`, `@REL:id`, `@DEFOBJ:id`, etc.) drawn from the closed prefix vocabulary; when omitted, composed references default to an Object anchor. The marker enables composed references to non-Object anchors (RELs, Templates, transport-layer containers) without requiring resolver inference.
-
-(2) **§12.4 closes.** Path-mode reference resolution is no longer an open issue. References to §12.4 in earlier revisions are satisfied by the companion specification.
-
-(3) **`/` removed from `IdStartChar` (§5.4.1).** Breaking change. Identifiers may no longer begin with `/`. The `IdContChar` set is unchanged, so identifiers may continue to contain `/` (e.g., IRIs like `https://acme.com/people/alice` remain valid). The narrowing makes the `$/...` path-mode form unambiguous and the `@Identifier$PathExpression` boundary lexically clean. Path-style local identifiers such as `<OBJ /people/alice>` MUST be migrated; the recommended migrations are documented in `GDX-Path.md` Appendix C.
-
-(4) **§5.4.2 identifier-forms table updated.** The "Path" row is removed; path-style local naming is replaced by path-mode reference resolution. The remaining identifier forms (Local name, Single letter, CURIE, Dotted CURIE local, GUID/opaque, IRI) are unchanged.
-
-(5) **§5.2.6 reference literal grammar updated.** The five-form `ReferenceLiteral` production replaces the placeholder. Address-mode singularity is incorporated by reference to `GDX-Path.md` §8.
-
-(6) **§8.1 composition matrix expands the resolvable target set.** `@KIND` references composed with a `PathRef`, `KeyRef`, `IdPathRef`, or `IdKeyRef` resource may now resolve against Records, Blocks, value Properties, Qualifiers, Extensions, and Embedded elements. Parent-context restrictions on where `@KIND` reference elements may appear are unchanged; only the addressability of the target expands.
-
-(7) **`Key` field reframed from Template-slot identifier to location-stable anchor.** The §3.2 description of `Key` is rewritten: Keys are an opt-in named-anchor mechanism providing stable reference targets for elements that lack global identifiers. The Template-alignment justification is removed. A new §5.4.5 defines Key uniqueness rules (scoped to the enclosing Object, or to the document at transport-layer position). The numeric Key form is retained as a lexical convenience but no longer carries Template-slot semantics.
-
-(8) **§9.2 Template-instance alignment pinned.** A new normative paragraph specifies that alignment is by `Id` matching (case-sensitive ordinal), with `Rel` matching as a cross-vocabulary fallback. The `Key` field plays no role in alignment.
-
-(9) **§5.1.1 sigils table updated.** The `$` row is updated from "reserved, grammar deferred" to "introduces a path-mode reference literal (§5.2.6, `GDX-Path.md`)."
-
-(10) **Migration impact.** Existing documents using leading-slash identifiers MUST be migrated (drop the leading slash, retaining any interior `/`). Existing documents using only `@Identifier` references are unaffected. Existing documents that used `&K` numeric Keys for Template-slot alignment MUST be migrated to named-Id Template slots; the `Key` field continues to be lexically valid but no longer carries slot-alignment semantics. Templates that previously used `&1`, `&2` positional slots are migrated to named slots (`firstName`, `lastName`, etc.). Existing documents that used a non-normative `$`-prefixed literal under v0.10.0 §12.4's implementation-defined window MUST conform to the v0.11.0 grammar.
-
-(11) **§1.3 adds the substrate-with-pluggable-constraints positioning.** A new design-goal paragraph names GDX as a structural schema (the prefix vocabulary, element model, Template structure, composition axioms) with no constraint implementation. Constraint vocabularies layer on top as Constraint Extensions whose identifiers GDX records but never interprets.
-
-(12) **§2.2 decomposes Layer 2 conformance.** The single "Schema Conformance" layer splits into Layer 2a (Template structural conformance, owned by GDX) and Layer 2b (constraint-vocabulary conformance, owned by the constraint vocabulary). The decomposition makes explicit that an instance may be Layer 2a-conforming while Layer 2b-non-conforming for one vocabulary and Layer 2b-conforming for another; verdicts are vocabulary-relative above the primitive floor. Appendix A is updated to mirror the split.
-
-(13) **§8.5 closes with a primitive-axioms statement.** A new closing paragraph names the §8.5 validation requirements as the GDX-native floor (Layer 1) and points to §9 for the schema layer.
-
-(14) **§9 gains a layered-intro paragraph.** A new paragraph at the top of §9 frames the section in three layers — Template structure, Template-instance alignment, and Constraint Extensions — and ties each to the §2.2 conformance layers.
-
-(15) **§9.4 renamed and rewritten.** Previous title "Validation Extensions" becomes "Constraint Extensions" to reflect that GDX hosts, vocabularies validate. New normative MUST: GDX implementations MUST NOT interpret constraint semantics; constraint identifiers are opaque to GDX. A new §9.4.1 "Parallel Constraint Vocabularies" formalizes the multi-vocabulary coexistence property and gives a worked example showing XSD, JSON Schema, and a vendor vocabulary on the same Template. §9.4.2 covers validator behavior on recognized vs unrecognized identifiers.
-
-(16) **§9.6 updates Common Vocabulary framing.** The Common Vocabulary is positioned as one vocabulary among many — it ships with GDX as a convenience and reference but has no privileged status at the GDX layer. `gdx:` constraint identifiers are opaque to GDX in the same way as `xsd:`, `json:`, or any other.
-
-(17) **§9.2 expands into subsections covering the universal claim rule and materialization.** §9.2.1 (Slot Alignment) carries forward the Id-and-Rel alignment rule. §9.2.2 (Cross-Role and Transport Restrictions) carries forward the prefix-matching rules. §9.2.3 (The Universal Claim Rule) is new: a four-case matrix governs how Template-declared and instance-declared values reconcile on any claim-bearing field (Rel, Key, default Resource, nested `--type`). Differing claims are conflicts; matching claims are confirmed; silent-on-one-side defers to the other. §9.2.4 (Materialization) is new: defines the build-time operation of writing Template-supplied values into the instance as explicit fields, motivated by the searchability and self-description requirements of persisted documents. Materialization is RECOMMENDED for persistence and OPTIONAL for in-memory processing.
-
-(18) **§9.2 distinguishes named type identity from observable conformance.** Two new paragraphs in §9.2: (a) `--type` is an identity claim anchored to the Template name; two Templates with identical shapes are different types, and an instance of one is not silently an instance of the other; (b) cross-type conformance — an instance of type A structurally satisfying Template B — is a separately observable relation, useful for validation against multiple schemas, version-compatibility checks, and migration tooling. Conformance does not redefine identity. Consumers MUST NOT silently substitute one type for another even when their instances mutually conform; any cross-conformance is surfaced as a derived observation, not a rewrite of the original `--type` claim.
-
-(19) **§1.1 reframes GDX as an abstract data model with concrete representations.** A new opening paragraph establishes that GDX is the data model — the abstract content — and that Standard Form, Compact Form, Binary Form, and programmatic in-memory form are alternative concrete representations of that model. This clarifies the boundary "what is GDX?" and positions the various forms as faithful realizations rather than separate things.
-
-(20) **§4 (Abstract Data Model) intro reinforces the model/representation distinction.** New paragraph ties the data model defined in §4 to its concrete realizations: each preserves the same elements, prefixes, field semantics, and composition relationships; conversions transform surface syntax without changing content.
-
-(21) **§2.1 adds Core / Extension definitional pair.** New terminology entries formally distinguish the **core** (what GDX itself defines and interprets — prefix vocabulary, element model, grammars, composition, Template-instance alignment, claim rule, primitive value-kind axioms) from **extension** (vocabulary-defined material that rides on top of the core — Rel identifiers, Type identifiers, Constraint Extension content). The pair names the **interpretation** boundary between what GDX understands and what GDX hosts. The terms *core layer* and *extension layer* are introduced as a convenient shorthand for the two sides of the boundary.
-
-(22) **§3.7 articulates the optional-elaboration principle.** New subsection: elements are valid at their minimum form (Prefix alone); elaboration is opt-in and proceeds along two structurally distinct patterns. Identity elaboration is orthogonal across three independent axes (`Id`, `Key`, `Rel`). Value elaboration is layered across five layers (category, value, structural identity, constraint attachment, constraint semantics), where each layer is optional given the layer above and the layers live in different places (instance, Template, vocabulary). The principle organizes how to read the rest of §3 and explains why simple GDX stays simple while richer cases grow without restructuring.
-
-(23) **§1.3 adds integration-surface, not-LCD framing.** A clause in the substrate-paragraph clarifies that GDX is the integration surface where multiple vocabularies coexist, not a lowest-common-denominator subset of them. The structural schema is opinionated and complete; what's neutral is the constraint layer.
-
-(24) **Targeted wording sweep: core/extension terminology adopted across §2.2 and §9.4.** Replaced phrases like "the GDX layer" and "hosted on top" with "core layer" and "extension layer" where the new terminology disambiguates the interpretation boundary from the mechanism boundary. Other places — where wording was already clear — were left as-is to avoid churn.
-
-(25) **§1 restructured.** §1.1 (What GDX Is) trimmed for redundancy: removed the duplicate prose paragraph (with `strutural`/`resouce` typos), pulled the "single repeating element shape" paragraph forward from §1.3's tail, and framed the small example explicitly as Standard Form (one realization of the abstract model). §1.2 and §1.3 swapped positions: design goals now lead, format comparison follows. The rhetorical flow shifts from "survey landscape, explain choices" to "introduce model, state goals, validate against alternatives."
-
-(26) **§1.2 (Design Goals) rewritten with nine model-focused goals.** Replaced the previous mixed list (which combined model goals with serialization-format virtues) with nine goals that each articulate a capability GDX commits to and a corresponding gap in established formats or data models. The new goals: Typed elements baked into the form; Inline semantic alignment; Schema is data; Structural schema with pluggable constraint vocabularies; Unified document and graph model; Self-describing instances without the schema; Reflexivity through typed references; Layered validity with clear ownership; Minimum-is-enough elaboration. Serialization-format virtues (round-trip stability, encoding efficiency, canonical content addressing) are explicitly relegated to §5 as properties of Standard Form rather than goals of the data model.
-
-(27) **§1.3 (Comparison with Existing Formats) absorbed the side-by-side example.** The composite-record side-by-side comparison block (showing the same record in GDX Standard, GDX Compact, JSON, YAML, and XML) moved from the tail of the old §1.3 to the tail of the new §1.3 (the comparison section). It now functions as a synthesizing example after each format's individual discussion rather than as an interruption of the design-goals list. The new §1.3 also gets typo cleanup (`unweildly`, `loosing`, `Write and Read`) and a sharpened opening that frames the section as validation of the §1.2 claims against the landscape.
-
-(28) **Three cross-references updated for the §1.2/§1.3 swap.** §3.1 ("responds to the problems §1.2 named" → "§1.3 names"); §9 layered-model paragraph ("(§1.3)" → "(§1.2)"); the new §1.3 closing references "(§1.2)" for the layering/pluralism design goals. Historical changelog entries that reference §1.3 at the time of their item are left as-is; they correctly describe the change at the point it was made.
-
-(29) **Role definition reframed as both structural and conceptual.** §2.1 and the §6 intro paragraph now describe Role as carrying both the structural shape (what fields and children are admitted) and the conceptual interpretation (how the element is to be read in relation to its parent). This makes explicit a property the spec previously relied on implicitly — that two roles may share a structural shape and still differ as roles because their conceptual interpretation differs.
-
-(30) **§7 role descriptions sharpened with explicit conceptual leads.** Each per-role subsection now leads with a one-sentence conceptual identity for the role before describing structural mechanics. Object is "a thing with identity"; Record is "a compound property"; Property is "an attribute of its parent"; Edge is "a graph statement"; Block is "a labeled section"; Annotation is "a note attached to its parent"; Package is "a transport wrapper"; Group is "a transport partition"; Qualifier is "a refinement on its parent's value"; Extension is "a schema rule attached to a Template"; Embedded is "a structured value in a scalar's position"; Node is "a semi-structured pocket"; Set is "a multiplicity"; Template is "a type contract"; REL is "a predicate as a first-class entity"; Reference is "a typed pointer to another element". The conceptual lead resolves why structurally-similar roles (Object/Record being the load-bearing example) exist as distinct roles — the distinction lives in interpretation, not in structure.
-
-(31) **§7.2 adds explicit Object/Record comparison.** A new paragraph at the end of §7.2 names that Records and Objects share structural shape but differ conceptually, with the consequences for addressability, persistence, and document root spelled out.
-
-(32) **RELs admit Extension children — internal inconsistency resolved.** The §8.1 composition matrix and rule 8 already allowed Extensions on RELs (for predicate semantics like domain, range, inverse, cardinality), but §7.10, §8 modifier transparency, §8.1 prose, and §8.2 rule 7 contradicted this by saying "Extensions only under Templates." All five passages now consistently state that Extensions are valid under Templates or RELs. §7.10's conceptual lead is broadened from "a schema rule attached to a Template" to "a schema rule attached to a Template or REL." The composition matrix is unchanged (REL row already shows Extension as admitted child).
-
-(33) **§1.2 adds "First-class predicates and vocabulary documents" design goal.** Elevates Rel to a design-level concern, framed as a single primitive — a vocabulary-defined named relationship between two roles — whose expressed form (compositional alignment, associative predicate, predicate-axiom) is parameterized by the role-combination it sits in. The structural side — the `Rel` field, the `REL` element, References — is the implementation of that primitive. Concept-as-Object is named as the decision that lets GDX have RDF/OWL's ontology-building primitive without a separate Class role.
-
-(34) **§3.7 (new) Predicates and Vocabularies.** New subsection between §3.6 and (former) §3.7 articulating the foundational principle — a Rel is a single, constant primitive that names a relationship between two roles; the form of statement it expresses is parameterized by role-context (one rule, three readings: compositional alignment, associative predicate, predicate-axiom). The three coordinated structural mechanisms (Rel field, REL element, @REL reference) are presented as the implementation of that principle. Names the concept-as-Object decision. Defines what a vocabulary document is. Optional Elaboration moves to §3.8.
-
-(35) **§7.15 (Relation Declaration) sharpened.** Expanded to show: the three-component vocabulary system in detail; what Extensions and References on RELs do; the concept-as-Object pattern; a small worked vocabulary document combining concept Objects, REL declarations with domain/range Extensions, predicate-to-predicate References, and Templates.
-
-(36) **Cookbook Pattern 25 (Complete Vocabulary Document) added.** Shows a full vocabulary document with concept Objects, RELs carrying predicate-semantic Extensions, inverse References between RELs, and Templates bound to concepts. Patterns 25-34 renumbered to 26-35; TOC ranges updated.
-
-(37) **§6.5 promoted to standalone §7 (Element Roles); subsequent sections renumbered.** The per-role catalog (formerly §6.5.1 through §6.5.16) is now §7 as a top-level section, with each role at `###` depth instead of `####`. §6 is renamed from "Element Roles" to "Prefix Vocabulary" to reflect its narrowed scope (the prefix grammar, base vocabulary, special operators, and refinement modifiers). The new §7 is the authoritative role reference. Subsequent sections shift up by one: Composition Axioms (was §7) → §8, Schemas and Validation (was §8) → §9, Transport (was §9) → §10, Data Persistence (was §10) → §11, Open Issues (was §11) → §12. All body cross-references to §6.5.x → §7.x, §7.x → §8.x, §8.x → §9.x, §9 → §10, §10.x → §11.x, §11.x → §12.x. The Table of Contents and the v0.11.0 changelog entries are updated to current section numbers; older changelog entries (v0.9.x, v0.10.0) are also updated since the sections being described still exist at the new numbers.
-
-(38) **Extensions reframed as adjunct statements; structural restriction lifted.** §7.10 (Extension) is rewritten to define Extensions as *adjunct statements* — vocabulary-defined assertions attached to an element that consumers may interpret and act upon, but on which the element does not depend for its identity, value, or validity. This reframing replaces the prior "schema rule attached to a Template or REL" framing, which described one application of Extensions rather than what they are. The "harmlessly ignored" property (consumers that don't recognize an Extension's vocabulary ignore it) follows directly from the adjunct nature and is what allows multiple vocabularies to coexist on the same element.
-
-Structurally, Extensions are no longer restricted to Templates and RELs. §8.1 composition matrix is updated: the Extension column shows ✓ for all parent roles that admit children, with the exceptions of Annotation (leaf-only) and Node (isolated-subtree per rule 5). §8.2 rule 7 is rewritten to state the adjunct property; rule 9 (modifier transparency) drops the Extension-restriction exception. This is an additive change for existing documents — Constraint Extensions on Templates still work exactly as before; predicate-semantic Extensions on RELs still work; what is now also permitted is provenance Extensions on Objects, presentation Extensions on Properties, audit Extensions on Edges, signing Extensions on transport wrappers, and any other vocabulary-defined adjunct statement attached to any element.
-
-§9.4 (Constraint Extensions) retains its title and content as a normative description of one specific Extension application (schema validation on Templates). A new opening paragraph in §9.4 frames constraint validation as one use of the broader Extension mechanism.
-
-Cookbook Pattern 20 (Adjunct Extension for Non-Schema Metadata) added, showing provenance on an Object, presentation hint on a Property, migration directive on a Template, and confidence Extension on an Edge. Pattern 19 (Annotation for Provenance) updated to clarify the Annotation-vs-Extension distinction (free-text vs vocabulary-keyed) with a pointer to Pattern 20. Patterns 20-35 renumbered to 21-36; TOC ranges updated.
-
-(39) **Extension value-kind scope clarified; broken `_OBJ` examples fixed.** §7.10 (Extension) adds a normative paragraph stating that Extensions carry primitive value-kinds only (the closed table: `_STR`, `_INT`, `_FLOAT`, `_BOOL`, `_BYTE`). Reference-valued adjunct statements use a Reference (`@KIND`, §7.16) child with a `#rel` predicate naming the assertion. Extensions and References together cover the adjunct-statement surface — Extensions for primitive values, References for reference values — and both attach as vocabulary-keyed children of the parent.
-
-The prior commit (38) introduced examples in §7.10, §7.15, and Cookbook Pattern 26 that incorrectly used `_OBJ` (`<_OBJ gdx:domain : @gdx:Person>`) to express reference-valued REL metadata. `_OBJ` is not in the closed Extension prefix vocabulary and would semantically mean "Extension whose Resource is an Object" — either meaningless (Objects are not a value-kind) or illegal (embedding an Object inside an Extension violates §8.2 rule 2 Object exclusion). All occurrences corrected to use References with `#rel` predicates: `<@OBJ #gdx:domain : @gdx:Person>` for Object references, `<@DEFOBJ #gdx:supersedes : @CustomerV1>` for Template references. No structural change required; the composition matrix already admits References as REL and Template children.
-
-Changes in v0.12.0 from v0.11.0:
-
-(40) **Embedded modifier `%` replaced by VAL role.** The Embedded refinement modifier (`%STR`, `%REC`, `%OBJ`, etc.) is removed from the prefix vocabulary and replaced by a new first-class role, **VAL** (minified **V**), defined in §7.11. Where `%X` previously expressed "an X element in property-value position," `<VAL name <X : value>>` now expresses "a slot named `name` whose value is an X element." The change is motivated by two structural needs the modifier could not express: (a) two-level identity — VAL distinguishes the slot's identity (Id/Key/Rel on the VAL itself) from the occupant's identity (Id/Key/Rel on the contained element), allowing a single position to be both vocabulary-aligned at the slot level and addressable at the occupant level; (b) closed occupant enumeration — VAL admits Properties, Records, Objects, Blocks, Sets, Edges, and References as occupants under a single uniform role, rather than requiring a separate `%`-form for each primitive.
-
-§6.2 adds the VAL/V row. §6.4 drops the `%` modifier row and gains a paragraph pointing readers to VAL. §8.1 adds a VAL column and VAL row to the composition matrix. §8.2 rules 2 (Object exclusion), 9 (modifier transparency), 12 (modifier stacking), and 13 (Set as suffix) are updated to reference VAL rather than `%`. §8.4 drops `%X` from the value-kind family lists. §8.5 validation lists VAL rather than `%O` as the data-layer Object licensing form. §4.2 gains an "occupant of a VAL slot" carve-out paragraph mirroring the Set-member positional exemption, so that an occupant inherits the slot's named-attribute role without needing its own identifier.
-
-Migration: every `%X` element becomes `<VAL #rel name <X : value>>`, with the slot's `#rel` predicate (and any Id/Key) moved to the VAL and the value moved into the occupant. The `VAL*` form is malformed (§7.11 axiom 6); Set-of-VAL semantics are expressed as a Set of the underlying occupant role. Examples throughout the spec, Cookbook, Path, Grammar, Compact Form, and Quick Start companions are migrated. Cookbook Pattern 10 (Embedded Structured Value) and Pattern 11 (Embedded Alternative Representations) are rewritten to demonstrate slot-level and occupant-level alignment respectively.
-
-(41) **EDGE prefix replaced by the @-Edge family (`@OBJ`, `@REL`); §7.4 rewritten as the @-Edge Family with axioms E1–E6.** The `EDGE`/`E` prefix is removed from the closed vocabulary. Where `<EDGE #knows : @bob>` previously expressed a graph-statement element, `<@OBJ #knows : @bob>` now does. `@REL` is promoted from a leaf-like reference to a first-class @-edge whose target is a predicate (REL declaration). The two members of the @-Edge family, `@OBJ` and `@REL`, are enumerated by target role and restricted to *independent graph-entities* — Objects (including concept-Objects per §3.7's concept-as-Object pattern) and REL declarations. All other `@KIND` forms remain in the Reference family (§7.16, pending a separate refinement pass), which retains leaf-like-pointer semantics.
-
-§7.4 is rewritten as "The @-Edge Family" and adds six normative axioms:
-- **E1.** Prefix asserts target role; Resource asserts target identity; the assertion stands even when the Resource is empty (`<@OBJ #knows : >` in Template context declares an Object-edge slot).
-- **E2′.** First-class but dependent: an @-edge is its own entity (carries identity, predicate, attributes) but is owned by and serialized within its source. Dies with source (relational projections SHOULD use `ON DELETE CASCADE`); dangles on target loss.
-- **E3.** Attribute children describe the relationship-entity. When the edge carries identity (E6), attributes belong to the persistent edge-entity, not to any single predication.
-- **E4.** Predicate (`#rel`) is MANDATORY. No unlabeled adjacency — adjacency-if-wanted is a designated `#rel` value, not its absence.
-- **E5.** Family is enumerated by target role and restricted to independent graph-entities. Exactly two members (`@OBJ`, `@REL`); source role is orthogonal.
-- **E6.** Identity (`Id`/`Key`) is optional and orthogonal to predicate. Identity is the edge's *substance* — the persistent entity that endures across predicate/attribute changes and disambiguates multiple edges between the same endpoints. Two @-edges with the same (source, predicate, target) ARE distinct if their identities differ; uniqueness is by identity, not by the triple. Identity-without-predicate is malformed; predicate-without-identity is the common case.
-
-The substance/predication split is the spine: Id is what the edge *is*, `#rel` is what it currently *asserts*, attributes ride on the substance. This delivers named edges, predicate mutation over stable identity, and multi-edge disambiguation — all from E2′ with no RDF-style reification machinery.
-
-Cascade changes:
-- §3.5 (graph statements) updated to use `@OBJ` instead of `EDGE`.
-- §3.6 (trio framing) re-anchored: VAL = embedding, @-Edge = graph relationships, Reference = leaf-like pointing.
-- §3.7 (predicates and vocabularies) updated to describe @-edge children on RELs alongside Extensions.
-- §4.3.2 (reference value-kind) and §4.3 (Resource definition) updated to use `@OBJ` examples.
-- §6.2 (base vocabulary) drops the `EDGE`/`E` row; adds a graph-statement-roles subsection listing `@OBJ`/`@REL`.
-- §6.3.2 (Reference Operator) rewritten to describe the @-Edge / Reference structural split.
-- §7.15 (REL) updated to describe three kinds of vocabulary-metadata children (@-edges, Extensions, References) with the new framing.
-- §7.16 (References) rewritten: family scope explicitly excludes `@OBJ` and `@REL`; transitional-status note added.
-- §8.1 composition matrix: `Edge` column/row renamed to `@-Edge`; REL row gains `@-Edge` admittance (`✗` → `✓`) for vocabulary metadata.
-- §8.2 rule 16 reframed around the @-Edge-vs-Reference split.
-- §8.4 (resource rules) splits the former `EDGE` resource line into separate `@-Edge` and `Reference` lines.
-- Appendix A.5 (canonical form) removes `EDGE` from the prefix list and notes the `E` slot is unassigned.
-- Appendix A.7 (test suite) updated.
-- §11 (Data Persistence) gains an `ON DELETE CASCADE` recommendation per E2′.
-
-The `E` minified slot is currently unassigned; reassignment is deferred to the Reference-family refinement pass where the full minified-letter map can be reconsidered together.
-
-Companion-document updates:
-- **Cookbook Pattern 7 (Edge Between Entities)** rewritten with `@OBJ` syntax and a new example demonstrating edge-as-substance via E6 identity.
-- **Cookbook Pattern 22** retitled "Typed Reference to a Non-Graph-Entity"; examples replaced with `@DEFOBJ`/`@REC` targets to match the new Reference-family scope (graph-entity references are @-edges, covered by Pattern 7).
-- **Path spec** Appendix B.4 and B.6 examples migrated from Edge targets to Property targets to remain neutral with respect to the pending Reference-family refinement (cross-references to specific @-edges are a Reference-side concern).
-- **Grammar / Compact Form** drop `EdgePrefix` production.
-- **Quick Start** §5 retitled "Edges Between Objects" with the new syntax.
-- **Format Comparison** §5 (graph data) updated; @-Edge model now positioned with named-edge / substance-without-reification as a distinguishing feature.
-- **Security Considerations** §2 (reference cycles) updated to use @-edge framing.
-
-Migration: every `<EDGE …>` element becomes `<@OBJ …>`. The `#rel` requirement is unchanged (it was already required for EDGE). Existing `@OBJ`/`@REL` references that *do* carry `#rel` continue to work; those that *don't* carry `#rel` are no longer well-formed @-edges and must either add a `#rel` (becoming proper @-edges) or migrate to the Reference family when its surface form is refined. The `E` minified prefix is unassigned and MUST NOT appear in new documents.
-
-Changes in v0.13.0 from v0.12.0:
-
-(42) **REF family completed; `%` sigil added; the slot-filler trichotomy made structural.** The Reference family is given its own sigil `%`, distinct from the `@` sigil that names the @-Edge family. Every `@KIND` prefix that previously served as a leaf-like reference (`@DEFOBJ`, `@REC`, `@BLK`, `@.STR`, `@_INT`, `@VAL`, value-Property forms, and their Set forms) is renamed to `%KIND`. The `@` sigil is now exclusively the @-Edge sigil, restricted to its two members (`@OBJ`, `@REL`) by §7.4 axiom E5.
-
-The closure rule: the `%` sigil wraps any layer-1 role-prefix to produce a REF-to-that-role. The closed REF family is generated by this single composition:
-
-- `%OBJ`, `%REC`, `%BLK` — REF to an Object, Record, Block
-- `%STR`, `%INT`, `%FLOAT`, `%BOOL`, `%BYTE` — REF to a value Property
-- `%.STR`, `%_INT`, `%NSTR` — REF to a Qualifier, Extension, Node-zone element
-- `%DEFOBJ`, `%DEFSTR`, etc. — REF to a Template
-- `%VAL` — REF to a VAL slot
-- `%@OBJ`, `%@REL` — REF to an @-edge (reification)
-- `%KIND*` — REF to a Set (or, in Set-member position, a Set of REFs)
-
-The genus split is the load-bearing structural commitment: `%` always fills a slot (compositional `#rel`); `@` always asserts a relationship (associative `#rel`); the two sigils are never synonyms. The proof-by-collapse (§7.16 axiom R4): if `<%OBJ #X x : @T>` and `<@OBJ #X : @T>` could both assert "parent X T," the sigils would be interchangeable spellings and the partition would dissolve. They do not — the `%` form is "slot holds a handle, slot semantically aligned with `#X`"; the `@` form is "parent stands in relation `#X` to `T`."
-
-§7.16 is rewritten as "The %-Reference Family" with six normative axioms:
-
-- **R1.** Prefix asserts target role; Resource asserts target identity; resolution dereferences and verifies the role.
-- **R1a.** The role-assertion is a resolution constraint, particularly pronounced for path/key resolution.
-- **R2.** A REF fills a slot; it asserts nothing about its parent.
-- **R3.** A REF is Property-shaped — admits `#rel` (compositional), Qualifiers, Extensions, an `Id` (slot name), and Annotations; admits no structural children.
-- **R4.** `#rel` on a REF is always compositional alignment (slot-level), never associative (parent-relationship). Associative is the exclusive province of @-Edge.
-- **R5.** A REF may target any addressable element by any resolution mode (name, path, key, composed cross-document) — including @-edges by key (reification via `%@OBJ`/`%@REL`).
-- **R6.** A REF has no identity of its own beyond its slot; a REF is never itself a reference target.
-
-The trichotomy and edge framing in §3.6 is rewritten around the genus split: Property fills a slot with a literal; VAL fills a slot with a dependent element; REF fills a slot with a handle to an independent element; @-Edge asserts a relationship its source participates in. The three slot-fillers share Property-shaped elaboration (compositional `#rel`, Qualifiers, Extensions); the @-Edge stands apart with associative `#rel`, attribute children, and identity.
-
-Edge-side fall-out:
-
-- **§7.4 axiom E5 strengthened:** `@OBJ*` and `@REL*` are declared malformed. Each @-edge is a single graph statement (per E2′); multiple edges from one source are expressed as siblings, not as Set members. Multiple-edges-as-a-collection is implicit in the document structure, not collected into a Set.
-- **§8.2 derived rules 14, 14a, 15, 16 rewritten.** New rule 14 narrows the @-Edge family to two members. New rule 14a closes off `@OBJ*`/`@REL*`. Rule 15 enumerates the three malformed sigil compositions: `@@KIND`, `%%KIND`, `@%KIND`. Rule 16 distinguishes Property-shaped (REF) from statement-shaped (@-Edge) composition.
-
-Cascade changes in Core Spec:
-- §3.6 rewritten as "The Slot-Filler Trichotomy and Graph Statements"
-- §4.3.2 (reference value-kind) updated for the two-family split
-- §6.2 base vocabulary: REF row added; reading note updated
-- §6.3 split into §6.3.2 (sigil `@`) and §6.3.3 (sigil `%`); §6 prefix-pattern intro updated to the two-layer grammar
-- §7.16 rewritten as "The %-Reference Family"
-- §8.1 matrix: Reference column/row renamed to REF; Set row admits REF (for Sets of REFs)
-- §8.4 resource rules: REF prefix family clause added
-- §A.5 (canonical form) prefix list updated
-- Closed-enumeration listings in §7 intro and §1.2 reflexivity goal updated
-
-Companion-doc cascade (to be migrated):
-- Cookbook: Pattern 22 rewritten in `%` syntax; reification pattern added (`%@OBJ`); Template-version-chain examples migrated with the conceptual-shift note
-- Path spec: §8.6 expanded; Appendix B examples migrated to `%KIND`
-- Grammar / Compact Form: add `%` sigil production; document layer-2 wrapping
-- Quick Start, Security, Format Comparison: incidental cleanup
-- All companions bumped to v0.13.0 (or next minor)
-
-Migration: every leaf-like `@KIND` reference (no `#rel`, no attribute children) becomes `%KIND` mechanically. `@DEFOBJ`, `@REC`, `@BLK`, `@.STR`, `@_INT`, `@VAL`, `@KIND*` for non-graph-entity targets all migrate. The `@OBJ` and `@REL` forms WITH `#rel` and attribute children continue to work as @-edges with no syntactic change; the conceptual reading shifts (under v0.12, leaf-like vocabulary-metadata links; under v0.13, first-class associative graph statements per E4). Documents using `@OBJ #conformsTo : @Template` patterns where `#conformsTo` is *compositional* (slot-aligning, not relating) migrate to `%DEFOBJ #conformsTo : @Template`; the change is semantically meaningful and documents will need review on a case-by-case basis. The `@OBJ*` and `@REL*` Set forms (rare in practice) are no longer well-formed; multiple edges become siblings.
-
-(43) **§7.15 REL composition widened; "defined by purpose, not by structure" principle made explicit.** A REL is defined by its purpose — naming a first-class predicate — and that purpose is fully discharged by its identifier. The prior matrix held RELs to a stricter standard than any other role ("every child must be semantically load-bearing"); the new matrix admits the full data-carrier set, with structurally-justified exclusions only.
-
-The REL composition row widens from `@-Edge, REF, Extension, Annotation` to add `Property, Record, Block, Set, VAL`. Authors may now attach labels (`<STR rdfs:label : "knows">`), descriptions (`<STR rdfs:comment : "...">`), version markers, authorship, alias Sets, documentation Records, or any other data carrier directly to a REL — the same kinds of children that stand on any Object. Properties on a REL are data carriers whose meaning is consumer-conferred, never by GDX-core; meaninglessness is never disqualifying. RELs are held to no stricter standard than any other element.
-
-The structurally-justified exclusions remain:
-
-- **Object** — vocabulary entities don't contain data-instance Objects; a contextually false claim about what the REL is.
-- **Node** — RELs are structured vocabulary entities, not semi-structured pockets.
-- **Qualifier** — RELs carry no Resource, so there is nothing to refine.
-- **REL (self)** and **Template (`DEF…`) forms** — vocabulary entities don't nest within RELs. The Template exclusion is an explicit carve-out from modifier transparency (§8.2 rule 9(b)): even though `DEFREC` would otherwise be admitted as a Record-modifier (and REL now admits Record), the `DEF…` forms are blocked because they declare another vocabulary entity, and one vocabulary entity does not nest inside another.
-- **Transport-layer roles (Package, Group)** — transport wrappers do not appear inside vocabulary declarations.
-
-**Property-vs-Extension guidance on RELs.** Both are admitted; the choice communicates intent to consumers:
-
-- Use **Property** for data about the predicate (labels, descriptions, version, authorship) — meaning conferred by the reading consumer (documentation tool, vocabulary browser, lookup index).
-- Use **Extension** for a vocabulary-defined semantic axiom (symmetry, transitivity, cardinality bounds) — meaning conferred by the validator or reasoner that recognizes the vocabulary identifier.
-
-Mechanical rule: would a validator/reasoner act on it? → Extension. Is it for humans or downstream lookup? → Property.
-
-**@-edge target convention on RELs.** The @-Edge family axioms (§7.4 E5) restrict @-edge targets to Objects or RELs structurally. The vocabulary convention for @-edges on a REL is to target concept-Objects or other RELs (predicate-axiom statements like domain/range/inverse). This is convention, not structural enforcement; the matrix admits any @OBJ or @REL target, and the concept-vs-data-instance distinction lives in vocabulary practice.
-
-Cascade in Core Spec:
-- §7.15 rewritten with the "purpose, not structure" framing and the full admitted/excluded enumeration
-- §8.1 matrix REL row: Property, Record, Block, Set, VAL added (✓)
-- §8.2 rule 9 updated with the REL-doesn't-admit-Templates carve-out as new clause 9(b); existing Node-zone isolation becomes clause 9(a)
-- Small vocabulary example in §7.15 updated to show Property usage alongside @-edges and Extensions
-
-Migration: existing REL declarations continue to work; the change is additive. New patterns become available — labels, descriptions, alias Sets, documentation Records can sit on a REL directly without Extension wrapping. Existing uses of `<_STR rdfs:label : "...">` (Extension form) on RELs remain syntactically valid, but `rdfs:label` is data about the predicate rather than a semantic axiom — the cleaner expression is `<STR rdfs:label : "...">` (Property form). Authors should review their `_STR`/`_INT` uses on RELs and reclassify by the Property-vs-Extension guidance above when convenient.
+This is a pre-1.0 working draft. The specification is under active refinement; revisions may include breaking changes until v1.0.
+
+### Revision History
+
+| Version | Date       |
+|---------|------------|
+| v0.13.0 | 2026-05-25 |
+| v0.12.0 | 2026-05-25 |
+| v0.11.0 | 2026-05-20 |
+| v0.10.0 | —          |
+| v0.9.10 | —          |
+| v0.9.9  | —          |
+| v0.9.8  | —          |
+| v0.9.7  | —          |
+
+Detailed change descriptions for each revision are collected in **Appendix B — Detailed Revision History** at the end of this document.
 
 
 ## Table of Contents
@@ -279,6 +45,7 @@ Migration: existing REL declarations continue to work; the change is additive. N
 11. [Data Persistence](#11-data-persistence)
 12. [Open Issues](#12-open-issues)
 - [Appendix A — Conformance](#appendix-a--conformance)
+- [Appendix B — Detailed Revision History](#appendix-b--detailed-revision-history)
 
 ---
 
@@ -3181,6 +2948,271 @@ A conforming implementation SHOULD verify its behavior against a test suite cove
 - Round-trip: Compact → Standard → Compact (data-model preservation; comment loss is expected per Compact Form spec).
 
 The test suite is exhaustive in concept and bounded in practice. Each category above expands to dozens of specific tests when fully populated. A conformance test suite covering these categories is a substantial deliverable; implementations may bootstrap from a subset and expand coverage over time. The intent is that an implementation passing the full suite has demonstrably correct behavior on the cases that matter for interoperability.
+
+---
+
+## Appendix B — Detailed Revision History
+
+This appendix records the per-revision change descriptions accumulated during the pre-1.0 working-draft phase. The Revision History table at the top of this document gives the version + date summary; this appendix carries the prose detail. Once the specification reaches v1.0, this appendix will be archived and subsequent revisions will use a leaner change-log format.
+
+### v0.9.7
+
+§1 (Introduction) restructured into §1.1 What GDX Is, §1.2 Existing Approaches, §1.3 GDX Design Goals, §1.4 Where GDX Fits, §1.5 Scope. Conventions and Terminology promoted back to top-level §2, scoped to term definitions only (Core Terms, Conformance Layers, Vocabulary Terms, Identifier Schemes). The GDX Element and Core Data Model renumbered to §3 and §4. §6 renamed to "Element Kinds." Field Sigils and Separators (previously in §2.7 of Conventions) absorbed into §3.4. No normative semantics change.
+
+### v0.9.8
+
+The technical term "Kind" (naming the closed enumeration of Object, Record, Edge, etc.) renamed to "Role" throughout. "Kind" was ambiguous against generic English usage and competed with "value-kind." §6 renamed from "Element Kinds" to "Element Roles"; §6.3 from "Kinds in Detail" to "Roles in Detail." §4.1 renamed from "Field Roles" to "Element Fields" to avoid collision with the new technical term; its column header changed from "Role" to "Purpose." The §3.4 sigil table column header changed from "Role" to "Purpose" for the same reason. Sub-subsection numbering in §4.3 corrected from the stale §3.3.x to §4.3.x. The term "value-kind" (the value-category of a Resource) is preserved unchanged; only the structural-position concept renamed. No normative semantics change.
+
+### v0.9.9
+
+Sharpened the conceptual / data-model / text-form boundary across §3, §4, §5. Each section now has a distinct focus, signaled by its title: §3 "GDX Concepts" defines what GDX expresses; §4 "The GDX Abstract Data Model" defines what an implementation represents at runtime; §5 "Canonical Text Form" defines how elements are written. Substantial content moved between sections to eliminate the three-way overlap that had accumulated. The Sigils and Separators subsection moved from §3.4 to §5.1.1 (sigils are textual mechanics, not conceptual). The Real-Number Representation subsection from §4.3.2 merged into §5.2.3 Float Literals (suffix mechanics are textual). The two textual forms of null values (bare and empty-value) moved from §4.3.4 to a new §5.1.3, while the three-state Property semantics (Absent/Null/Present-with-value) remain in §4. A new §3.4 "The Implicit Parent-Child Relationship" promotes a conceptual point previously buried in §3.2's closing paragraph. Cross-references throughout the spec updated accordingly. No normative semantics change.
+
+### v0.9.10
+
+Corrections: (1) §8.4 Resource Rules erroneously listed DEF prefixes (`DEFSTR`, `DEFINT`, etc.) as Resource-bearing; Templates declare a contract for instances and do not carry an instance value themselves. The DEF prefixes have been removed from the resource-family bullets and added to the list of roles that do not carry Resources. (2) Appendix C.2 was reframed from "Reference Cycle Detection" (a generic implementation-correctness concern) to "Reference Cycle Exploitation," emphasizing the adversarial framing consistent with the rest of Appendix C. (3) Several Quick Start examples in Appendix D (§D.1, §D.2, §D.3, §D.4, §D.6, §D.7, §D.8) were updated to wrap their content in an Object or Template root; the previous examples placed bare Properties, Records, or Sets at the document root, which violates the conformance requirement that a document's root MUST be an Object, Template, REL declaration, or Package (§8). No normative semantics change.
+
+### v0.10.0
+
+Substantial changes:
+
+(1) **Reference operator `@` added.** The `@` prefix produces typed references, joining the existing modifier vocabulary. The `@KIND` family composes universally with role bases and modifier-bearing bases (subject to a `@@` prohibition: references cannot target other references). The composition reads as "a reference to a KIND-element." Closed-vocabulary expansion: the §6 specification describes the composition pattern rather than enumerating every cell; valid `@KIND` prefixes are derived from the pattern. This adds the reflexivity primitive — any addressable element can be referenced by any other element through a typed pointer.
+
+(2) **Set notation moved to suffix.** The Set marker `*` is now a suffix: `STR*`, `REC*`, `*INT` notation is replaced by `INT*`. This is a breaking change. The suffix position reflects Set's structural distinction from the refinement modifiers — `*` is value-kind-redirecting (creates a collection) rather than value-kind-preserving. The suffix also unlocks compositions previously forbidden by the no-modifier-stacking rule: `.STR*` (Set of Qualifiers), `_INT*` (Set of Extensions), `@STR*` (reference to a Set) are all valid.
+
+(3) **§3 trio framing added.** New §3.6 "Embedding, Referencing, and Graph Relationships" articulates the three distinct mechanisms for involving an addressable element from within another: `%X` for inline embedding, `@X` for typed references, EDGE for graph statements. Each has a distinct structural shape and use case.
+
+(4) **§6 restructured around the composition pattern.** The §6 intro introduces the prefix pattern `[@?][refinement-modifier?][base][*?]`. §6.1 (Canonical/Minified Forms) and §6.2 (Base Vocabulary) cover the core role vocabulary. §6.3 (Special Operators) introduces the `*` suffix and `@` operator. §6.4 (Refinement Modifiers) covers `.`, `_`, `%`, `N`. §7 (Roles in Detail) is the detailed per-role treatment, renumbered from old §6.3.x with `@KIND` added as §7.16. The base vocabulary is grouped by category: value primitives, structural roles, declaration roles, transport roles.
+
+(5) **Reference literal grammar reserves `$` for path expressions.** The reference literal grammar accepts `@Identifier` (normative in this revision) and reserves `$PathExpression` for a future revision. Path-mode resolution is an open issue (§12).
+
+(6) **§7.4 EDGE clarified.** A note distinguishes EDGE (structured graph-statement element with its own children) from `@OBJ` (leaf-like typed pointer). Both carry references to Objects but have different structural shapes.
+
+(7) **§8.1 Composition Matrix expanded.** New Reference column and row reflect the leaf-like nature of `@KIND` elements (Qualifiers and Annotations as children only). REL and Template rows admit Reference children for vocabulary metadata.
+
+(8) **§8.2 rules updated.** Rule 12 reframed to describe the refinement-modifier-non-stacking constraint precisely. New rules 13 (Set as suffix), 14 (universal `@` composition), 15 (`@@` prohibition), 16 (References are leaf-like).
+
+(9) **Migration impact.** All `*PREFIX` notation in existing documents must migrate to `PREFIX*`. The `@KIND` family is additive and does not affect existing documents. EDGE is unchanged. Templates and RELs are unchanged.
+
+(10) **Appendix split.** The previously-included Appendices B (Format Comparison), C (Security Considerations), and D (Quick Start) have been extracted into separate companion specifications, joining the existing Grammar, Compact Form, and Cookbook companions. The previously-included Appendix A (Conformance) remains in the core specification as normative content. Cross-references throughout the spec updated to point at the new companion documents. The split reduces the core specification by approximately 700 lines and clarifies the boundary between normative content (this specification, Appendix A, Grammar) and non-normative content (Format Comparison, Security Considerations, Quick Start, Cookbook).
+
+### v0.11.0
+
+(1) **Path-mode and key-mode reference resolution are now normative.** The `$PathExpression` form reserved in v0.10.0 §12.4 is fully specified in a new companion document, the GDX Path Expressions Specification (`GDX-Path.md`). The path grammar supports three segment kinds — `IdSegment` (bareword, matches `Id`), `RelSegment` (`#R`, matches `Rel`), and `OrdinalSegment` (`[N]`, matches by 1-based document order). The `&Key` reference literal provides key-based addressing through the location-stable `Key` anchor. Five reference-literal forms are recognized: `IdRef` (`@Anchor`), `PathRef` (`$PathExpression`), `KeyRef` (`&Key`), `IdPathRef` (`@Anchor$PathExpression`), and `IdKeyRef` (`@Anchor&Key`). The composed forms express cross-document addressing. The `@Anchor` production carries an optional role marker (`@OBJ:id`, `@REL:id`, `@DEFOBJ:id`, etc.) drawn from the closed prefix vocabulary; when omitted, composed references default to an Object anchor. The marker enables composed references to non-Object anchors (RELs, Templates, transport-layer containers) without requiring resolver inference.
+
+(2) **§12.4 closes.** Path-mode reference resolution is no longer an open issue. References to §12.4 in earlier revisions are satisfied by the companion specification.
+
+(3) **`/` removed from `IdStartChar` (§5.4.1).** Breaking change. Identifiers may no longer begin with `/`. The `IdContChar` set is unchanged, so identifiers may continue to contain `/` (e.g., IRIs like `https://acme.com/people/alice` remain valid). The narrowing makes the `$/...` path-mode form unambiguous and the `@Identifier$PathExpression` boundary lexically clean. Path-style local identifiers such as `<OBJ /people/alice>` MUST be migrated; the recommended migrations are documented in `GDX-Path.md` Appendix C.
+
+(4) **§5.4.2 identifier-forms table updated.** The "Path" row is removed; path-style local naming is replaced by path-mode reference resolution. The remaining identifier forms (Local name, Single letter, CURIE, Dotted CURIE local, GUID/opaque, IRI) are unchanged.
+
+(5) **§5.2.6 reference literal grammar updated.** The five-form `ReferenceLiteral` production replaces the placeholder. Address-mode singularity is incorporated by reference to `GDX-Path.md` §8.
+
+(6) **§8.1 composition matrix expands the resolvable target set.** `@KIND` references composed with a `PathRef`, `KeyRef`, `IdPathRef`, or `IdKeyRef` resource may now resolve against Records, Blocks, value Properties, Qualifiers, Extensions, and Embedded elements. Parent-context restrictions on where `@KIND` reference elements may appear are unchanged; only the addressability of the target expands.
+
+(7) **`Key` field reframed from Template-slot identifier to location-stable anchor.** The §3.2 description of `Key` is rewritten: Keys are an opt-in named-anchor mechanism providing stable reference targets for elements that lack global identifiers. The Template-alignment justification is removed. A new §5.4.5 defines Key uniqueness rules (scoped to the enclosing Object, or to the document at transport-layer position). The numeric Key form is retained as a lexical convenience but no longer carries Template-slot semantics.
+
+(8) **§9.2 Template-instance alignment pinned.** A new normative paragraph specifies that alignment is by `Id` matching (case-sensitive ordinal), with `Rel` matching as a cross-vocabulary fallback. The `Key` field plays no role in alignment.
+
+(9) **§5.1.1 sigils table updated.** The `$` row is updated from "reserved, grammar deferred" to "introduces a path-mode reference literal (§5.2.6, `GDX-Path.md`)."
+
+(10) **Migration impact.** Existing documents using leading-slash identifiers MUST be migrated (drop the leading slash, retaining any interior `/`). Existing documents using only `@Identifier` references are unaffected. Existing documents that used `&K` numeric Keys for Template-slot alignment MUST be migrated to named-Id Template slots; the `Key` field continues to be lexically valid but no longer carries slot-alignment semantics. Templates that previously used `&1`, `&2` positional slots are migrated to named slots (`firstName`, `lastName`, etc.). Existing documents that used a non-normative `$`-prefixed literal under v0.10.0 §12.4's implementation-defined window MUST conform to the v0.11.0 grammar.
+
+(11) **§1.3 adds the substrate-with-pluggable-constraints positioning.** A new design-goal paragraph names GDX as a structural schema (the prefix vocabulary, element model, Template structure, composition axioms) with no constraint implementation. Constraint vocabularies layer on top as Constraint Extensions whose identifiers GDX records but never interprets.
+
+(12) **§2.2 decomposes Layer 2 conformance.** The single "Schema Conformance" layer splits into Layer 2a (Template structural conformance, owned by GDX) and Layer 2b (constraint-vocabulary conformance, owned by the constraint vocabulary). The decomposition makes explicit that an instance may be Layer 2a-conforming while Layer 2b-non-conforming for one vocabulary and Layer 2b-conforming for another; verdicts are vocabulary-relative above the primitive floor. Appendix A is updated to mirror the split.
+
+(13) **§8.5 closes with a primitive-axioms statement.** A new closing paragraph names the §8.5 validation requirements as the GDX-native floor (Layer 1) and points to §9 for the schema layer.
+
+(14) **§9 gains a layered-intro paragraph.** A new paragraph at the top of §9 frames the section in three layers — Template structure, Template-instance alignment, and Constraint Extensions — and ties each to the §2.2 conformance layers.
+
+(15) **§9.4 renamed and rewritten.** Previous title "Validation Extensions" becomes "Constraint Extensions" to reflect that GDX hosts, vocabularies validate. New normative MUST: GDX implementations MUST NOT interpret constraint semantics; constraint identifiers are opaque to GDX. A new §9.4.1 "Parallel Constraint Vocabularies" formalizes the multi-vocabulary coexistence property and gives a worked example showing XSD, JSON Schema, and a vendor vocabulary on the same Template. §9.4.2 covers validator behavior on recognized vs unrecognized identifiers.
+
+(16) **§9.6 updates Common Vocabulary framing.** The Common Vocabulary is positioned as one vocabulary among many — it ships with GDX as a convenience and reference but has no privileged status at the GDX layer. `gdx:` constraint identifiers are opaque to GDX in the same way as `xsd:`, `json:`, or any other.
+
+(17) **§9.2 expands into subsections covering the universal claim rule and materialization.** §9.2.1 (Slot Alignment) carries forward the Id-and-Rel alignment rule. §9.2.2 (Cross-Role and Transport Restrictions) carries forward the prefix-matching rules. §9.2.3 (The Universal Claim Rule) is new: a four-case matrix governs how Template-declared and instance-declared values reconcile on any claim-bearing field (Rel, Key, default Resource, nested `--type`). Differing claims are conflicts; matching claims are confirmed; silent-on-one-side defers to the other. §9.2.4 (Materialization) is new: defines the build-time operation of writing Template-supplied values into the instance as explicit fields, motivated by the searchability and self-description requirements of persisted documents. Materialization is RECOMMENDED for persistence and OPTIONAL for in-memory processing.
+
+(18) **§9.2 distinguishes named type identity from observable conformance.** Two new paragraphs in §9.2: (a) `--type` is an identity claim anchored to the Template name; two Templates with identical shapes are different types, and an instance of one is not silently an instance of the other; (b) cross-type conformance — an instance of type A structurally satisfying Template B — is a separately observable relation, useful for validation against multiple schemas, version-compatibility checks, and migration tooling. Conformance does not redefine identity. Consumers MUST NOT silently substitute one type for another even when their instances mutually conform; any cross-conformance is surfaced as a derived observation, not a rewrite of the original `--type` claim.
+
+(19) **§1.1 reframes GDX as an abstract data model with concrete representations.** A new opening paragraph establishes that GDX is the data model — the abstract content — and that Standard Form, Compact Form, Binary Form, and programmatic in-memory form are alternative concrete representations of that model. This clarifies the boundary "what is GDX?" and positions the various forms as faithful realizations rather than separate things.
+
+(20) **§4 (Abstract Data Model) intro reinforces the model/representation distinction.** New paragraph ties the data model defined in §4 to its concrete realizations: each preserves the same elements, prefixes, field semantics, and composition relationships; conversions transform surface syntax without changing content.
+
+(21) **§2.1 adds Core / Extension definitional pair.** New terminology entries formally distinguish the **core** (what GDX itself defines and interprets — prefix vocabulary, element model, grammars, composition, Template-instance alignment, claim rule, primitive value-kind axioms) from **extension** (vocabulary-defined material that rides on top of the core — Rel identifiers, Type identifiers, Constraint Extension content). The pair names the **interpretation** boundary between what GDX understands and what GDX hosts. The terms *core layer* and *extension layer* are introduced as a convenient shorthand for the two sides of the boundary.
+
+(22) **§3.7 articulates the optional-elaboration principle.** New subsection: elements are valid at their minimum form (Prefix alone); elaboration is opt-in and proceeds along two structurally distinct patterns. Identity elaboration is orthogonal across three independent axes (`Id`, `Key`, `Rel`). Value elaboration is layered across five layers (category, value, structural identity, constraint attachment, constraint semantics), where each layer is optional given the layer above and the layers live in different places (instance, Template, vocabulary). The principle organizes how to read the rest of §3 and explains why simple GDX stays simple while richer cases grow without restructuring.
+
+(23) **§1.3 adds integration-surface, not-LCD framing.** A clause in the substrate-paragraph clarifies that GDX is the integration surface where multiple vocabularies coexist, not a lowest-common-denominator subset of them. The structural schema is opinionated and complete; what's neutral is the constraint layer.
+
+(24) **Targeted wording sweep: core/extension terminology adopted across §2.2 and §9.4.** Replaced phrases like "the GDX layer" and "hosted on top" with "core layer" and "extension layer" where the new terminology disambiguates the interpretation boundary from the mechanism boundary. Other places — where wording was already clear — were left as-is to avoid churn.
+
+(25) **§1 restructured.** §1.1 (What GDX Is) trimmed for redundancy: removed the duplicate prose paragraph (with `strutural`/`resouce` typos), pulled the "single repeating element shape" paragraph forward from §1.3's tail, and framed the small example explicitly as Standard Form (one realization of the abstract model). §1.2 and §1.3 swapped positions: design goals now lead, format comparison follows. The rhetorical flow shifts from "survey landscape, explain choices" to "introduce model, state goals, validate against alternatives."
+
+(26) **§1.2 (Design Goals) rewritten with nine model-focused goals.** Replaced the previous mixed list (which combined model goals with serialization-format virtues) with nine goals that each articulate a capability GDX commits to and a corresponding gap in established formats or data models. The new goals: Typed elements baked into the form; Inline semantic alignment; Schema is data; Structural schema with pluggable constraint vocabularies; Unified document and graph model; Self-describing instances without the schema; Reflexivity through typed references; Layered validity with clear ownership; Minimum-is-enough elaboration. Serialization-format virtues (round-trip stability, encoding efficiency, canonical content addressing) are explicitly relegated to §5 as properties of Standard Form rather than goals of the data model.
+
+(27) **§1.3 (Comparison with Existing Formats) absorbed the side-by-side example.** The composite-record side-by-side comparison block (showing the same record in GDX Standard, GDX Compact, JSON, YAML, and XML) moved from the tail of the old §1.3 to the tail of the new §1.3 (the comparison section). It now functions as a synthesizing example after each format's individual discussion rather than as an interruption of the design-goals list. The new §1.3 also gets typo cleanup (`unweildly`, `loosing`, `Write and Read`) and a sharpened opening that frames the section as validation of the §1.2 claims against the landscape.
+
+(28) **Three cross-references updated for the §1.2/§1.3 swap.** §3.1 ("responds to the problems §1.2 named" → "§1.3 names"); §9 layered-model paragraph ("(§1.3)" → "(§1.2)"); the new §1.3 closing references "(§1.2)" for the layering/pluralism design goals. Historical changelog entries that reference §1.3 at the time of their item are left as-is; they correctly describe the change at the point it was made.
+
+(29) **Role definition reframed as both structural and conceptual.** §2.1 and the §6 intro paragraph now describe Role as carrying both the structural shape (what fields and children are admitted) and the conceptual interpretation (how the element is to be read in relation to its parent). This makes explicit a property the spec previously relied on implicitly — that two roles may share a structural shape and still differ as roles because their conceptual interpretation differs.
+
+(30) **§7 role descriptions sharpened with explicit conceptual leads.** Each per-role subsection now leads with a one-sentence conceptual identity for the role before describing structural mechanics. Object is "a thing with identity"; Record is "a compound property"; Property is "an attribute of its parent"; Edge is "a graph statement"; Block is "a labeled section"; Annotation is "a note attached to its parent"; Package is "a transport wrapper"; Group is "a transport partition"; Qualifier is "a refinement on its parent's value"; Extension is "a schema rule attached to a Template"; Embedded is "a structured value in a scalar's position"; Node is "a semi-structured pocket"; Set is "a multiplicity"; Template is "a type contract"; REL is "a predicate as a first-class entity"; Reference is "a typed pointer to another element". The conceptual lead resolves why structurally-similar roles (Object/Record being the load-bearing example) exist as distinct roles — the distinction lives in interpretation, not in structure.
+
+(31) **§7.2 adds explicit Object/Record comparison.** A new paragraph at the end of §7.2 names that Records and Objects share structural shape but differ conceptually, with the consequences for addressability, persistence, and document root spelled out.
+
+(32) **RELs admit Extension children — internal inconsistency resolved.** The §8.1 composition matrix and rule 8 already allowed Extensions on RELs (for predicate semantics like domain, range, inverse, cardinality), but §7.10, §8 modifier transparency, §8.1 prose, and §8.2 rule 7 contradicted this by saying "Extensions only under Templates." All five passages now consistently state that Extensions are valid under Templates or RELs. §7.10's conceptual lead is broadened from "a schema rule attached to a Template" to "a schema rule attached to a Template or REL." The composition matrix is unchanged (REL row already shows Extension as admitted child).
+
+(33) **§1.2 adds "First-class predicates and vocabulary documents" design goal.** Elevates Rel to a design-level concern, framed as a single primitive — a vocabulary-defined named relationship between two roles — whose expressed form (compositional alignment, associative predicate, predicate-axiom) is parameterized by the role-combination it sits in. The structural side — the `Rel` field, the `REL` element, References — is the implementation of that primitive. Concept-as-Object is named as the decision that lets GDX have RDF/OWL's ontology-building primitive without a separate Class role.
+
+(34) **§3.7 (new) Predicates and Vocabularies.** New subsection between §3.6 and (former) §3.7 articulating the foundational principle — a Rel is a single, constant primitive that names a relationship between two roles; the form of statement it expresses is parameterized by role-context (one rule, three readings: compositional alignment, associative predicate, predicate-axiom). The three coordinated structural mechanisms (Rel field, REL element, @REL reference) are presented as the implementation of that principle. Names the concept-as-Object decision. Defines what a vocabulary document is. Optional Elaboration moves to §3.8.
+
+(35) **§7.15 (Relation Declaration) sharpened.** Expanded to show: the three-component vocabulary system in detail; what Extensions and References on RELs do; the concept-as-Object pattern; a small worked vocabulary document combining concept Objects, REL declarations with domain/range Extensions, predicate-to-predicate References, and Templates.
+
+(36) **Cookbook Pattern 25 (Complete Vocabulary Document) added.** Shows a full vocabulary document with concept Objects, RELs carrying predicate-semantic Extensions, inverse References between RELs, and Templates bound to concepts. Patterns 25-34 renumbered to 26-35; TOC ranges updated.
+
+(37) **§6.5 promoted to standalone §7 (Element Roles); subsequent sections renumbered.** The per-role catalog (formerly §6.5.1 through §6.5.16) is now §7 as a top-level section, with each role at `###` depth instead of `####`. §6 is renamed from "Element Roles" to "Prefix Vocabulary" to reflect its narrowed scope (the prefix grammar, base vocabulary, special operators, and refinement modifiers). The new §7 is the authoritative role reference. Subsequent sections shift up by one: Composition Axioms (was §7) → §8, Schemas and Validation (was §8) → §9, Transport (was §9) → §10, Data Persistence (was §10) → §11, Open Issues (was §11) → §12. All body cross-references to §6.5.x → §7.x, §7.x → §8.x, §8.x → §9.x, §9 → §10, §10.x → §11.x, §11.x → §12.x. The Table of Contents and the v0.11.0 changelog entries are updated to current section numbers; older changelog entries (v0.9.x, v0.10.0) are also updated since the sections being described still exist at the new numbers.
+
+(38) **Extensions reframed as adjunct statements; structural restriction lifted.** §7.10 (Extension) is rewritten to define Extensions as *adjunct statements* — vocabulary-defined assertions attached to an element that consumers may interpret and act upon, but on which the element does not depend for its identity, value, or validity. This reframing replaces the prior "schema rule attached to a Template or REL" framing, which described one application of Extensions rather than what they are. The "harmlessly ignored" property (consumers that don't recognize an Extension's vocabulary ignore it) follows directly from the adjunct nature and is what allows multiple vocabularies to coexist on the same element.
+
+Structurally, Extensions are no longer restricted to Templates and RELs. §8.1 composition matrix is updated: the Extension column shows ✓ for all parent roles that admit children, with the exceptions of Annotation (leaf-only) and Node (isolated-subtree per rule 5). §8.2 rule 7 is rewritten to state the adjunct property; rule 9 (modifier transparency) drops the Extension-restriction exception. This is an additive change for existing documents — Constraint Extensions on Templates still work exactly as before; predicate-semantic Extensions on RELs still work; what is now also permitted is provenance Extensions on Objects, presentation Extensions on Properties, audit Extensions on Edges, signing Extensions on transport wrappers, and any other vocabulary-defined adjunct statement attached to any element.
+
+§9.4 (Constraint Extensions) retains its title and content as a normative description of one specific Extension application (schema validation on Templates). A new opening paragraph in §9.4 frames constraint validation as one use of the broader Extension mechanism.
+
+Cookbook Pattern 20 (Adjunct Extension for Non-Schema Metadata) added, showing provenance on an Object, presentation hint on a Property, migration directive on a Template, and confidence Extension on an Edge. Pattern 19 (Annotation for Provenance) updated to clarify the Annotation-vs-Extension distinction (free-text vs vocabulary-keyed) with a pointer to Pattern 20. Patterns 20-35 renumbered to 21-36; TOC ranges updated.
+
+(39) **Extension value-kind scope clarified; broken `_OBJ` examples fixed.** §7.10 (Extension) adds a normative paragraph stating that Extensions carry primitive value-kinds only (the closed table: `_STR`, `_INT`, `_FLOAT`, `_BOOL`, `_BYTE`). Reference-valued adjunct statements use a Reference (`@KIND`, §7.16) child with a `#rel` predicate naming the assertion. Extensions and References together cover the adjunct-statement surface — Extensions for primitive values, References for reference values — and both attach as vocabulary-keyed children of the parent.
+
+The prior commit (38) introduced examples in §7.10, §7.15, and Cookbook Pattern 26 that incorrectly used `_OBJ` (`<_OBJ gdx:domain : @gdx:Person>`) to express reference-valued REL metadata. `_OBJ` is not in the closed Extension prefix vocabulary and would semantically mean "Extension whose Resource is an Object" — either meaningless (Objects are not a value-kind) or illegal (embedding an Object inside an Extension violates §8.2 rule 2 Object exclusion). All occurrences corrected to use References with `#rel` predicates: `<@OBJ #gdx:domain : @gdx:Person>` for Object references, `<@DEFOBJ #gdx:supersedes : @CustomerV1>` for Template references. No structural change required; the composition matrix already admits References as REL and Template children.
+
+### v0.12.0
+
+(40) **Embedded modifier `%` replaced by VAL role.** The Embedded refinement modifier (`%STR`, `%REC`, `%OBJ`, etc.) is removed from the prefix vocabulary and replaced by a new first-class role, **VAL** (minified **V**), defined in §7.11. Where `%X` previously expressed "an X element in property-value position," `<VAL name <X : value>>` now expresses "a slot named `name` whose value is an X element." The change is motivated by two structural needs the modifier could not express: (a) two-level identity — VAL distinguishes the slot's identity (Id/Key/Rel on the VAL itself) from the occupant's identity (Id/Key/Rel on the contained element), allowing a single position to be both vocabulary-aligned at the slot level and addressable at the occupant level; (b) closed occupant enumeration — VAL admits Properties, Records, Objects, Blocks, Sets, Edges, and References as occupants under a single uniform role, rather than requiring a separate `%`-form for each primitive.
+
+§6.2 adds the VAL/V row. §6.4 drops the `%` modifier row and gains a paragraph pointing readers to VAL. §8.1 adds a VAL column and VAL row to the composition matrix. §8.2 rules 2 (Object exclusion), 9 (modifier transparency), 12 (modifier stacking), and 13 (Set as suffix) are updated to reference VAL rather than `%`. §8.4 drops `%X` from the value-kind family lists. §8.5 validation lists VAL rather than `%O` as the data-layer Object licensing form. §4.2 gains an "occupant of a VAL slot" carve-out paragraph mirroring the Set-member positional exemption, so that an occupant inherits the slot's named-attribute role without needing its own identifier.
+
+Migration: every `%X` element becomes `<VAL #rel name <X : value>>`, with the slot's `#rel` predicate (and any Id/Key) moved to the VAL and the value moved into the occupant. The `VAL*` form is malformed (§7.11 axiom 6); Set-of-VAL semantics are expressed as a Set of the underlying occupant role. Examples throughout the spec, Cookbook, Path, Grammar, Compact Form, and Quick Start companions are migrated. Cookbook Pattern 10 (Embedded Structured Value) and Pattern 11 (Embedded Alternative Representations) are rewritten to demonstrate slot-level and occupant-level alignment respectively.
+
+(41) **EDGE prefix replaced by the @-Edge family (`@OBJ`, `@REL`); §7.4 rewritten as the @-Edge Family with axioms E1–E6.** The `EDGE`/`E` prefix is removed from the closed vocabulary. Where `<EDGE #knows : @bob>` previously expressed a graph-statement element, `<@OBJ #knows : @bob>` now does. `@REL` is promoted from a leaf-like reference to a first-class @-edge whose target is a predicate (REL declaration). The two members of the @-Edge family, `@OBJ` and `@REL`, are enumerated by target role and restricted to *independent graph-entities* — Objects (including concept-Objects per §3.7's concept-as-Object pattern) and REL declarations. All other `@KIND` forms remain in the Reference family (§7.16, pending a separate refinement pass), which retains leaf-like-pointer semantics.
+
+§7.4 is rewritten as "The @-Edge Family" and adds six normative axioms:
+- **E1.** Prefix asserts target role; Resource asserts target identity; the assertion stands even when the Resource is empty (`<@OBJ #knows : >` in Template context declares an Object-edge slot).
+- **E2′.** First-class but dependent: an @-edge is its own entity (carries identity, predicate, attributes) but is owned by and serialized within its source. Dies with source (relational projections SHOULD use `ON DELETE CASCADE`); dangles on target loss.
+- **E3.** Attribute children describe the relationship-entity. When the edge carries identity (E6), attributes belong to the persistent edge-entity, not to any single predication.
+- **E4.** Predicate (`#rel`) is MANDATORY. No unlabeled adjacency — adjacency-if-wanted is a designated `#rel` value, not its absence.
+- **E5.** Family is enumerated by target role and restricted to independent graph-entities. Exactly two members (`@OBJ`, `@REL`); source role is orthogonal.
+- **E6.** Identity (`Id`/`Key`) is optional and orthogonal to predicate. Identity is the edge's *substance* — the persistent entity that endures across predicate/attribute changes and disambiguates multiple edges between the same endpoints. Two @-edges with the same (source, predicate, target) ARE distinct if their identities differ; uniqueness is by identity, not by the triple. Identity-without-predicate is malformed; predicate-without-identity is the common case.
+
+The substance/predication split is the spine: Id is what the edge *is*, `#rel` is what it currently *asserts*, attributes ride on the substance. This delivers named edges, predicate mutation over stable identity, and multi-edge disambiguation — all from E2′ with no RDF-style reification machinery.
+
+Cascade changes:
+- §3.5 (graph statements) updated to use `@OBJ` instead of `EDGE`.
+- §3.6 (trio framing) re-anchored: VAL = embedding, @-Edge = graph relationships, Reference = leaf-like pointing.
+- §3.7 (predicates and vocabularies) updated to describe @-edge children on RELs alongside Extensions.
+- §4.3.2 (reference value-kind) and §4.3 (Resource definition) updated to use `@OBJ` examples.
+- §6.2 (base vocabulary) drops the `EDGE`/`E` row; adds a graph-statement-roles subsection listing `@OBJ`/`@REL`.
+- §6.3.2 (Reference Operator) rewritten to describe the @-Edge / Reference structural split.
+- §7.15 (REL) updated to describe three kinds of vocabulary-metadata children (@-edges, Extensions, References) with the new framing.
+- §7.16 (References) rewritten: family scope explicitly excludes `@OBJ` and `@REL`; transitional-status note added.
+- §8.1 composition matrix: `Edge` column/row renamed to `@-Edge`; REL row gains `@-Edge` admittance (`✗` → `✓`) for vocabulary metadata.
+- §8.2 rule 16 reframed around the @-Edge-vs-Reference split.
+- §8.4 (resource rules) splits the former `EDGE` resource line into separate `@-Edge` and `Reference` lines.
+- Appendix A.5 (canonical form) removes `EDGE` from the prefix list and notes the `E` slot is unassigned.
+- Appendix A.7 (test suite) updated.
+- §11 (Data Persistence) gains an `ON DELETE CASCADE` recommendation per E2′.
+
+The `E` minified slot is currently unassigned; reassignment is deferred to the Reference-family refinement pass where the full minified-letter map can be reconsidered together.
+
+Companion-document updates:
+- **Cookbook Pattern 7 (Edge Between Entities)** rewritten with `@OBJ` syntax and a new example demonstrating edge-as-substance via E6 identity.
+- **Cookbook Pattern 22** retitled "Typed Reference to a Non-Graph-Entity"; examples replaced with `@DEFOBJ`/`@REC` targets to match the new Reference-family scope (graph-entity references are @-edges, covered by Pattern 7).
+- **Path spec** Appendix B.4 and B.6 examples migrated from Edge targets to Property targets to remain neutral with respect to the pending Reference-family refinement (cross-references to specific @-edges are a Reference-side concern).
+- **Grammar / Compact Form** drop `EdgePrefix` production.
+- **Quick Start** §5 retitled "Edges Between Objects" with the new syntax.
+- **Format Comparison** §5 (graph data) updated; @-Edge model now positioned with named-edge / substance-without-reification as a distinguishing feature.
+- **Security Considerations** §2 (reference cycles) updated to use @-edge framing.
+
+Migration: every `<EDGE …>` element becomes `<@OBJ …>`. The `#rel` requirement is unchanged (it was already required for EDGE). Existing `@OBJ`/`@REL` references that *do* carry `#rel` continue to work; those that *don't* carry `#rel` are no longer well-formed @-edges and must either add a `#rel` (becoming proper @-edges) or migrate to the Reference family when its surface form is refined. The `E` minified prefix is unassigned and MUST NOT appear in new documents.
+
+### v0.13.0
+
+(42) **REF family completed; `%` sigil added; the slot-filler trichotomy made structural.** The Reference family is given its own sigil `%`, distinct from the `@` sigil that names the @-Edge family. Every `@KIND` prefix that previously served as a leaf-like reference (`@DEFOBJ`, `@REC`, `@BLK`, `@.STR`, `@_INT`, `@VAL`, value-Property forms, and their Set forms) is renamed to `%KIND`. The `@` sigil is now exclusively the @-Edge sigil, restricted to its two members (`@OBJ`, `@REL`) by §7.4 axiom E5.
+
+The closure rule: the `%` sigil wraps any layer-1 role-prefix to produce a REF-to-that-role. The closed REF family is generated by this single composition:
+
+- `%OBJ`, `%REC`, `%BLK` — REF to an Object, Record, Block
+- `%STR`, `%INT`, `%FLOAT`, `%BOOL`, `%BYTE` — REF to a value Property
+- `%.STR`, `%_INT`, `%NSTR` — REF to a Qualifier, Extension, Node-zone element
+- `%DEFOBJ`, `%DEFSTR`, etc. — REF to a Template
+- `%VAL` — REF to a VAL slot
+- `%@OBJ`, `%@REL` — REF to an @-edge (reification)
+- `%KIND*` — REF to a Set (or, in Set-member position, a Set of REFs)
+
+The genus split is the load-bearing structural commitment: `%` always fills a slot (compositional `#rel`); `@` always asserts a relationship (associative `#rel`); the two sigils are never synonyms. The proof-by-collapse (§7.16 axiom R4): if `<%OBJ #X x : @T>` and `<@OBJ #X : @T>` could both assert "parent X T," the sigils would be interchangeable spellings and the partition would dissolve. They do not — the `%` form is "slot holds a handle, slot semantically aligned with `#X`"; the `@` form is "parent stands in relation `#X` to `T`."
+
+§7.16 is rewritten as "The %-Reference Family" with six normative axioms:
+
+- **R1.** Prefix asserts target role; Resource asserts target identity; resolution dereferences and verifies the role.
+- **R1a.** The role-assertion is a resolution constraint, particularly pronounced for path/key resolution.
+- **R2.** A REF fills a slot; it asserts nothing about its parent.
+- **R3.** A REF is Property-shaped — admits `#rel` (compositional), Qualifiers, Extensions, an `Id` (slot name), and Annotations; admits no structural children.
+- **R4.** `#rel` on a REF is always compositional alignment (slot-level), never associative (parent-relationship). Associative is the exclusive province of @-Edge.
+- **R5.** A REF may target any addressable element by any resolution mode (name, path, key, composed cross-document) — including @-edges by key (reification via `%@OBJ`/`%@REL`).
+- **R6.** A REF has no identity of its own beyond its slot; a REF is never itself a reference target.
+
+The trichotomy and edge framing in §3.6 is rewritten around the genus split: Property fills a slot with a literal; VAL fills a slot with a dependent element; REF fills a slot with a handle to an independent element; @-Edge asserts a relationship its source participates in. The three slot-fillers share Property-shaped elaboration (compositional `#rel`, Qualifiers, Extensions); the @-Edge stands apart with associative `#rel`, attribute children, and identity.
+
+Edge-side fall-out:
+
+- **§7.4 axiom E5 strengthened:** `@OBJ*` and `@REL*` are declared malformed. Each @-edge is a single graph statement (per E2′); multiple edges from one source are expressed as siblings, not as Set members. Multiple-edges-as-a-collection is implicit in the document structure, not collected into a Set.
+- **§8.2 derived rules 14, 14a, 15, 16 rewritten.** New rule 14 narrows the @-Edge family to two members. New rule 14a closes off `@OBJ*`/`@REL*`. Rule 15 enumerates the three malformed sigil compositions: `@@KIND`, `%%KIND`, `@%KIND`. Rule 16 distinguishes Property-shaped (REF) from statement-shaped (@-Edge) composition.
+
+Cascade changes in Core Spec:
+- §3.6 rewritten as "The Slot-Filler Trichotomy and Graph Statements"
+- §4.3.2 (reference value-kind) updated for the two-family split
+- §6.2 base vocabulary: REF row added; reading note updated
+- §6.3 split into §6.3.2 (sigil `@`) and §6.3.3 (sigil `%`); §6 prefix-pattern intro updated to the two-layer grammar
+- §7.16 rewritten as "The %-Reference Family"
+- §8.1 matrix: Reference column/row renamed to REF; Set row admits REF (for Sets of REFs)
+- §8.4 resource rules: REF prefix family clause added
+- §A.5 (canonical form) prefix list updated
+- Closed-enumeration listings in §7 intro and §1.2 reflexivity goal updated
+
+Companion-doc cascade (to be migrated):
+- Cookbook: Pattern 22 rewritten in `%` syntax; reification pattern added (`%@OBJ`); Template-version-chain examples migrated with the conceptual-shift note
+- Path spec: §8.6 expanded; Appendix B examples migrated to `%KIND`
+- Grammar / Compact Form: add `%` sigil production; document layer-2 wrapping
+- Quick Start, Security, Format Comparison: incidental cleanup
+- All companions bumped to v0.13.0 (or next minor)
+
+Migration: every leaf-like `@KIND` reference (no `#rel`, no attribute children) becomes `%KIND` mechanically. `@DEFOBJ`, `@REC`, `@BLK`, `@.STR`, `@_INT`, `@VAL`, `@KIND*` for non-graph-entity targets all migrate. The `@OBJ` and `@REL` forms WITH `#rel` and attribute children continue to work as @-edges with no syntactic change; the conceptual reading shifts (under v0.12, leaf-like vocabulary-metadata links; under v0.13, first-class associative graph statements per E4). Documents using `@OBJ #conformsTo : @Template` patterns where `#conformsTo` is *compositional* (slot-aligning, not relating) migrate to `%DEFOBJ #conformsTo : @Template`; the change is semantically meaningful and documents will need review on a case-by-case basis. The `@OBJ*` and `@REL*` Set forms (rare in practice) are no longer well-formed; multiple edges become siblings.
+
+(43) **§7.15 REL composition widened; "defined by purpose, not by structure" principle made explicit.** A REL is defined by its purpose — naming a first-class predicate — and that purpose is fully discharged by its identifier. The prior matrix held RELs to a stricter standard than any other role ("every child must be semantically load-bearing"); the new matrix admits the full data-carrier set, with structurally-justified exclusions only.
+
+The REL composition row widens from `@-Edge, REF, Extension, Annotation` to add `Property, Record, Block, Set, VAL`. Authors may now attach labels (`<STR rdfs:label : "knows">`), descriptions (`<STR rdfs:comment : "...">`), version markers, authorship, alias Sets, documentation Records, or any other data carrier directly to a REL — the same kinds of children that stand on any Object. Properties on a REL are data carriers whose meaning is consumer-conferred, never by GDX-core; meaninglessness is never disqualifying. RELs are held to no stricter standard than any other element.
+
+The structurally-justified exclusions remain:
+
+- **Object** — vocabulary entities don't contain data-instance Objects; a contextually false claim about what the REL is.
+- **Node** — RELs are structured vocabulary entities, not semi-structured pockets.
+- **Qualifier** — RELs carry no Resource, so there is nothing to refine.
+- **REL (self)** and **Template (`DEF…`) forms** — vocabulary entities don't nest within RELs. The Template exclusion is an explicit carve-out from modifier transparency (§8.2 rule 9(b)): even though `DEFREC` would otherwise be admitted as a Record-modifier (and REL now admits Record), the `DEF…` forms are blocked because they declare another vocabulary entity, and one vocabulary entity does not nest inside another.
+- **Transport-layer roles (Package, Group)** — transport wrappers do not appear inside vocabulary declarations.
+
+**Property-vs-Extension guidance on RELs.** Both are admitted; the choice communicates intent to consumers:
+
+- Use **Property** for data about the predicate (labels, descriptions, version, authorship) — meaning conferred by the reading consumer (documentation tool, vocabulary browser, lookup index).
+- Use **Extension** for a vocabulary-defined semantic axiom (symmetry, transitivity, cardinality bounds) — meaning conferred by the validator or reasoner that recognizes the vocabulary identifier.
+
+Mechanical rule: would a validator/reasoner act on it? → Extension. Is it for humans or downstream lookup? → Property.
+
+**@-edge target convention on RELs.** The @-Edge family axioms (§7.4 E5) restrict @-edge targets to Objects or RELs structurally. The vocabulary convention for @-edges on a REL is to target concept-Objects or other RELs (predicate-axiom statements like domain/range/inverse). This is convention, not structural enforcement; the matrix admits any @OBJ or @REL target, and the concept-vs-data-instance distinction lives in vocabulary practice.
+
+Cascade in Core Spec:
+- §7.15 rewritten with the "purpose, not structure" framing and the full admitted/excluded enumeration
+- §8.1 matrix REL row: Property, Record, Block, Set, VAL added (✓)
+- §8.2 rule 9 updated with the REL-doesn't-admit-Templates carve-out as new clause 9(b); existing Node-zone isolation becomes clause 9(a)
+- Small vocabulary example in §7.15 updated to show Property usage alongside @-edges and Extensions
+
+Migration: existing REL declarations continue to work; the change is additive. New patterns become available — labels, descriptions, alias Sets, documentation Records can sit on a REL directly without Extension wrapping. Existing uses of `<_STR rdfs:label : "...">` (Extension form) on RELs remain syntactically valid, but `rdfs:label` is data about the predicate rather than a semantic axiom — the cleaner expression is `<STR rdfs:label : "...">` (Property form). Authors should review their `_STR`/`_INT` uses on RELs and reclassify by the Property-vs-Extension guidance above when convenient.
 
 ---
 
