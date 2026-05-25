@@ -476,7 +476,7 @@ Core Spec §9.2 is amended with an explicit alignment rule: an instance child sa
 - `@REC`, `@BLK` — resolvable when the Resource is a `PathRef`, `KeyRef`, `IdPathRef`, or `IdKeyRef` whose terminal element is a Record or Block, respectively.
 - `@.STR`, `@.INT`, `@.FLOAT`, `@.BOOL`, `@.BYTE` — resolvable when the path or key terminal is a Qualifier of the corresponding value-kind.
 - `@_BOOL`, `@_INT`, `@_STR`, `@_FLOAT`, `@_BYTE` — resolvable when the path or key terminal is an Extension of the corresponding value-kind (Extensions are valid only under Templates; the reference must resolve within a Template subtree).
-- `@%REC`, `@%OBJ`, `@%STR`, `@%INT`, etc. — resolvable when the path or key terminal is an Embedded element.
+- `@VAL` — resolvable when the path or key terminal is a VAL slot (Core Spec §7.11). Resolution targets the VAL element itself, not its occupant; to address the occupant, the path must include a further segment selecting it.
 - `@STR`, `@INT`, `@FLOAT`, `@BOOL`, `@BYTE` to value Properties — resolvable when the path or key terminal is a value Property of the corresponding value-kind. (Distinct from references to Objects of those names, which is not a legal composition; `@STR` to an Object is malformed.)
 
 Parent-context restrictions on where `@KIND` references may appear (Core Spec §8.1) are unchanged. Only the addressability of the **target** expands; the rules for where a reference element may sit in its parent's children are governed by the existing composition matrix.
@@ -525,9 +525,9 @@ Node-zone elements (the `N` modifier; Core Spec §7.13) are described as semi-st
 
 A future revision is expected to specify either (a) Node-zone subtrees are opaque to outside path expressions (paths halt at the Node-zone boundary), or (b) paths traverse Node-zone subtrees with the same segment semantics. Implementers SHOULD NOT rely on either behavior in v1.
 
-### 10.2 Path Behavior Across Embedded Elements
+### 10.2 Path Behavior Across VAL Slots and Their Occupants
 
-Embedded elements (the `%` modifier; Core Spec §7.11) appear in property-value position while retaining their base role's children and identifier rules. Path traversal through an Embedded element behaves naturally — the Embedded element is a child of its parent, and its own children are accessed by further segments — but this should be stated explicitly in a subsequent revision, including the case where a `PathRef` terminates at an Embedded element.
+VAL slots (Core Spec §7.11) carry exactly one occupant element as a child. Path traversal through a VAL behaves like traversal through any other parent — the VAL is a child of its containing element, and its occupant is in turn a child of the VAL accessed by further segments — but the two-level identity that VAL introduces (slot-level on the VAL, occupant-level on the contained element) is not given an explicit traversal-form abbreviation. A reference of the form `$/parent/slotName` resolves to the VAL; `$/parent/slotName/occupantId` resolves to the occupant. A future revision MAY introduce an abbreviated form that resolves directly to the occupant (e.g., a sigil that says "the value of this slot"), if implementer experience demonstrates a clear need; v1 does not provide one. Authors should pick the level they need explicitly.
 
 ### 10.3 Ordinal Counting and Annotations
 
@@ -700,20 +700,19 @@ The path is syntactically well-formed and parses correctly. However, the termina
 
 The path traverses Object → Property → Qualifier. The terminal element is the `<.STR currency>` Qualifier; the enclosing `@.STR` prefix matches its role (string Qualifier). The reference resolves successfully.
 
-### B.8 Reference to an Embedded Element
+### B.8 Reference to a VAL Slot
 
 ```
 <OBJ orders/42
-    <%REC delivery
-        <STR street : "Broadway">
-        <STR city : "Oakland">
+    <VAL delivery
+        <REC <STR street : "Broadway"> <STR city : "Oakland">>
     >
 >
 
-<@%REC d : $/orders/42/delivery>
+<@VAL d : $/orders/42/delivery>
 ```
 
-The path resolves to the Embedded Record. The `@%REC` prefix matches the role (Embedded Record). Resolution succeeds.
+The path resolves to the VAL slot. The `@VAL` prefix matches the role. To reach the occupant Record instead, the path would extend by one more segment selecting the Record (e.g., by ordinal: `$/orders/42/delivery/[1]`).
 
 ### B.9 Key-Based Reference to a Non-Identified Element
 

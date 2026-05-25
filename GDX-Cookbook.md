@@ -227,41 +227,51 @@ The materialized instance is self-describing. A reader that does not load `com.a
 
 Materialization does not extrapolate beyond what the Template explicitly declares. Missing slots are not invented; Constraint Extensions on the Template (Core Spec §9.4) remain Template-scoped and are not copied into the instance.
 
-## 10. Embedded Structured Value
+## 10. Embedded Structured Value (VAL)
 
-When a structured value must occupy a property-value position, use the Embedded modifier.
+When a structured value must occupy a value-bearing slot, use the VAL role. VAL provides a named slot whose value is itself an element.
 
 ```
-<STR contact
-    <%REC details
-        <STR email : "a@example.com">
-        <STR phone : "555-0100">
+<OBJ contact
+    <VAL details
+        <REC <STR email : "a@example.com"> <STR phone : "555-0100">>
     >
 >
 ```
 
-The `%R` form lets a Record sit where a scalar would normally appear, without losing its structured nature.
+The VAL `details` is the slot in the containing Object; the Record occupant is the structured value the slot holds. The slot stays named in the parent's structure; the occupant carries the structured content with its own role intact.
+
+When the slot itself is semantically aligned (the *slot* corresponds to a vocabulary predicate, distinct from the value's own alignment), put the `#rel` on the VAL:
+
+```
+<OBJ employee
+    <VAL #gdx:emergencyContact contactSlot
+        <OBJ contacts/bob
+            <STR #gdx:givenName name : "Bob">
+            <STR #gdx:phoneNumber phone : "555-0100">
+        >
+    >
+>
+```
+
+The VAL says "this is the employee's emergency-contact slot." The occupant Object says "the value is `contacts/bob`, a Person with these attributes." Two levels of alignment, one structural mechanism.
 
 ## 11. Embedded Alternative Representations
 
-A common case for Embedded is when an entity has multiple equivalent representations that should travel together.
+A common case for VAL is when an entity has multiple equivalent representations that should travel together. Each representation is a complete Object filling a named slot in the parent.
 
 ```
 <REC colorReading
-    <%OBJ lab
-        <FLOAT l : 50.0>
-        <FLOAT a : 25.3>
-        <FLOAT b : -12.7>
+    <VAL lab
+        <OBJ <FLOAT l : 50.0> <FLOAT a : 25.3> <FLOAT b : -12.7>>
     >
-    <%OBJ rgb
-        <INT r : 124>
-        <INT g : 89>
-        <INT b : 200>
+    <VAL rgb
+        <OBJ <INT r : 124> <INT g : 89> <INT b : 200>>
     >
 >
 ```
 
-Each embedded Object is itself a structured entity with its own type identity. Wrapping them in Embedded form keeps each representation intact while letting both belong to a single colorReading record.
+Each VAL names the representation slot (`lab`, `rgb`); each Object occupant is itself a structured entity. The slot identifies which representation the value provides; the occupant carries the structured content. The two-level identity (slot-level on VAL, occupant-level on the contained Object) lets each representation be addressable as a slot in `colorReading` *and* as an Object in its own right when occupant identifiers are present.
 
 ## 12. Width-Bounded Numeric Values
 

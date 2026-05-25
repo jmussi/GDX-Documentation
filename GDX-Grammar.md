@@ -459,7 +459,7 @@ A GDX prefix follows the composition pattern:
 
 Where:
 - `@` is the optional Reference operator (prefix position)
-- `refinement-modifier` is one of `.`, `_`, `%`, `N`, `DEF` (at most one)
+- `refinement-modifier` is one of `.`, `_`, `N`, `DEF` (at most one); VAL is a base prefix, not a modifier
 - `base` is a core role name
 - `*` is the optional Set suffix
 
@@ -477,6 +477,7 @@ ModifierBase        ::= RefinementBase
                       | TransportPrefix
                       | BlockPrefix
                       | EdgePrefix
+                      | ValPrefix
                       | BasePrefix
 
 SetSuffix           ::= "*"
@@ -486,19 +487,21 @@ SetSuffix           ::= "*"
 
 RefinementBase      ::= QualifierComposition
                       | ExtensionComposition
-                      | EmbeddedComposition
                       | NodeComposition
 
 QualifierComposition ::= "." PropertyPrefix
 
 ExtensionComposition ::= "_" PropertyPrefix
 
-EmbeddedComposition  ::= "%" PropertyPrefix
-                       | "%" RecordPrefix
-                       | "%" ObjectPrefix
-
 NodeComposition      ::= "N" PropertyBase
                        | "N" RecordBase
+
+(* VAL (element-as-value slot) — canonical | minified.
+   VAL is a base prefix in its own right; the occupant is the VAL's
+   single child element (see Core Spec §7.11) and is not part of the
+   prefix grammar. The `*` suffix does not compose with VAL. *)
+
+ValPrefix           ::= "VAL"  | "V"
 
 (* Bare base prefixes — canonical | minified *)
 
@@ -564,7 +567,7 @@ GroupPrefix         ::= "GRP"
 - `@DEFSTR` — reference to a string-Template
 - `@.STR` — reference to a string-Qualifier
 - `@_INT` — reference to an int-Extension
-- `@%REC` — reference to an Embedded Record
+- `@VAL` — reference to a VAL slot
 - `@STR*` — reference to a Set of strings
 - `@.STR*` — reference to a Set of string-Qualifiers
 
@@ -777,16 +780,18 @@ BasePrefix       ::= ObjectPrefix
 
 QualifierComposition ::= "." PropertyPrefix
 ExtensionComposition ::= "_" PropertyPrefix
-EmbeddedComposition  ::= "%" PropertyPrefix
-                       | "%" RecordPrefix
-                       | "%" ObjectPrefix
 NodeComposition      ::= "N" PropertyBase
                        | "N" RecordBase
 
 RefinementBase   ::= QualifierComposition
                    | ExtensionComposition
-                   | EmbeddedComposition
                    | NodeComposition
+
+// --- VAL (element-as-value slot) — canonical | minified ---
+// VAL is a base prefix; its occupant is a child element, not part of
+// the prefix grammar. The `*` Set suffix does not compose with VAL.
+
+ValPrefix        ::= "VAL"  | "V"
 
 // --- Template prefixes (canonical only) ---
 
@@ -812,6 +817,7 @@ GroupPrefix      ::= "GRP"
 TransportPrefix  ::= PackagePrefix | GroupPrefix
 
 // --- ModifierBase: anything that can carry an @ prefix or * suffix ---
+// VAL is included as a target of @ but NOT of * (see Core Spec §7.11 axiom 6).
 
 ModifierBase     ::= RefinementBase
                    | TemplatePrefix
@@ -820,6 +826,7 @@ ModifierBase     ::= RefinementBase
                    | TransportPrefix
                    | BlockPrefix
                    | EdgePrefix
+                   | ValPrefix
                    | BasePrefix
 
 // --- Special operators ---

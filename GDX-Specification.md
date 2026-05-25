@@ -132,6 +132,12 @@ Cookbook Pattern 20 (Adjunct Extension for Non-Schema Metadata) added, showing p
 
 The prior commit (38) introduced examples in §7.10, §7.15, and Cookbook Pattern 26 that incorrectly used `_OBJ` (`<_OBJ gdx:domain : @gdx:Person>`) to express reference-valued REL metadata. `_OBJ` is not in the closed Extension prefix vocabulary and would semantically mean "Extension whose Resource is an Object" — either meaningless (Objects are not a value-kind) or illegal (embedding an Object inside an Extension violates §8.2 rule 2 Object exclusion). All occurrences corrected to use References with `#rel` predicates: `<@OBJ #gdx:domain : @gdx:Person>` for Object references, `<@DEFOBJ #gdx:supersedes : @CustomerV1>` for Template references. No structural change required; the composition matrix already admits References as REL and Template children.
 
+(40) **Embedded modifier `%` replaced by VAL role.** The Embedded refinement modifier (`%STR`, `%REC`, `%OBJ`, etc.) is removed from the prefix vocabulary and replaced by a new first-class role, **VAL** (minified **V**), defined in §7.11. Where `%X` previously expressed "an X element in property-value position," `<VAL name <X : value>>` now expresses "a slot named `name` whose value is an X element." The change is motivated by two structural needs the modifier could not express: (a) two-level identity — VAL distinguishes the slot's identity (Id/Key/Rel on the VAL itself) from the occupant's identity (Id/Key/Rel on the contained element), allowing a single position to be both vocabulary-aligned at the slot level and addressable at the occupant level; (b) closed occupant enumeration — VAL admits Properties, Records, Objects, Blocks, Sets, Edges, and References as occupants under a single uniform role, rather than requiring a separate `%`-form for each primitive.
+
+§6.2 adds the VAL/V row. §6.4 drops the `%` modifier row and gains a paragraph pointing readers to VAL. §8.1 adds a VAL column and VAL row to the composition matrix. §8.2 rules 2 (Object exclusion), 9 (modifier transparency), 12 (modifier stacking), and 13 (Set as suffix) are updated to reference VAL rather than `%`. §8.4 drops `%X` from the value-kind family lists. §8.5 validation lists VAL rather than `%O` as the data-layer Object licensing form. §4.2 gains an "occupant of a VAL slot" carve-out paragraph mirroring the Set-member positional exemption, so that an occupant inherits the slot's named-attribute role without needing its own identifier.
+
+Migration: every `%X` element becomes `<VAL #rel name <X : value>>`, with the slot's `#rel` predicate (and any Id/Key) moved to the VAL and the value moved into the occupant. The `VAL*` form is malformed (§7.11 axiom 6); Set-of-VAL semantics are expressed as a Set of the underlying occupant role. Examples throughout the spec, Cookbook, Path, Grammar, Compact Form, and Quick Start companions are migrated. Cookbook Pattern 10 (Embedded Structured Value) and Pattern 11 (Embedded Alternative Representations) are rewritten to demonstrate slot-level and occupant-level alignment respectively.
+
 
 ## Table of Contents
 
@@ -326,7 +332,7 @@ This section defines the terms used throughout the specification. The key words 
 
 - **Role** — the structural position an element occupies in the data model *and* the conceptual interpretation that position carries. A role names both the structural shape (what fields and children are admitted) and the meaning (how the element is to be interpreted in relation to its parent and the wider document). The closed enumeration of roles — Object, Record, Block, Edge, Property, Set, Node, Qualifier, Extension, Template, Relation Declaration, Annotation, Package, Group — covers both axes; each role's detail is in §7. Obtained from a prefix by stripping any modifier.
 
-- **Modifier** — a sigil or letter prefix-fragment that adapts a base role without changing its composition rules: `*`(Set), `%`(Embedded), `.`(Qualifier), `_`(Extension), `N`(Node), `DEF`(Template).
+- **Modifier** — a sigil or letter prefix-fragment that adapts a base role without changing its composition rules: `*`(Set), `.`(Qualifier), `_`(Extension), `N`(Node), `DEF`(Template).
 
 - **Resource** — the typed scalar value carried by an element, when present. Resource value-kinds are `string`, `int`, `float`, `bool`, `bytes`, and `reference` (§4.3).
 
@@ -454,7 +460,7 @@ The document remains a tree while expressing graph relationships. A reader can n
 
 GDX provides three distinct mechanisms for involving an addressable element from within another element's content. The three answer different questions and have different structural shapes:
 
-**Embedding** (the `%` modifier on a Property prefix) puts the target's content directly into the parent's structure. The embedded element appears in property-value position, carrying its full content inline. The host element holds the target's content. Use embedding when the content belongs *here*.
+**Embedding** (the `VAL` role, §7.11) puts a fully-realized element into a value-bearing slot of its parent. A VAL element is a slot whose value is another element — complete with its own role, identity, resource, and children. The host carries the slot; the slot carries the occupant; the occupant carries the content. Use embedding when the content belongs *here* but is itself structured rather than primitive.
 
 **Referencing** (the `@` operator on any base) creates a typed pointer to the target. The reference element is leaf-like — it carries an identifier that names the target and may be refined by Qualifiers, but it does not carry its own substructure. The target lives elsewhere; this element is just the pointer. Use referencing when you want to identify the target without including its content.
 
@@ -588,11 +594,14 @@ Identifier requirements apply to elements in *named-attribute positions* — pos
 The following roles, when in named-attribute position, MUST carry at least one of `Id`, `Key`, or `Rel`:
 
 - Object (`OBJ`/`O`, `DEFOBJ`)
-- Record (`REC`/`R`, `%REC`/`%R`, `DEFREC`, `NREC`/`NR`) when not in Set member position
-- Property (`STR`/`S`, `INT`/`I`, `FLOAT`/`F`, `BOOL`/`L`, `BYTE`/`B`, and their embedded/template variants) when not in Set member position
+- Record (`REC`/`R`, `DEFREC`, `NREC`/`NR`) when not in Set member position
+- Property (`STR`/`S`, `INT`/`I`, `FLOAT`/`F`, `BOOL`/`L`, `BYTE`/`B`, and their template variants) when not in Set member position
 - Template (any `DEF…`)
+- VAL (`VAL`/`V`) when not in Set member position (rare; VAL is typically a named slot)
 
 Elements appearing as members of a Set (§7.13) are in *positional* rather than named-attribute position. They are not required to carry identifiers; they identify themselves by position and value within the Set. Identifiers on Set members are valid and MAY be used when meaningful (for example, to identify individual Records within a Record Set).
+
+An element appearing as the **occupant of a VAL slot** (§7.11) is similarly in a positional rather than named-attribute position with respect to the VAL: the slot is the named-attribute position, and the occupant fills it. The occupant MAY carry its own `Id`, `Key`, or `Rel` for its own purposes (occupant-level identity, addressable from references), but it is NOT required to carry an identifier merely because its role would otherwise require one in a named-attribute position. The two identity levels (slot-level on the VAL, occupant-level on the child) are independent; this separation is what distinguishes VAL from a plain Property whose Resource is the value.
 
 A Prefix is REQUIRED on every element regardless of position. Set members MUST carry their prefix even when their identifier is omitted, because the prefix distinguishes Set members from Qualifiers, Annotations, Extensions, and other elements that may appear within a Set's children.
 
@@ -723,7 +732,7 @@ The sigils `&`, `#`, and `--` MUST be immediately followed by their field conten
 
 When the `:` separator appears with no identity field on the left in a context where an identifier is required, the element is malformed; conforming parsers MUST reject it. When the `--` sigil appears without a type identifier following, the element is malformed.
 
-**Prefix-position characters** (`%`, `.`, `_`, `N`, `DEF`, `@`) and the **suffix-position character** (`*`) are not field sigils — they are part of the prefix token itself and are defined in §6.
+**Prefix-position characters** (`.`, `_`, `N`, `DEF`, `@`) and the **suffix-position character** (`*`) are not field sigils — they are part of the prefix token itself and are defined in §6.
 
 #### 5.1.2 Whitespace Rules
 
@@ -1177,7 +1186,7 @@ Where:
 - **base** is one of the core role prefixes (§6.2)
 - **`*` suffix** marks the element as a Set (§6.3.1)
 - **`@` prefix** marks the element as a typed reference (§6.3.2)
-- **refinement-modifier** is one of `.`, `_`, `%`, `N` (§6.4) or the `DEF` declaration-construct (§7.14)
+- **refinement-modifier** is one of `.`, `_`, `N` (§6.4) or the `DEF` declaration-construct (§7.14)
 
 All four slots are independent. The base is required; the others are optional. Day-to-day GDX use involves the base prefixes plus the `*` suffix when a collection is needed. The `@` operator and the refinement modifiers are specialized constructs used in particular contexts (typed references, vocabulary metadata, schema declarations).
 
@@ -1225,6 +1234,7 @@ The base prefixes are the core role vocabulary. They group into four categories:
 | `REC`     | `R`      | Record | —                   | §7.2   |
 | `BLK`     | —        | Block  | —                   | §7.5   |
 | `EDGE`    | `E`      | Edge   | `reference`         | §7.4   |
+| `VAL`     | `V`      | VAL (element-as-value slot) | — (occupant is a child) | §7.11 |
 
 **Declaration roles** — vocabulary and schema declarations:
 
@@ -1299,13 +1309,12 @@ Detailed treatment of the `@KIND` family, including resolution rules and use cas
 
 ### 6.4 Refinement Modifiers
 
-Four refinement modifiers compose with value primitives (and in some cases Records and Objects) to produce elements that carry the base's value-kind but function in a refined contextual role. They do not change what value an element carries; they change what the element *does* with that value.
+Three refinement modifiers compose with value primitives (and in some cases Records) to produce elements that carry the base's value-kind but function in a refined contextual role. They do not change what value an element carries; they change what the element *does* with that value.
 
 | Modifier | Name      | Role                                                  | Composes with               |
 |----------|-----------|-------------------------------------------------------|-----------------------------|
 | `.`      | Qualifier | Refines the meaning of the parent element             | value primitives            |
-| `_`      | Extension | Declares a schema constraint on a Template            | value primitives            |
-| `%`      | Embedded  | Places a structural value in property-value position  | value primitives, REC, OBJ  |
+| `_`      | Extension | Carries a vocabulary-defined adjunct assertion        | value primitives            |
 | `N`      | Node-zone | Marks a semi-structured subtree                       | value primitives, REC       |
 
 Examples:
@@ -1316,13 +1325,7 @@ Examples:
 >
 
 <DEFSTR Email
-    <_STR pattern : "^[^@]+@[^@]+$">    -- Extension constraining Email instances
->
-
-<STR contact
-    <%REC details                       -- Embedded Record in property-value position
-        <STR email : "a@example.com">
-    >
+    <_STR pattern : "^[^@]+@[^@]+$">    -- Extension carrying a constraint
 >
 
 <NREC audit                             -- Node-zone container for ad-hoc data
@@ -1330,9 +1333,11 @@ Examples:
 >
 ```
 
-**Refinement modifiers do not stack with each other.** `*%STR`, `%REC*`, `.NSTR`, `N.STR`, `%_STR` and similar combinations are all malformed. Each element carries at most one refinement modifier.
+**Embedded values use the VAL role**, not a refinement modifier. To place a fully first-class element in value position, wrap the occupant in a VAL slot (§7.11). This is a base role rather than a modifier because the embedded value is itself an element with its own role; VAL provides the slot, the occupant carries its own prefix.
 
-**Refinement modifiers MAY combine with `*` and `@`.** `.STR*` is a Set of Qualifiers; `_STR*` is a Set of Extensions; `%REC*` is a Set of Embedded Records. The reference operator `@` may prefix any modifier-base composition: `@.STR`, `@_BOOL`, `@%REC`, `@NSTR`. The pattern `[@?][refinement-modifier?][base][*?]` governs which combinations are well-formed.
+**Refinement modifiers do not stack with each other.** `*.STR`, `.NSTR`, `N.STR`, `_NSTR` and similar combinations are all malformed. Each element carries at most one refinement modifier.
+
+**Refinement modifiers MAY combine with `*` and `@`.** `.STR*` is a Set of Qualifiers; `_STR*` is a Set of Extensions. The reference operator `@` may prefix any modifier-base composition: `@.STR`, `@_BOOL`, `@NSTR`. The pattern `[@?][refinement-modifier?][base][*?]` governs which combinations are well-formed.
 
 **The `DEF` declaration construct** (§7.14) shares the prefix-position slot with the refinement modifiers but is structurally different — it declares a Template rather than refining an element's contextual role. See §7.14 for details.
 
@@ -1342,7 +1347,7 @@ Examples:
 
 This section is the authoritative reference for GDX's closed role vocabulary. Each subsection covers one role, its prefix(es), composition rules, identifier requirements, structural and conceptual identity, and worked examples. Roles are introduced syntactically in §6 (Prefix Vocabulary); this section defines what each role *means* and how it behaves.
 
-The closed enumeration of roles is: Object, Record, Property, Edge, Block, Annotation, Package, Group, Qualifier, Extension, Embedded, Node, Set, Template, Relation Declaration, and Reference (the `@KIND` family). Composition rules between roles — what each may contain and what may contain it — are defined in §8 (Composition Axioms).
+The closed enumeration of roles is: Object, Record, Property, Edge, Block, Annotation, Package, Group, Qualifier, Extension, VAL, Node, Set, Template, Relation Declaration, and Reference (the `@KIND` family). Composition rules between roles — what each may contain and what may contain it — are defined in §8 (Composition Axioms).
 
 ### 7.1 Object — `OBJ`
 
@@ -1352,7 +1357,7 @@ The closed enumeration of roles is: Object, Record, Property, Edge, Block, Annot
 
 An Object is a **thing with identity** — an independently-identified entity that stands on its own and may be referenced from other elements. Conceptually, an Object is the kind of element that *other* elements refer to: a Person, an Order, a Server, a Document. It is the unit of persistence and exchange, and its identifier (a path, CURIE, GUID, IRI, or other globally meaningful identifier) is what makes that referenceability possible. The specification places no constraint on the identifier scheme.
 
-Structurally, an Object is a container of named children. The root of a GDX document MUST be one or more Objects, Templates, REL declarations, or Packages. Objects may not contain other Objects except through the Embedded modifier (§7.11) or as transport-layer payload (§7.7, §10).
+Structurally, an Object is a container of named children. The root of a GDX document MUST be one or more Objects, Templates, REL declarations, or Packages. Objects may not contain other Objects except as the occupant of a VAL slot (§7.11) or as transport-layer payload (§7.7, §10).
 
 ```
 <OBJ people/alice
@@ -1369,7 +1374,7 @@ Structurally, an Object is a container of named children. The root of a GDX docu
 
 A Record is a **compound property** — a named composite that belongs to its parent's structure rather than standing on its own. Conceptually, a Record is to its parent what a struct or nested object is to a programming-language container: it represents "the parent has an X of shape Y," where Y is a collection of named properties. A Record contributes to its parent's identity rather than carrying its own.
 
-Structurally, a Record is a container of named children, admitting Properties, Sets, Edges, nested Records, Qualifiers, Nodes, and Annotations. A Record's identifier is a local identifier, meaningful within its containing scope — it names the slot the Record fills in its parent, not a globally addressable resource. A Record *contains* its children, in contrast to a Block which merely *labels* a region of children (§7.5). Records may not contain Objects (except through the Embedded modifier, §7.11), Groups, or Extensions.
+Structurally, a Record is a container of named children, admitting Properties, Sets, Edges, nested Records, Qualifiers, Nodes, and Annotations. A Record's identifier is a local identifier, meaningful within its containing scope — it names the slot the Record fills in its parent, not a globally addressable resource. A Record *contains* its children, in contrast to a Block which merely *labels* a region of children (§7.5). Records may not contain Objects (except as the occupant of a VAL slot, §7.11) or Groups.
 
 **Records and Objects share structural shape** (both are composites of named children) but differ conceptually: an Object stands as an identified thing; a Record belongs to its parent as a compound property. The distinction matters for addressability (Objects are globally referenceable by Id; Records require path or key composition to reach — see §5.2.6), for persistence (Objects are the unit of storage; Records are stored as part of their containing Object), and for what may root a document (Objects may root; Records may not).
 
@@ -1652,47 +1657,89 @@ In each case, GDX records the Extension as a well-formed element; what (if anyth
 
 The first is data ("the temperature value, expressed in celsius"); the second is schema ("any instance of TemperatureReading is required to be in celsius"). The grammar makes the distinction explicit at the prefix level.
 
-### 7.11 Embedded — `%`
+### 7.11 VAL — `VAL` (element-as-value)
 
-An Embedded element is a **structured value in a scalar's position** — a way to put a composite where a single typed value would normally sit, while keeping the composite's full GDX identity. Conceptually, Embedded says "the parent has a value, and the value happens to be structured rather than scalar": an address embedded as a Property's value, an alternative representation of a measurement embedded alongside the canonical one, an Object embedded as a configuration value. Without Embedded, structured values would have to be serialized to strings and re-parsed; Embedded preserves the structure in place.
+A VAL is **an element in value position** — a slot that holds, as its value, a fully first-class element complete with its own role, identity, resource, and children. Where a value-bearing prefix says "my value is a {string, int, …}," VAL says "my value is an element." The alternative — serializing a structure into a string literal — forfeits parsing, validation, addressability, and round-trip integrity; VAL is how GDX keeps a value structured when that value is itself an element.
 
-Structurally, the `%` modifier marks a Property, Record, or Object as eligible to appear in a property-value position — where a scalar value would otherwise sit. The embedded element retains its base role's children and identifier rules.
-
-| Canonical | Minified | Base role |
-|-----------|----------|-----------|
-| `%STR`    | `%S`     | Property  |
-| `%INT`    | `%I`     | Property  |
-| `%FLOAT`  | `%F`     | Property  |
-| `%BOOL`   | `%L`     | Property  |
-| `%BYTE`   | `%B`     | Property  |
-| `%REC`    | `%R`     | Record    |
-| `%OBJ`    | `%O`     | Object    |
+The mechanism distinguishes two levels of identity:
 
 ```
-<STR contact
-    <%REC details
-        <STR email : "a@example.com">
-        <STR phone : "555-0100">
+<REC person
+    <VAL #gdx:legalName nameSlot
+        <STR #gdx:givenName name : "bob">
     >
 >
 ```
 
-The Embedded modifier is particularly useful when a structured value should retain its full GDX identity rather than being serialized to a string and re-parsed:
+Here the VAL `nameSlot` carries `#gdx:legalName` — the slot's alignment in `person`'s structure. The occupant STR carries `#gdx:givenName` — the value's own semantic alignment. These are two distinct alignments at two different levels; a single-element form would collapse one of them. VAL preserves both.
+
+| Canonical | Minified | Resource? | Identifier |
+|-----------|----------|-----------|------------|
+| `VAL`     | `V`      | —         | required (local) when in named-attribute position |
+
+#### Axioms
+
+1. **No Resource of its own.** VAL carries no Resource and no `:` separator; the value is the occupant child, not a literal Resource value.
+
+2. **Exactly one occupant.** VAL holds exactly one *occupant* — the embedded value, which is a structural element of any data-bearing role (see Axiom 3). Annotations, Qualifiers, and Extensions MAY additionally appear as children of the VAL itself, refining the slot rather than the value. Zero occupants or multiple occupants are malformed.
+
+3. **Occupant role.** The occupant may be a Property (any value-kind), Record, Object, Block, Set, Edge (as a graph-statement value), or Reference (as a typed-pointer value). The occupant MUST NOT be a VAL (no double-wrapping), a Template or REL (vocabulary-layer roles are not embeddable as values), a Qualifier, Extension, or Annotation (refinement and adjunct roles are not values), a Node-zone element (Node isolation per §8.2 rule 5), or a transport-layer role (Package/Group).
+
+4. **Two-level identity.** The occupant's identity fields (`Id`, `Key`, `Rel`) are part of the embedded value and describe the value itself. The VAL's own identity fields name the slot the value fills and describe the slot's role in the parent. The occupant is in *positional* context within the VAL (the slot name comes from the VAL, not the occupant); the §4.2 identifier requirements that apply to Properties and Records in named-attribute position are accordingly relaxed for VAL occupants. The occupant MAY be anonymous (slot-named only) or identified (when its own identity carries information — for example, a `Rel` alignment for the value's semantic content).
+
+5. **Object licensing.** VAL is the data-layer licensing point for an Object in non-root position. The §8.2 rule-2 Object-exclusion exception that historically permitted `%O` is provided by VAL: a VAL whose occupant is an Object is the only data-layer form (besides transport-layer Package and Group payload) that may contain an Object as a non-root element.
+
+6. **No `VAL*` form.** Sets of VAL are malformed. Set members are positional and need no slot-wrapping; a Set of `X`-typed values is written `X*` directly.
+
+#### Examples
+
+A simple primitive value with an anonymous occupant:
 
 ```
-<REC colorReading
-    <%OBJ lab
-        <FLOAT l : 50.0>
-        <FLOAT a : 25.3>
-        <FLOAT b : -12.7>
-    >
-    <%OBJ rgb
-        <INT r : 124>
-        <INT g : 89>
-        <INT b : 200>
+<OBJ alice
+    <VAL nickname
+        <STR : "Allie">
     >
 >
 ```
+
+A structured value (Record) as the occupant:
+
+```
+<OBJ order123
+    <VAL deliveryAddress
+        <REC <STR street : "123 Main"> <STR city : "Oakland">>
+    >
+>
+```
+
+An Object embedded as the value of a slot:
+
+```
+<OBJ orderRecord
+    <VAL primaryContact
+        <OBJ contacts/alice
+            <STR firstName : "Alice">
+            <STR email : "alice@example.com">
+        >
+    >
+>
+```
+
+Two-level alignment — slot purpose and occupant content both surfaced:
+
+```
+<OBJ employee
+    <VAL #gdx:emergencyContact contactSlot
+        <OBJ contacts/bob --gdx:Person
+            <STR #gdx:givenName name : "Bob">
+            <STR #gdx:phoneNumber phone : "555-0100">
+        >
+    >
+>
+```
+
+The slot says "this is the employee's emergency-contact slot." The occupant says "the value is a Person Object with these attributes."
 
 ### 7.12 Node — `N`
 
@@ -1918,7 +1965,7 @@ Structurally, the `@` operator (§6.3.2) composes with any base or modifier-base
 @ [refinement-modifier?] [base] [*?]
 ```
 
-This produces references like `@OBJ`, `@REL`, `@DEFSTR`, `@.STR`, `@_BOOL`, `@%REC`, `@NSTR`, `@STR*`, `@DEFOBJ*`, `@.STR*`, and so on. The composition reads as "a reference to a [KIND] element," where KIND is the rest of the prefix interpreted as a role.
+This produces references like `@OBJ`, `@REL`, `@DEFSTR`, `@.STR`, `@_BOOL`, `@VAL`, `@NSTR`, `@STR*`, `@DEFOBJ*`, `@.STR*`, and so on. The composition reads as "a reference to a [KIND] element," where KIND is the rest of the prefix interpreted as a role.
 
 **The `@@` prohibition.** A reference cannot target another reference. `@@STR`, `@@OBJ`, `@@DEFOBJ`, and similar compositions are malformed. References resolve to addressable elements directly, not to other references.
 
@@ -1949,30 +1996,31 @@ GDX nesting is governed by a single matrix indexed by **role**. The table below 
 
 Modifier-bearing and operator-bearing prefixes are validated as their base role with two refinements:
 
-- **Refinement modifiers** (`.`, `_`, `%`, `N`) and the **`DEF` declaration construct** do not change which roles may contain or be contained by the element, with two exceptions: Extensions (`_X`) may only appear under Templates or REL declarations (rule 7), and Node-zone elements (`NX`) have isolated-subtree semantics (rule 5).
+- **Refinement modifiers** (`.`, `_`, `N`) and the **`DEF` declaration construct** do not change which roles may contain or be contained by the element, with one exception: Node-zone elements (`NX`) have isolated-subtree semantics (rule 5). VAL is a role rather than a modifier (§7.11), governed by its own row in §8.1.
 
 - **The `*` suffix** (Set) and **the `@` operator** (Reference) produce roles whose composition rules are distinct from their bases. A Set follows the Set row; a Reference follows the Reference row.
 
 ### 8.1 Allowed Children Matrix
 
-| Parent ↓ \ Child →  | Object | Record | Block | Property | Set | Node | Edge | Reference | Qualifier | Extension | Annotation | REL | Group |
-|---------------------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| **Object**          |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |
-| **Record**          |   | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |
-| **Block**           |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |
-| **Property**        |   |   |   |   |   | ✓ |   |   | ✓ | ✓ | ✓ |   |   |
-| **Set**             |   |   |   | ✓ |   | ✓ |   |   | ✓ | ✓ | ✓ |   |   |
-| **Node**            |   |   |   |   |   | ✓ |   |   |   |   | ✓ |   |   |
-| **Edge**            |   | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |
-| **Reference**       |   |   |   |   |   |   |   |   | ✓ | ✓ | ✓ |   |   |
-| **Qualifier**       |   |   |   |   |   |   |   |   |   | ✓ | ✓ |   |   |
-| **Extension**       |   |   |   |   |   |   |   |   |   | ✓ | ✓ |   |   |
-| **Annotation**      |   |   |   |   |   |   |   |   |   |   |   |   |   |
-| **Template**        |   | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |
-| **REL**             |   |   |   |   |   |   |   | ✓ |   | ✓ | ✓ |   |   |
-| **Package**         | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   | ✓ | ✓ | ✓ | ✓ |
-| **Group**           | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   | ✓ | ✓ | ✓ | ✓ |
-| **Document root**   | ✓ |   |   |   |   |   |   |   |   |   |   | ✓ |   |
+| Parent ↓ \ Child →  | Object | Record | Block | Property | Set | Node | Edge | Reference | Qualifier | Extension | Annotation | VAL | REL | Group |
+|---------------------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| **Object**          |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |
+| **Record**          |   | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |
+| **Block**           |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |
+| **Property**        |   |   |   |   |   | ✓ |   |   | ✓ | ✓ | ✓ |   |   |   |
+| **Set**             |   |   |   | ✓ |   | ✓ |   |   | ✓ | ✓ | ✓ |   |   |   |
+| **Node**            |   |   |   |   |   | ✓ |   |   |   |   | ✓ |   |   |   |
+| **Edge**            |   | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |
+| **Reference**       |   |   |   |   |   |   |   |   | ✓ | ✓ | ✓ |   |   |   |
+| **Qualifier**       |   |   |   |   |   |   |   |   |   | ✓ | ✓ |   |   |   |
+| **Extension**       |   |   |   |   |   |   |   |   |   | ✓ | ✓ |   |   |   |
+| **Annotation**      |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| **VAL**             | ✓ | ✓ | ✓ | ✓ | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |   |
+| **Template**        |   | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |
+| **REL**             |   |   |   |   |   |   |   | ✓ |   | ✓ | ✓ |   |   |   |
+| **Package**         | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   | ✓ | ✓ |   | ✓ | ✓ |
+| **Group**           | ✓ | ✓ |   | ✓ | ✓ |   |   |   |   | ✓ | ✓ |   | ✓ | ✓ |
+| **Document root**   | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ |   |
 
 **Extension admittance is broad.** Extensions are adjunct statements (§7.10) — vocabulary-defined assertions attached to an element that consumers may interpret and act on. Because Extensions don't constitute the element they attach to, they may appear under almost any parent role: data-bearing elements (Object, Record, Property, etc.) for provenance, presentation hints, and other instance-level adjuncts; vocabulary and schema elements (REL, Template) for predicate semantics and schema constraints; transport-layer wrappers (Package, Group) for transport metadata such as signing or routing directives. The Extension column in the matrix shows ✓ for all parent roles that admit children. The exceptions are Annotation (leaf-only) and Node (isolated-subtree per rule 5 — Extensions cannot leak into Node-zone material).
 
@@ -1981,6 +2029,8 @@ The Template row covers all `DEF…` prefixes, validated by their base role's ro
 The Reference row covers all `@…` prefixes. References are leaf-like with respect to *structural* children — they do NOT carry Properties, Edges, Sets, Records, or Objects of their own. They MAY carry Qualifiers (refining the reference's meaning), Extensions (vocabulary-defined adjunct statements about the reference, such as provenance or confidence), and Annotations. The element identifies its target via the Resource (a reference literal); the target lives elsewhere and is reached through resolution.
 
 The REL row admits Extensions (most commonly for predicate semantics: domain, range, inverse, symmetry, cardinality — but any vocabulary-defined assertion about the predicate) and References (typed pointers to other RELs for vocabulary metadata, or to Objects for concept-bearing domain/range targets).
+
+The VAL row admits exactly one occupant of any data-bearing role (Object, Record, Property, Block, Set, Edge, Reference) plus optional Annotations, Qualifiers, and Extensions as slot-level metadata (§7.11). VAL does NOT admit other VALs (no double-wrapping), Node-zone elements (isolated subtree per §8.2 rule 5), Templates, RELs, transport-layer roles, or refinement/adjunct-only roles (Qualifier/Extension/Annotation alone without an occupant). VAL is admitted by data-container parents (Object, Record, Block, Edge) and by Templates as a slot type; it is NOT admitted by Properties (which are scalar leaves), Sets (members are positional and need no slot wrapping), References (leaf-like), RELs (no data slots), or transport-layer wrappers (which contain Objects directly as payload).
 
 The Package row admits Templates (any `DEF…` prefix) and REL declarations as payload along with Objects. For clarity: a Package may directly contain Object instances (`OBJ`/`O`), Template definitions (`DEF…`), REL declarations (`REL`), Properties (metadata), Records (metadata), Sets (metadata), Annotations, and Groups for transport-internal organization. A Group admits the same children as a Package except for Package itself.
 
@@ -1992,7 +2042,7 @@ The following rules are consequences of the matrix and are repeated here for cla
 
 1. **Root rule.** A document root MUST be an Object, a Template, a REL declaration, or a Package. A document MAY contain multiple top-level elements; each top-level element MUST independently be a root-eligible type.
 
-2. **Object exclusion.** No role other than the Embedded modifier (`%O`, §7.11) and the transport-layer roles (Package, Group) may contain another Object. The `%O` form expresses Object-as-property-value within data-layer composition; Package and Group contain Objects as transport-layer payload, not as ownership relationships.
+2. **Object exclusion.** No role other than VAL (when its occupant is an Object, §7.11) and the transport-layer roles (Package, Group) may contain another Object. VAL expresses Object-as-element-value within data-layer composition; Package and Group contain Objects as transport-layer payload, not as ownership relationships.
 
 3. **Block containment.** A Block may only appear under an Object or another Block. Blocks do not appear in transport-layer roles.
 
@@ -2006,21 +2056,20 @@ The following rules are consequences of the matrix and are repeated here for cla
 
 8. **REL declares predicates.** A REL element may carry Extension children that declare predicate semantics (domain, range, inverse, symmetry, cardinality, etc.). The vocabulary of those Extensions is defined by the GDX Common Vocabulary or by application vocabularies. This is one specific application of rule 7's adjunct-Extension mechanism.
 
-9. **Modifier transparency.** Embedded (`%X`), Template (`DEF…`), Qualifier (`.X`), Extension (`_X`), and Node (`NX`) modifier-bearing prefixes are validated as their base role for composition purposes. The modifier never changes what is allowed inside or what may contain the element, with one exception: Node-zone elements have isolated-subtree semantics (rule 5) and admit only Node-zone elements (or Annotations) as children, regardless of what their base role would admit.
+9. **Modifier transparency.** Template (`DEF…`), Qualifier (`.X`), Extension (`_X`), and Node (`NX`) modifier-bearing prefixes are validated as their base role for composition purposes. The modifier never changes what is allowed inside or what may contain the element, with one exception: Node-zone elements have isolated-subtree semantics (rule 5) and admit only Node-zone elements (or Annotations) as children, regardless of what their base role would admit. VAL is not a modifier of a base role — it is its own role (§7.11) and is governed by its own row in the composition matrix.
 
 10. **Transport non-nesting.** Packages MUST NOT contain other Packages. Groups MUST NOT contain Packages. Transport-layer roles form a controlled structure: a Package may contain Groups and data-layer items; a Group may contain other Groups and data-layer items.
 
 11. **Transport non-persistence.** Package and Group elements are not persisted as such by storage layers. Their contents (Objects, Templates, REL declarations) are extracted and stored individually; transport-layer metadata MAY be retained as provenance information but the transport wrapping is discarded. See §10 and §11.4.
 
-12. **Refinement modifiers do not stack.** An element carries at most one refinement modifier (`.`, `_`, `%`, `N`) or the `DEF` construct. The following are NOT valid prefixes:
-    - `*%STR` — Set notation is now a suffix (see rule 13); the form would be `%STR*` if it were valid, but `%` and `*` may combine
+12. **Refinement modifiers do not stack.** An element carries at most one refinement modifier (`.`, `_`, `N`) or the `DEF` construct. The following are NOT valid prefixes:
     - `.NSTR` — Qualifier of a Node-zone element
-    - `_%STR` — Extension of an Embedded element
+    - `_.STR` — Extension of a Qualifier
     - `DEFN.STR` — DEF-on-modifier-on-modifier
 
-    The reading pattern for any prefix is `[@?][refinement-modifier?][base][*?]`. At most one of `.`, `_`, `%`, `N`, `DEF` may appear in the prefix-position-element slot; the slot is filled by at most one of these.
+    The reading pattern for any prefix is `[@?][refinement-modifier?][base][*?]`. At most one of `.`, `_`, `N`, `DEF` may appear in the prefix-position-element slot; the slot is filled by at most one of these.
 
-    Where multi-valued semantics on an embedded or template-defined value are needed, the structure is expressed through normal nesting:
+    Where multi-valued semantics on a template-defined value are needed, the structure is expressed through normal nesting:
 
     ```
     <REC* tagSets
@@ -2040,7 +2089,7 @@ The following rules are consequences of the matrix and are repeated here for cla
 
     This restriction keeps the prefix vocabulary closed and bounded. The combinations expressible through nested structure are sufficient for all use cases the specification anticipates.
 
-13. **Set is a suffix.** The `*` Set marker is a suffix on the base prefix: `STR*`, `INT*`, `REC*`, etc. The `*` suffix MAY combine with refinement modifiers (`.STR*`, `_INT*`, `%REC*`, `NSTR*`) and with the `@` reference operator (`@STR*`, `@.STR*`, `@DEFOBJ*`). The `*` suffix does not compose with `DEF` (Templates are not collected as a set in normal usage).
+13. **Set is a suffix.** The `*` Set marker is a suffix on the base prefix: `STR*`, `INT*`, `REC*`, etc. The `*` suffix MAY combine with refinement modifiers (`.STR*`, `_INT*`, `NSTR*`) and with the `@` reference operator (`@STR*`, `@.STR*`, `@DEFOBJ*`). The `*` suffix does not compose with `DEF` (Templates are not collected as a set in normal usage). The `*` suffix does NOT combine with VAL — `VAL*` is malformed (§7.11 axiom 6); sets of element-as-value slots are expressed as a Set whose members are themselves VALs only when each VAL is a positional, identifier-less occupant slot, which is degenerate; Set semantics over heterogeneous occupants are expressed through Records or Blocks.
 
 14. **Reference operator is universal.** The `@` operator MAY prefix any base or refinement-modifier-bearing base to produce a typed reference. The `@KIND` composition reads as "a reference to a KIND-element." The `@` operator MAY combine with the `*` suffix: `@KIND*` is a reference to a Set of KIND-elements.
 
@@ -2053,10 +2102,11 @@ The following rules are consequences of the matrix and are repeated here for cla
 Per §4.2, the following roles MUST carry at least one identifier (`Id`, `Key`, or `Rel`) when in named-attribute position:
 
 - Object (`OBJ`/`O`, `DEFOBJ`)
-- Record (`REC`/`R`, `%REC`/`%R`, `DEFREC`, `NREC`/`NR`) when not in Set member position
+- Record (`REC`/`R`, `DEFREC`, `NREC`/`NR`) when not in Set member position
 - Property (`STR`/`S`, `INT`/`I`, `FLOAT`/`F`, `BOOL`/`L`, `BYTE`/`B` and their variants) when not in Set member position
 - Template (any `DEF…`)
 - REL (`REL`)
+- VAL (`VAL`/`V`) when not in Set member position and when used as a named slot
 - Block (`BLK`) — Blocks always require an identifier; the identifier names the partition
 - Group (`GRP`) — Groups always require an identifier; the identifier names the partition within a Package
 
@@ -2070,11 +2120,11 @@ Other roles MAY carry identifiers but do not require them.
 
 Per §4.3, when a Resource is present, its value-kind MUST be consistent with the element's prefix family:
 
-- String-family prefixes (`STR`/`S`, `STR*`/`S*`, `%STR`/`%S`, `.STR`/`.S`, `_STR`/`_S`, `NSTR`/`NS`) carry `string` resources.
-- Int-family prefixes (`INT`/`I`, `INT*`/`I*`, `%INT`/`%I`, `.INT`/`.I`, `_INT`/`_I`, `NINT`/`NI`) carry `int` resources.
-- Float-family prefixes (`FLOAT`/`F`, `FLOAT*`/`F*`, `%FLOAT`/`%F`, `.FLOAT`/`.F`, `_FLOAT`/`_F`, `NFLOAT`/`NF`) carry `float` resources.
-- Bool-family prefixes (`BOOL`/`L`, `BOOL*`/`L*`, `%BOOL`/`%L`, `.BOOL`/`.L`, `_BOOL`/`_L`, `NBOOL`/`NL`) carry `bool` resources.
-- Bytes-family prefixes (`BYTE`/`B`, `BYTE*`/`B*`, `%BYTE`/`%B`, `.BYTE`/`.B`, `_BYTE`/`_B`, `NBYTE`/`NB`) carry `bytes` resources.
+- String-family prefixes (`STR`/`S`, `STR*`/`S*`, `.STR`/`.S`, `_STR`/`_S`, `NSTR`/`NS`) carry `string` resources.
+- Int-family prefixes (`INT`/`I`, `INT*`/`I*`, `.INT`/`.I`, `_INT`/`_I`, `NINT`/`NI`) carry `int` resources.
+- Float-family prefixes (`FLOAT`/`F`, `FLOAT*`/`F*`, `.FLOAT`/`.F`, `_FLOAT`/`_F`, `NFLOAT`/`NF`) carry `float` resources.
+- Bool-family prefixes (`BOOL`/`L`, `BOOL*`/`L*`, `.BOOL`/`.L`, `_BOOL`/`_L`, `NBOOL`/`NL`) carry `bool` resources.
+- Bytes-family prefixes (`BYTE`/`B`, `BYTE*`/`B*`, `.BYTE`/`.B`, `_BYTE`/`_B`, `NBYTE`/`NB`) carry `bytes` resources.
 - Edge prefixes (`EDGE`/`E`) carry `reference` resources.
 - Reference prefixes (`@KIND` family) carry `reference` resources. The Resource is a reference literal whose target-kind is declared by the prefix (see §7.16).
 - Annotation prefix (`REM`) carries `string` resources.
@@ -2094,7 +2144,7 @@ A conforming parser MUST reject any document containing:
 - An Extension appearing outside a Template parent.
 - A Node containing a non-Node, non-Annotation child.
 - A Set containing a member whose prefix does not match the Set's element type.
-- An Object appearing as a non-root child in a position other than `%O` Embedded form, a Package payload, or a Group payload.
+- An Object appearing as a non-root child in a position other than the occupant of a VAL slot (§7.11), a Package payload, or a Group payload.
 - A Package containing another Package.
 - A Group containing a Package.
 - A Block at the document root or in any position other than as a child of an Object or another Block.
@@ -2604,7 +2654,7 @@ Path-mode reference resolution is normatively specified by the companion GDX Pat
 
 - **The path expression grammar.** Specified in `GDX-Path.md` §3 and §4. Three segment kinds — `IdSegment`, `RelSegment`, `OrdinalSegment` — separated by `/`. Key-based addressing is provided through the `KeyRef` and `IdKeyRef` reference-literal forms rather than as a path segment.
 - **The resolution algorithm.** Specified in `GDX-Path.md` §6. Left-to-right segment traversal from a defined starting element, with per-segment match semantics and explicit handling of zero, one, and multi-match outcomes.
-- **The composition matrix expansion.** Specified in `GDX-Path.md` §9.5 (changes required of this specification). `@REC`, `@BLK`, `@.STR`, `@_INT`, `@%REC`, value-Property targets, and other previously-unresolvable `@KIND` forms become resolvable when the resource is a `PathRef` or `IdPathRef`. Parent-context restrictions are unchanged; only target-addressability expands.
+- **The composition matrix expansion.** Specified in `GDX-Path.md` §9.5 (changes required of this specification). `@REC`, `@BLK`, `@.STR`, `@_INT`, `@VAL`, value-Property targets, and other previously-unresolvable `@KIND` forms become resolvable when the resource is a `PathRef` or `IdPathRef`. Parent-context restrictions are unchanged; only target-addressability expands.
 - **Modifier-stacking interaction.** The `@`-with-modifier-bases pattern (`@.STR`, `@_INT`) now resolves through path-mode references.
 
 The composed reference form `@Identifier$PathExpression` is the canonical mechanism for cross-document addressing: the identifier portion resolves a starting element by scope walk (per §7.16), and the path portion traverses structurally from there. This form replaces the speculative path-style identifier convention (e.g., `@/people/alice`) used in earlier revisions; with the v0.11.0 narrowing of `IdStartChar` (§5.4.1), identifiers no longer begin with `/`.
@@ -2697,7 +2747,7 @@ For applications requiring byte-for-byte stability (content-addressable storage,
 9. Boolean values appear as `true` or `false` (lowercase spelled-out form). The single-letter forms (`t`, `f`) and uppercase variants are NOT used in canonical output.
 10. Null Properties appear in the bare form (`<STR name>`), not the empty-value form (`<STR name : >`). The empty-value form is accepted on input but normalized to the bare form on canonical output.
 11. Field write order is exactly Prefix · Key · Rel · Id · Resource · Type.
-12. Prefixes appear in **canonical form** — three-letter (or longer where natural) names in uppercase: `STR`, `INT`, `BOOL`, `FLOAT`, `BYTE`, `REC`, `OBJ`, `EDGE`, `GRP`, `STR*`, `INT*`, `.STR`, `_STR`, `%STR`, `%REC`, `%OBJ`, `NSTR`, `NINT`, `NBOOL`, `NFLOAT`, `NBYTE`, `NREC`, `DEFSTR`, `DEFINT`, `DEFBOOL`, `DEFFLOAT`, `DEFBYTE`, `DEFREC`, `DEFOBJ`, `REL`, `REM`, `PKG`, `BLK`. The minified single-letter forms (`S`, `I`, `L`, `F`, `B`, `R`, `O`, `E`, `G`, `S*`, `.S`, `_S`, `%S`, `NS`, etc.) are valid GDX but do not produce strict canonical bytes; conversion to canonical form is required before content addressing.
+12. Prefixes appear in **canonical form** — three-letter (or longer where natural) names in uppercase: `STR`, `INT`, `BOOL`, `FLOAT`, `BYTE`, `REC`, `OBJ`, `EDGE`, `GRP`, `STR*`, `INT*`, `.STR`, `_STR`, `VAL`, `NSTR`, `NINT`, `NBOOL`, `NFLOAT`, `NBYTE`, `NREC`, `DEFSTR`, `DEFINT`, `DEFBOOL`, `DEFFLOAT`, `DEFBYTE`, `DEFREC`, `DEFOBJ`, `REL`, `REM`, `PKG`, `BLK`. The minified single-letter forms (`S`, `I`, `L`, `F`, `B`, `R`, `O`, `E`, `G`, `S*`, `.S`, `_S`, `V`, `NS`, etc.) are valid GDX but do not produce strict canonical bytes; conversion to canonical form is required before content addressing.
 
 Two strict-canonical-form documents that represent the same data model produce byte-identical serializations. This property allows the strict canonical form to serve as the input to content-addressing functions.
 

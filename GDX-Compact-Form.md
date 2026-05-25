@@ -985,7 +985,7 @@ SetSuffix       ::= "*"
 
 // ModifierBase and the sub-prefix vocabulary (ObjectPrefix, RecordPrefix,
 // PropertyPrefix, EdgePrefix, BlockPrefix, RefinementBase including
-// QualifierComposition/ExtensionComposition/EmbeddedComposition/NodeComposition,
+// QualifierComposition/ExtensionComposition/NodeComposition, ValPrefix,
 // TemplatePrefix, RelPrefix, AnnotationPrefix, PackagePrefix, GroupPrefix)
 // are inherited from the Standard Grammar (Appendix A, §7.1).
 //
