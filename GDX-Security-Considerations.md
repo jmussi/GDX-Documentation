@@ -1,6 +1,6 @@
 # GDX — Security Considerations
 
-- **Status:** Draft v0.13.0 (companion to GDX Core Specification v0.13.0, working draft, pre-1.0)
+- **Status:** Draft v0.14.0 (companion to GDX Core Specification v0.18.0, working draft, pre-1.0)
 - **Date:** 2026-05-20
 - **Editors:** 
 - **Authors:** Julian Mussi
@@ -70,7 +70,7 @@ Mitigations:
 
 ## 4. Network Resolution
 
-The default Type and @-Edge reference resolution orders (Core Spec §9.5.2 and §7.4.1) include "globally-resolvable IRIs" as a fallback resolution scope. Implementations that resolve such references over the network expose themselves to several risks:
+The default Type and @-Edge reference resolution orders (Core Spec §8.5.2 and §7.4.1) include "globally-resolvable IRIs" as a fallback resolution scope. Implementations that resolve such references over the network expose themselves to several risks:
 
 - **Information disclosure.** Network requests to URLs in untrusted documents can leak information about the processing system to attacker-controlled servers (timing, request patterns, internal IP addresses).
 - **Server-side request forgery (SSRF).** Documents containing IRIs targeting internal network addresses can use the parser as a proxy to reach systems otherwise inaccessible to the attacker.
@@ -117,7 +117,7 @@ Considerations:
 
 - Package metadata fields like `source`, `exportedBy`, or timestamps are application-defined assertions, not enforced provenance. Receivers MUST NOT treat such fields as proof of origin without independent verification (signatures, transport-layer authentication, etc.).
 - A Package carrying claims about its contents (counts, content type) does not bind those claims; a receiver should validate the actual contents independently rather than relying on the wrapper's metadata.
-- Discarding transport wrappers after unpacking (Core Spec §10.3) means Package-level metadata is lost unless explicitly preserved as provenance. Applications that care about the chain of custody should establish provenance preservation conventions explicitly.
+- Discarding transport wrappers after unpacking (Core Spec §9.3) means Package-level metadata is lost unless explicitly preserved as provenance. Applications that care about the chain of custody should establish provenance preservation conventions explicitly.
 
 ## 8. Document-Level Considerations
 

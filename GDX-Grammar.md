@@ -1,6 +1,6 @@
 # GDX Standard Form — Grammar Specification
 
-- **Status:** Draft v0.9 (working draft)
+- **Status:** Draft v0.10 (companion to GDX Core Specification v0.18.0, working draft)
 - **Date:** 2026-05-20
 - **Companion to:** GDX Core Specification v0.11.0
 - **Authors:** Julian Mussi
@@ -18,9 +18,9 @@ Changes from v0.3: prefix vocabulary restructured for the canonical/minified sys
 
 Changes from v0.4 (this revision, v0.5): conformance with Core Specification v0.9.10. Cross-references updated to current section numbering: §8.1 (composition matrix) → §7.1; §8.2 rule 1 (root rule) → §7.2 rule 1; §11 (transport-layer) → §9; §3.3.1 (Numeric Value-Kinds) → §4.3.1; §6.10 (REM Annotation) → §6.3.6; "§4" in the abstract (Standard Form definition) → §5. Corrected `GroupPrefix` (§7.1 and Appendix A): GRP has no minified form; the previous `"G"` minified alternative was removed. Group prefix relocated in the §7.1 grammar from "bare structural primitives" to "transport-layer prefixes" to match the Core Spec's typological grouping.
 
-Changes from v0.5 (revision v0.6): conformance with Core Specification v0.10.0. The prefix vocabulary is reframed around the composition pattern `[@?][refinement-modifier?][base][*?]`. (1) The Set marker `*` is now a suffix rather than a prefix; the EBNF `SetPrefix` production is replaced by `SetSuffix`, which composes after a base or refinement-modifier-base. (2) A new `ReferencePrefix` (`@`) is added as the reference operator; the `@KIND` family composes with any `ModifierBase`, optionally followed by `SetSuffix`. The composition pattern is described rather than enumerated; valid `@KIND` prefixes are derived from the pattern. (3) The Reference operator MUST NOT compose with itself (`@@`-prefixed compositions are malformed). (4) The reference literal grammar (§5.6) is extended: identifier-mode `@Id` is normatively specified; path-mode `$PathExpression` is syntactically reserved with grammar deferred to a future revision (Core Specification §12.4). (5) The §3.1 element-variations table is reorganized by role category (instance, refinement, declaration, transport) and includes `ReferenceElement` and `SetElement` as derived forms. Cross-references to the Core Specification updated for §6.5.x renumbering (REM Annotation §6.3.6 → §6.5.6). No changes to literal grammars (strings, numerics, booleans, bytes), identifier grammar, field grammars, or whitespace rules.
+Changes from v0.5 (revision v0.6): conformance with Core Specification v0.10.0. The prefix vocabulary is reframed around the composition pattern `[@?][refinement-modifier?][base][*?]`. (1) The Set marker `*` is now a suffix rather than a prefix; the EBNF `SetPrefix` production is replaced by `SetSuffix`, which composes after a base or refinement-modifier-base. (2) A new `ReferencePrefix` (`@`) is added as the reference operator; the `@KIND` family composes with any `ModifierBase`, optionally followed by `SetSuffix`. The composition pattern is described rather than enumerated; valid `@KIND` prefixes are derived from the pattern. (3) The Reference operator MUST NOT compose with itself (`@@`-prefixed compositions are malformed). (4) The reference literal grammar (§5.6) is extended: identifier-mode `@Id` is normatively specified; path-mode `$PathExpression` is syntactically reserved with grammar deferred to a future revision (Core Specification §11.4). (5) The §3.1 element-variations table is reorganized by role category (instance, refinement, declaration, transport) and includes `ReferenceElement` and `SetElement` as derived forms. Cross-references to the Core Specification updated for §6.5.x renumbering (REM Annotation §6.3.6 → §6.5.6). No changes to literal grammars (strings, numerics, booleans, bytes), identifier grammar, field grammars, or whitespace rules.
 
-Changes from v0.6 (this revision, v0.7): conformance with Core Specification v0.11.0. (1) **§5.6 reference literal grammar normatively specifies path-mode and key-mode.** The placeholder `PathExpression ::= (* reserved; grammar deferred *)` is replaced by a forward reference to the companion GDX Path Expressions Specification (`GDX-Path.md`). Five `ReferenceLiteral` productions are recognized: `IdentifierReference` (`@Anchor`), `PathReference` (`$PathExpression`), `KeyReference` (`&KeyToken`), `IdPathReference` (`@Anchor$PathExpression`), and `IdKeyReference` (`@Anchor&KeyToken`). The `KeyReference` and `IdKeyReference` forms address an element by its location-stable `Key` anchor, scoped per Core Specification §5.4.5. The `Anchor` production extends the identifier portion of `@`-references with an optional `AnchorRole` keyword drawn from the closed prefix vocabulary (`OBJ`, `REL`, `DEFOBJ`, `PKG`, etc.) followed by `:`, disambiguating the role of the resolved element. Default anchor role in composed references is `OBJ`. (2) **§6 identifier grammar narrows.** `IdStartChar` no longer admits `/`. Identifiers may continue to contain `/` (`IdContChar` unchanged); only the leading-`/` form is removed. This change is a breaking change for documents conforming to v0.6 or earlier; the migration is mechanical (drop the leading `/` or move to a path-mode reference). (3) Appendix A updated to reflect the new reference-literal productions, the `Anchor` production, and the narrowed identifier grammar. (4) Cross-references to Core Specification updated to v0.11.0.
+Changes from v0.6 (this revision, v0.7): conformance with Core Specification v0.11.0. (1) **§5.6 reference literal grammar normatively specifies path-mode and key-mode.** The placeholder `PathExpression ::= (* reserved; grammar deferred *)` is replaced by a forward reference to the companion GDX Path Expressions Specification (`GDX-Path.md`). Five `ReferenceLiteral` productions are recognized: `IdentifierReference` (`@Anchor`), `PathReference` (`$PathExpression`), `KeyReference` (`&KeyToken`), `IdPathReference` (`@Anchor$PathExpression`), and `IdKeyReference` (`@Anchor&KeyToken`). The `KeyReference` and `IdKeyReference` forms address an element by its location-stable `Key` anchor, scoped per Core Specification §4.4.5. The `Anchor` production extends the identifier portion of `@`-references with an optional `AnchorRole` keyword drawn from the closed prefix vocabulary (`OBJ`, `REL`, `DEFOBJ`, `PKG`, etc.) followed by `:`, disambiguating the role of the resolved element. Default anchor role in composed references is `OBJ`. (2) **§6 identifier grammar narrows.** `IdStartChar` no longer admits `/`. Identifiers may continue to contain `/` (`IdContChar` unchanged); only the leading-`/` form is removed. This change is a breaking change for documents conforming to v0.6 or earlier; the migration is mechanical (drop the leading `/` or move to a path-mode reference). (3) Appendix A updated to reflect the new reference-literal productions, the `Anchor` production, and the narrowed identifier grammar. (4) Cross-references to Core Specification updated to v0.11.0.
 
 
 ## Table of Contents
@@ -76,7 +76,7 @@ TopLevelElement ::= Object
                   | Package
 ```
 
-Per Core Specification §8.2 rule 1, the root of a GDX document MUST be one of: an Object, a Template, a REL declaration, or a Package. A document MAY contain multiple top-level elements; each top-level element MUST independently be a root-eligible type. This supports vocabulary documents that declare multiple Templates or REL elements at the root, files containing several independent Objects, and similar multi-root use cases.
+Per Core Specification §7.2 rule 1, the root of a GDX document MUST be one of: an Object, a Template, a REL declaration, or a Package. A document MAY contain multiple top-level elements; each top-level element MUST independently be a root-eligible type. This supports vocabulary documents that declare multiple Templates or REL elements at the root, files containing several independent Objects, and similar multi-root use cases.
 
 An empty document (no top-level elements) is malformed.
 
@@ -87,7 +87,7 @@ RelDeclaration  ::= RelElement
 Package         ::= PackageElement
 ```
 
-The detailed structure of these elements is defined in §3. Package and Group elements (transport-layer constructs introduced in Core Specification §10) follow the same general element grammar as data-layer elements; they are distinguished by their prefix tokens.
+The detailed structure of these elements is defined in §3. Package and Group elements (transport-layer constructs introduced in Core Specification §9) follow the same general element grammar as data-layer elements; they are distinguished by their prefix tokens.
 
 
 ---
@@ -117,7 +117,7 @@ Children        ::= (WS Element)+
 
 ### 3.1 Element Variations by Kind
 
-The general Element production above accepts any well-formed element. Additional structural rules are imposed by the role (declared via the Prefix) and the composition matrix of Core Specification §8.1. Those rules are semantic and are validated separately from grammar parsing.
+The general Element production above accepts any well-formed element. Additional structural rules are imposed by the role (declared via the Prefix) and the composition matrix of Core Specification §7.1. Those rules are semantic and are validated separately from grammar parsing.
 
 The element forms recognized at the grammar level, organized by role category:
 
@@ -383,13 +383,13 @@ PathExpression      ::= (* specified in GDX-Path.md §3-§4 *)
 KeyToken            ::= (* specified in GDX-Path.md §5 *)
 ```
 
-**Identifier-mode** (`@Anchor`) is normatively defined. The `@` sigil MUST be immediately followed by the anchor with no intervening whitespace. The identifier portion may be in any of the forms permitted by §6 (CURIEs, GUIDs, IRIs, local names, or hierarchical local names). The optional `AnchorRole` prefix carries a role-disambiguation keyword from the closed Core Specification §6.2 vocabulary.
+**Identifier-mode** (`@Anchor`) is normatively defined. The `@` sigil MUST be immediately followed by the anchor with no intervening whitespace. The identifier portion may be in any of the forms permitted by §6 (CURIEs, GUIDs, IRIs, local names, or hierarchical local names). The optional `AnchorRole` prefix carries a role-disambiguation keyword from the closed Core Specification §5.2 vocabulary.
 
 **Path-mode** (`$PathExpression`) is normatively defined by the companion GDX Path Expressions Specification (`GDX-Path.md`). The `$` sigil introduces a path expression addressing an element by its structural location in the document tree. The `$` sigil MUST be immediately followed by the `/` of the path with no intervening whitespace.
 
-**Key-mode** (`&KeyToken`) is normatively defined by `GDX-Path.md`. The `&` sigil introduces a key lookup; the Key is resolved within the scope of the reference (the enclosing Object, or the document at transport-layer position; see Core Specification §5.4.5). The `&` sigil MUST be immediately followed by the Key token with no intervening whitespace.
+**Key-mode** (`&KeyToken`) is normatively defined by `GDX-Path.md`. The `&` sigil introduces a key lookup; the Key is resolved within the scope of the reference (the enclosing Object, or the document at transport-layer position; see Core Specification §4.4.5). The `&` sigil MUST be immediately followed by the Key token with no intervening whitespace.
 
-**Composed name + path** (`@Anchor$PathExpression`) expresses cross-document addressing by structural traversal. The `@Anchor` portion resolves to a starting element by scope walk (per Core Specification §7.16), and the `$PathExpression` portion is then evaluated rooted at that starting element. No whitespace is permitted between `@`, the anchor, `$`, and the path. When the anchor carries no role marker, the starting element defaults to an Object.
+**Composed name + path** (`@Anchor$PathExpression`) expresses cross-document addressing by structural traversal. The `@Anchor` portion resolves to a starting element by scope walk (per Core Specification §6.16), and the `$PathExpression` portion is then evaluated rooted at that starting element. No whitespace is permitted between `@`, the anchor, `$`, and the path. When the anchor carries no role marker, the starting element defaults to an Object.
 
 **Composed name + key** (`@Anchor&KeyToken`) expresses cross-document addressing by key anchor. The `@Anchor` portion resolves to a starting element, and the `&KeyToken` portion is then looked up within that element's scope. No whitespace is permitted. When the anchor carries no role marker, the starting element defaults to an Object.
 
@@ -397,7 +397,7 @@ KeyToken            ::= (* specified in GDX-Path.md §5 *)
 
 The `$` and `&` operators do not combine within a single reference literal. The form `@Anchor$PathExpression&KeyToken` is malformed; an author chooses one of `IdPathReference` or `IdKeyReference` for the composed reference.
 
-When a reference literal appears as the Resource of a `@KIND` reference element (Core Specification §7.16), it MUST resolve to exactly one element of the matching role. See `GDX-Path.md` §7 for the normative address-mode singularity rule.
+When a reference literal appears as the Resource of a `@KIND` reference element (Core Specification §6.16), it MUST resolve to exactly one element of the matching role. See `GDX-Path.md` §7 for the normative address-mode singularity rule.
 
 
 ---
@@ -452,7 +452,7 @@ Note that `<I I : 42>` parses unambiguously: the first token after `<` is the pr
 
 ### 7.1 Prefix Vocabulary
 
-The Prefix production matches one of the closed vocabulary tokens defined in Core Specification §6. GDX prefix tokens have two equivalent textual forms — **canonical** (three-letter or longer where natural) and **minified** (single-letter where applicable). Both forms are recognized on input; serializers produce one or the other based on configuration.
+The Prefix production matches one of the closed vocabulary tokens defined in Core Specification §5. GDX prefix tokens have two equivalent textual forms — **canonical** (three-letter or longer where natural) and **minified** (single-letter where applicable). Both forms are recognized on input; serializers produce one or the other based on configuration.
 
 A GDX prefix follows a two-layer composition pattern:
 
@@ -462,13 +462,13 @@ Layer 2 (REF wrapper):  "%" + [layer-1 role-prefix]
 ```
 
 Where (layer 1):
-- `@` is the optional @-Edge sigil; restricted to `@OBJ` and `@REL` (Core Spec §7.4 axiom E5)
+- `@` is the optional @-Edge sigil; restricted to `@OBJ` and `@REL` (Core Spec §6.4 axiom E5)
 - `refinement-modifier` is one of `.`, `_`, `N`, `DEF` (at most one); VAL is a base prefix, not a modifier
 - `base` is a core role name
 - `*` is the optional Set suffix
 
 Where (layer 2):
-- `%` is the REF sigil; wraps any layer-1 role-prefix to produce a `%KIND` REF (Core Spec §7.16)
+- `%` is the REF sigil; wraps any layer-1 role-prefix to produce a `%KIND` REF (Core Spec §6.16)
 
 Three composition prohibitions: `@@KIND` (no @-edge to @-edge), `@OBJ*`/`@REL*` (no Set of @-edges, per E5), `%%KIND` (no REF to REF, per R6), `@%KIND` (no @-edge to REF, per E5).
 
@@ -484,7 +484,7 @@ RolePrefix          ::= EdgeSigil? ModifierBase SetSuffix?
 
 EdgeSigil           ::= "@"
                         (* Restricted: EdgeSigil MUST compose only with
-                           ObjectPrefix or RelPrefix, per Core Spec §7.4 E5.
+                           ObjectPrefix or RelPrefix, per Core Spec §6.4 E5.
                            Other compositions (e.g., @REC, @DEFOBJ) are
                            malformed when carrying EdgeSigil; those targets
                            are reached via RefSigil. *)
@@ -519,7 +519,7 @@ NodeComposition      ::= "N" PropertyBase
 
 (* VAL (element-as-value slot) — canonical | minified.
    VAL is a base prefix in its own right; the occupant is the VAL's
-   single child element (see Core Spec §7.11) and is not part of the
+   single child element (see Core Spec §6.11) and is not part of the
    prefix grammar. The `*` suffix does not compose with VAL. *)
 
 ValPrefix           ::= "VAL"  | "V"
@@ -548,7 +548,7 @@ PropertyBase        ::= "STR"   | "S"
 RecordBase          ::= "REC"   | "R"
 
 (* The EDGE/E prefix used through Core Spec v0.11.0 is removed in v0.12.0;
-   the @-Edge family (@OBJ, @REL — see Core Spec §7.4) replaces it. The
+   the @-Edge family (@OBJ, @REL — see Core Spec §6.4) replaces it. The
    `E` minified slot is currently unassigned. @-Edges and References are
    produced by the `@` operator (§7.2 below) composing with the @-Edge
    family members or with other base prefixes respectively. *)
@@ -606,7 +606,7 @@ The REF sigil does not stack with itself (no `%%KIND`) and does not compose unde
 
 A token in prefix position not matching the above is malformed.
 
-**On the closed vocabulary.** The prefix vocabulary is closed and committed against future change. The two-layer composition pattern (layer 1: `[@?][refinement-modifier?][base][*?]`; layer 2: `%` + layer-1) defines which compositions are valid; the spec describes the pattern rather than enumerating every prefix. New primitive types, structural roles, or domain concerns are expressed by composing existing prefixes with Templates, Extensions, and vocabulary identifiers — never by adding new modifiers, operators, or bases. The closed vocabulary enables uniform parser behavior across all implementations. See Core Specification §6.
+**On the closed vocabulary.** The prefix vocabulary is closed and committed against future change. The two-layer composition pattern (layer 1: `[@?][refinement-modifier?][base][*?]`; layer 2: `%` + layer-1) defines which compositions are valid; the spec describes the pattern rather than enumerating every prefix. New primitive types, structural roles, or domain concerns are expressed by composing existing prefixes with Templates, Extensions, and vocabulary identifiers — never by adding new modifiers, operators, or bases. The closed vocabulary enables uniform parser behavior across all implementations. See Core Specification §5.
 
 ### 7.2 Character Classes
 
@@ -721,11 +721,11 @@ Resolution: Unicode identifier support is a v2 design discussion. The grammar ma
 
 Items resolved since v0.1 and v0.2:
 
-- **Multi-element documents.** Confirmed in Core Specification §8.2 rule 1: a document may contain multiple top-level elements, each independently a root-eligible kind (Object, Template, REL, or Package). The grammar reflects this in the Document production.
+- **Multi-element documents.** Confirmed in Core Specification §7.2 rule 1: a document may contain multiple top-level elements, each independently a root-eligible kind (Object, Template, REL, or Package). The grammar reflects this in the Document production.
 
-- **Comment syntax via REM.** Comments in GDX are expressed via `REM` Annotation elements (Core Specification §7.6). REM elements participate in the data model and survive round-trip; they are not stripped at the lexical layer. The grammar has no separate comment production because none is needed.
+- **Comment syntax via REM.** Comments in GDX are expressed via `REM` Annotation elements (Core Specification §6.6). REM elements participate in the data model and survive round-trip; they are not stripped at the lexical layer. The grammar has no separate comment production because none is needed.
 
-- **Transport-layer prefixes.** Package and Group transport constructs (Core Specification §10) added to the prefix vocabulary. Document grammar updated to include Package as a root-eligible type.
+- **Transport-layer prefixes.** Package and Group transport constructs (Core Specification §9) added to the prefix vocabulary. Document grammar updated to include Package as a root-eligible type.
 
 - **Float suffix on integer-form numerics.** Resolved in v0.3: integer-form literals (`5`, `100`, `5f32`, `100d`) are accepted in float-prefix positions. The grammar (§5.3) admits IntNumeric with optional FloatSuffix as a FloatLiteral alternative. The asymmetry (float-form literals are NOT accepted in integer positions) is preserved because integers are a subset of reals while reals are not a subset of integers.
 
@@ -783,7 +783,7 @@ UriReference    ::= UriScheme "://" UriChars
 
 // --- Base prefixes ---
 // The EDGE/E prefix used through Core Spec v0.11.0 is removed in v0.12.0;
-// the @-Edge family (@OBJ, @REL — see Core Spec §7.4) replaces it. The
+// the @-Edge family (@OBJ, @REL — see Core Spec §6.4) replaces it. The
 // `E` minified slot is currently unassigned.
 
 ObjectPrefix     ::= "OBJ"  | "O"
@@ -984,7 +984,7 @@ Element         ::= "<" WS? Prefix ElementBody WS? ">"
 
 // ===== Document =====
 
-TopLevelElement ::= Element       // Restricted by Core Spec §8.2 rule 1 to:
+TopLevelElement ::= Element       // Restricted by Core Spec §7.2 rule 1 to:
                                   //   ObjectElement | TemplateElement
                                   //   | RelElement | PackageElement
 

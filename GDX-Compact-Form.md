@@ -1,6 +1,6 @@
 # GDX Compact Form — Grammar Specification
 
-- **Status:** Draft v0.6 (working draft)
+- **Status:** Draft v0.7 (companion to GDX Core Specification v0.18.0, working draft)
 - **Date:** 2026-05-20
 - **Companion to:** GDX Core Specification v0.11.0, GDX Standard Grammar v0.7, GDX Path Expressions v0.1
 - **Authors:** Julian Mussi
@@ -23,7 +23,7 @@ Changes from v0.1 to v0.2: conformance with Core Specification v0.9.10. Cross-re
 
 Changes from v0.2 to v0.3: conformance with Core Specification v0.10.0 and Standard Grammar v0.6. (1) The Set marker `*` migrated from prefix to suffix throughout examples: `*S tags` becomes `S* tags`; `*R contacts` becomes `R* contacts`. (2) The `@` reference operator and `@KIND` reference elements are introduced; §4.1 adds an example showing `@OBJ employer : @com.acme` in Compact Form. (3) The `$` reference-literal sigil is reserved for future path-mode references; identifier-mode `@id` is normatively specified. (4) The Appendix A grammar reframes the Prefix production around the composition pattern `[@?][refinement-modifier?][base][*?]`, inheriting the sub-prefix vocabulary from the Standard Grammar. Cross-reference to REM Annotation updated to §6.5.6 (its new location in Core v0.10.0). Companion-version line updated to GDX Core Specification v0.10.0 and GDX Standard Grammar v0.6.
 
-Changes from v0.3 to v0.4: conformance with Core Specification v0.11.0, Standard Grammar v0.7, and the new GDX Path Expressions Specification v0.1. (1) The `$`-introduced path-mode reference literal and the `&`-introduced key-mode reference literal are now normatively specified by `GDX-Path.md`; the §4 prose updates to recognize five reference-literal forms (`@anchor`, `$path`, `&key`, `@anchor$path`, `@anchor&key`). The composed forms express cross-document addressing by path or by key. The `@anchor` production carries an optional role marker (`@OBJ:id`, `@REL:id`, `@DEFOBJ:id`, etc.) drawn from the closed prefix vocabulary; when omitted, composed references default to an Object anchor. (2) The identifier grammar narrows in line with Core Spec §5.4.1: identifiers may not begin with `/`. Examples in this document that used leading-slash identifiers are migrated accordingly. (3) Companion-version line updated to GDX Core Specification v0.11.0, GDX Standard Grammar v0.7, and GDX Path Expressions v0.1.
+Changes from v0.3 to v0.4: conformance with Core Specification v0.11.0, Standard Grammar v0.7, and the new GDX Path Expressions Specification v0.1. (1) The `$`-introduced path-mode reference literal and the `&`-introduced key-mode reference literal are now normatively specified by `GDX-Path.md`; the §4 prose updates to recognize five reference-literal forms (`@anchor`, `$path`, `&key`, `@anchor$path`, `@anchor&key`). The composed forms express cross-document addressing by path or by key. The `@anchor` production carries an optional role marker (`@OBJ:id`, `@REL:id`, `@DEFOBJ:id`, etc.) drawn from the closed prefix vocabulary; when omitted, composed references default to an Object anchor. (2) The identifier grammar narrows in line with Core Spec §4.4.1: identifiers may not begin with `/`. Examples in this document that used leading-slash identifiers are migrated accordingly. (3) Companion-version line updated to GDX Core Specification v0.11.0, GDX Standard Grammar v0.7, and GDX Path Expressions v0.1.
 
 
 ## Table of Contents
@@ -45,7 +45,7 @@ Changes from v0.3 to v0.4: conformance with Core Specification v0.11.0, Standard
 
 ### 1.1 Purpose and Position
 
-The GDX Standard Form (defined by the Core Specification §5 and the Standard Grammar) is bracket-delimited and explicit about every structural boundary. It is unambiguous and easy for machines to parse, but reading it as a human, especially in deeply nested documents, can be visually noisy.
+The GDX Standard Form (defined by the Core Specification §4 and the Standard Grammar) is bracket-delimited and explicit about every structural boundary. It is unambiguous and easy for machines to parse, but reading it as a human, especially in deeply nested documents, can be visually noisy.
 
 The Compact Form trades bracket delimiters for indentation. The same data, expressed in Standard Form:
 
@@ -77,7 +77,7 @@ The Compact Form preserves the Core Spec data model with no information loss. Ev
 What the Compact Form does NOT preserve:
 
 - **Bracket-style whitespace flexibility.** Standard Form admits whitespace between fields; Compact Form requires fields on a single line.
-- **Source-level comments.** File-level comments (§5.4) appear in Compact Form but are NOT preserved when converting to Standard Form. Comments that should travel with the data are expressed using REM Annotations (Core Spec §7.6), which work identically in both forms.
+- **Source-level comments.** File-level comments (§5.4) appear in Compact Form but are NOT preserved when converting to Standard Form. Comments that should travel with the data are expressed using REM Annotations (Core Spec §6.6), which work identically in both forms.
 
 The Standard Form is the canonical wire and storage format. The Compact Form is for authoring. A typical pipeline:
 
@@ -109,7 +109,7 @@ The Compact Form is NOT:
 
 ## 2. Document Structure
 
-A Compact Form document consists of one or more top-level elements at zero indentation, separated by blank lines. The structural rules of the Core Spec apply: each top-level element MUST be one of Object, Template, REL, or Package (Core Spec §8.2 rule 1).
+A Compact Form document consists of one or more top-level elements at zero indentation, separated by blank lines. The structural rules of the Core Spec apply: each top-level element MUST be one of Object, Template, REL, or Package (Core Spec §7.2 rule 1).
 
 ### 2.1 Top-Level Elements
 
@@ -245,7 +245,7 @@ Each indent level represents one step deeper in the tree. An element's children 
 
 ### 3.3 Field Order and Sigils
 
-The field order, sigils, and lexical rules are identical to Standard Form (Core Spec §5.1 and §5.1.1):
+The field order, sigils, and lexical rules are identical to Standard Form (Core Spec §4.1 and §5.1.1):
 
 - The prefix is first.
 - The Key field, if present, follows the prefix and uses the `&` sigil.
@@ -316,7 +316,7 @@ End of file closes all remaining open elements.
 
 ### 4.1 Inline Literals
 
-Inline resource literals follow the same lexical rules as Standard Form (Core Spec §5.2). String, integer, float, boolean, bytes, and reference literals all work identically:
+Inline resource literals follow the same lexical rules as Standard Form (Core Spec §4.2). String, integer, float, boolean, bytes, and reference literals all work identically:
 
 ```
 S name : "Alice"
@@ -337,9 +337,9 @@ The lexical productions for each literal type are inherited from the Standard Gr
 
 **Reference literals.** Five forms are recognized in Resource position, all carried over from Standard Form:
 
-- Identifier-mode: `@anchor` (Core Spec §5.2.6).
+- Identifier-mode: `@anchor` (Core Spec §4.2.6).
 - Path-mode: `$/path/segments` (specified in `GDX-Path.md`).
-- Key-mode: `&target-key` (specified in `GDX-Path.md`; Key uniqueness rules in Core Spec §5.4.5).
+- Key-mode: `&target-key` (specified in `GDX-Path.md`; Key uniqueness rules in Core Spec §4.4.5).
 - Composed name + path: `@anchor$/path/segments` for cross-document path addressing.
 - Composed name + key: `@anchor&target-key` for cross-document key addressing.
 
@@ -355,7 +355,7 @@ The `@anchor` production may carry an optional role marker (`@OBJ:id`, `@REL:id`
 %STR slotDoc : @DEFOBJ:com.acme.Customer&firstName-doc  // REF, Template anchor
 ```
 
-@-edges (Core Spec §7.4) and REFs (Core Spec §7.16) appear in Compact Form with the prefix in the usual position:
+@-edges (Core Spec §6.4) and REFs (Core Spec §6.16) appear in Compact Form with the prefix in the usual position:
 
 ```
 O alice
@@ -439,7 +439,7 @@ Hex literals (`0x` prefix) do not have a multi-line form in this revision; long 
 
 ### 4.4 Null Forms
 
-The two null forms from Standard Form (Core Spec §5.1.3) work in Compact Form:
+The two null forms from Standard Form (Core Spec §4.1.3) work in Compact Form:
 
 ```
 S middleName              # bare form (canonical)
@@ -515,7 +515,7 @@ Comments are NOT part of the data model. They exist in the source file and are N
 - Converting Standard Form to Compact Form (no comments are introduced)
 - Persisting the data through any storage layer
 
-For documentation that should travel with the data, use REM Annotations (Core Spec §7.6), which work identically in both forms:
+For documentation that should travel with the data, use REM Annotations (Core Spec §6.6), which work identically in both forms:
 
 ```
 # This comment is editorial — for the developer's eyes only.
@@ -634,7 +634,7 @@ The following items exist in Compact Form source files but are NOT part of the d
 Items that are part of the data model and ARE preserved:
 
 - All element content (prefixes, identifiers, resources, types)
-- REM Annotations (Core Spec §7.6) — carry textual notes as data
+- REM Annotations (Core Spec §6.6) — carry textual notes as data
 - Child order
 - Null state of properties
 
@@ -1036,7 +1036,7 @@ BytesContentLine ::= IndentSpaces Base64Char+ NEWLINE
 
 // ===== Top-Level Element Restriction =====
 
-// Per Core Spec §8.2 rule 1, the prefix of a TopLevelElement
+// Per Core Spec §7.2 rule 1, the prefix of a TopLevelElement
 // MUST be one of: ObjectPrefix, TemplatePrefix, RelPrefix,
 // PackagePrefix.
 ```
