@@ -1,6 +1,6 @@
 # GDX — Cookbook of Canonical Patterns
 
-- **Status:** Draft v0.13.0 (companion to GDX Core Specification v0.13.0, working draft, pre-1.0)
+- **Status:** Draft v0.14.0 (companion to GDX Core Specification v0.18.0, working draft, pre-1.0)
 - **Date:** 2026-05-20
 - **Editors:** 
 - **Authors:** Julian Mussi
@@ -8,15 +8,15 @@
 
 ## Abstract
 
-This document is a companion to the GDX Core Specification. It is non-normative: it documents idiomatic GDX shapes for common modeling tasks. The patterns demonstrate the structural and schema mechanisms defined by the core specification (§4 through §8); they do not introduce new semantics.
+This document is a companion to the GDX Core Specification. It is non-normative: it documents idiomatic GDX shapes for common modeling tasks. The patterns demonstrate the structural and schema mechanisms defined by the core specification (§3 through §7); they do not introduce new semantics.
 
-Section references of the form §4, §6, §8 etc. refer to the GDX Core Specification.
+Section references of the form §3, §5, §7 etc. refer to the GDX Core Specification.
 
 The vocabulary identifiers used in these examples (`gdx:`, `schema:`, `vocab:`, etc.) are illustrative. Specific vocabulary content is defined by the relevant vocabulary specification, not by this document.
 
 ## Status of This Document
 
-This is the v0.13.0 working draft of the Cookbook, companion to the GDX Core Specification v0.13.0. The patterns documented here have stabilized alongside the core; future revisions will add patterns as common use cases emerge but will not remove existing entries except to merge or restructure them. v0.13.0 migrates all leaf-like `@KIND` references to the new `%KIND` REF family (Core Spec §7.16, entry 42 of the v0.13.0 changelog); Pattern 22 is rewritten as "Typed REF — Slot Holding a Handle to an Independent Element" and now includes a reification subsection (REF to an @-edge via `%@OBJ`/`%@REL`); Pattern 27 (Template Version Chain) is updated with the conceptual-shift note (Templates are vocabulary-layer, not graph-entities, so version chains are slot-bindings via `%DEFOBJ`, not graph statements). v0.13.0 also widens REL composition (Core Spec §7.15, entry 43): Pattern 17 (Predicate Declaration) is rewritten to demonstrate Properties (labels, descriptions, alias Sets) alongside @-edges and Extensions on a REL, with Property-vs-Extension choice guidance; Pattern 26 (Complete Vocabulary Document) updated to show the mixed-metadata-kinds pattern on RELs. v0.12.0 migrates `<EDGE …>` examples to `<@OBJ …>` per the @-Edge family (Core Spec §7.4, entry 41 of the v0.12.0 changelog); Pattern 7 (Edge Between Entities) is rewritten to demonstrate the new family including an edge-as-substance example (axiom E6 identity). v0.11.0 migrates leading-slash identifiers in examples to the new hierarchical-local form (no leading `/`); adds Pattern 16 (Parallel Constraint Vocabularies on One Template) demonstrating Layer 2b vocabulary pluralism; adds patterns demonstrating path-mode references (Pattern 23) and key-mode anchor references (Pattern 24); adds Pattern 20 (Adjunct Extension for Non-Schema Metadata) demonstrating Extensions beyond schema constraints; and adds Pattern 26 (Complete Vocabulary Document) showing how RELs with predicate-semantic Extensions, concept Objects, and Templates compose into a self-contained vocabulary.
+This is the v0.13.0 working draft of the Cookbook, companion to the GDX Core Specification v0.13.0. The patterns documented here have stabilized alongside the core; future revisions will add patterns as common use cases emerge but will not remove existing entries except to merge or restructure them. v0.13.0 migrates all leaf-like `@KIND` references to the new `%KIND` REF family (Core Spec §6.16, entry 42 of the v0.13.0 changelog); Pattern 22 is rewritten as "Typed REF — Slot Holding a Handle to an Independent Element" and now includes a reification subsection (REF to an @-edge via `%@OBJ`/`%@REL`); Pattern 27 (Template Version Chain) is updated with the conceptual-shift note (Templates are vocabulary-layer, not graph-entities, so version chains are slot-bindings via `%DEFOBJ`, not graph statements). v0.13.0 also widens REL composition (Core Spec §6.15, entry 43): Pattern 17 (Predicate Declaration) is rewritten to demonstrate Properties (labels, descriptions, alias Sets) alongside @-edges and Extensions on a REL, with Property-vs-Extension choice guidance; Pattern 26 (Complete Vocabulary Document) updated to show the mixed-metadata-kinds pattern on RELs. v0.12.0 migrates `<EDGE …>` examples to `<@OBJ …>` per the @-Edge family (Core Spec §6.4, entry 41 of the v0.12.0 changelog); Pattern 7 (Edge Between Entities) is rewritten to demonstrate the new family including an edge-as-substance example (axiom E6 identity). v0.11.0 migrates leading-slash identifiers in examples to the new hierarchical-local form (no leading `/`); adds Pattern 16 (Parallel Constraint Vocabularies on One Template) demonstrating Layer 2b vocabulary pluralism; adds patterns demonstrating path-mode references (Pattern 23) and key-mode anchor references (Pattern 24); adds Pattern 20 (Adjunct Extension for Non-Schema Metadata) demonstrating Extensions beyond schema constraints; and adds Pattern 26 (Complete Vocabulary Document) showing how RELs with predicate-semantic Extensions, concept Objects, and Templates compose into a self-contained vocabulary.
 
 Changes in v0.10.0 from v0.9.6 reflect Core Specification v0.10.0:
 
@@ -224,7 +224,7 @@ Templates define the shape; instances reference them via `--type`. The Template 
 >
 ```
 
-The instance is silent about each child's `Rel`, and silent about `locale` entirely. By the universal claim rule (Core Spec §9.2.3): for `firstName` and `lastName`, the Template-supplied `Rel`s are the effective values; for `locale`, the Template's default `Resource` is the effective value. The instance logically carries `Rel`s of `schema:givenName` and `schema:familyName`, and a `locale` of `"en-US"`.
+The instance is silent about each child's `Rel`, and silent about `locale` entirely. By the universal claim rule (Core Spec §8.2.3): for `firstName` and `lastName`, the Template-supplied `Rel`s are the effective values; for `locale`, the Template's default `Resource` is the effective value. The instance logically carries `Rel`s of `schema:givenName` and `schema:familyName`, and a `locale` of `"en-US"`.
 
 When the document is persisted, exchanged, or archived, **materialize** those Template-supplied values into the instance. The materialized form is what readers see when the schema is not available at read time:
 
@@ -238,7 +238,7 @@ When the document is persisted, exchanged, or archived, **materialize** those Te
 
 The materialized instance is self-describing. A reader that does not load `com.acme.Customer` still sees the predicate alignments; a query for elements with `Rel` `schema:givenName` finds this instance without resolving the Template. Materialization is recommended for persistence; it is optional for in-memory processing where the Template is already available.
 
-Materialization does not extrapolate beyond what the Template explicitly declares. Missing slots are not invented; Constraint Extensions on the Template (Core Spec §9.4) remain Template-scoped and are not copied into the instance.
+Materialization does not extrapolate beyond what the Template explicitly declares. Missing slots are not invented; Constraint Extensions on the Template (Core Spec §8.4) remain Template-scoped and are not copied into the instance.
 
 ## 10. Embedded Structured Value (VAL)
 
@@ -343,7 +343,7 @@ The two layers operate independently and are validated separately. Per Core Spec
 
 ## 16. Parallel Constraint Vocabularies on One Template
 
-A single Template MAY carry constraints expressed in multiple constraint vocabularies simultaneously. Each vocabulary's identifiers are opaque to GDX (Core Spec §9.4); GDX records them as well-formed Extensions and assigns no meaning. Consumers each read the vocabularies they understand and ignore the rest.
+A single Template MAY carry constraints expressed in multiple constraint vocabularies simultaneously. Each vocabulary's identifiers are opaque to GDX (Core Spec §8.4); GDX records them as well-formed Extensions and assigns no meaning. Consumers each read the vocabularies they understand and ignore the rest.
 
 ```
 <DEFSTR UserHandle
@@ -514,11 +514,11 @@ Object identifiers are not constrained to any particular scheme. Use whatever fi
 <@OBJ #cites : @https://acme.com/people/alice>
 ```
 
-The resolver determines how each reference resolves; the format does not constrain the scheme. Identifiers may not begin with `/` (Core Spec §5.4.1, narrowed in v0.11.0); the leading-slash form is the path-mode reference syntax (see Pattern 21).
+The resolver determines how each reference resolves; the format does not constrain the scheme. Identifiers may not begin with `/` (Core Spec §4.4.1, narrowed in v0.11.0); the leading-slash form is the path-mode reference syntax (see Pattern 21).
 
 ## 22. Typed REF — Slot Holding a Handle to an Independent Element
 
-When you want a slot whose value is a typed handle to an independently-existing element — a configuration pointing at a service, a schema-bound instance pointing at its Template, a derived view pointing at an interior position in a source document — use the REF family (Core Spec §7.16). REFs are slot-fillers: they identify the target and stop, with no relationship assertion about the parent and no attribute children. REFs use the `%KIND` prefix, distinguishing them from @-edges (`@OBJ`, `@REL`) which assert relationships and belong to graph-entity targets.
+When you want a slot whose value is a typed handle to an independently-existing element — a configuration pointing at a service, a schema-bound instance pointing at its Template, a derived view pointing at an interior position in a source document — use the REF family (Core Spec §6.16). REFs are slot-fillers: they identify the target and stop, with no relationship assertion about the parent and no attribute children. REFs use the `%KIND` prefix, distinguishing them from @-edges (`@OBJ`, `@REL`) which assert relationships and belong to graph-entity targets.
 
 Configuration / wiring:
 
@@ -551,7 +551,7 @@ The Qualifier annotates the slot binding: "this pointer is the read-write databa
 
 Pick `%` when you want a typed handle in a slot; pick `@` when you want GDX to record the relationship as a first-class graph statement.
 
-**Reification — REF to an @-edge.** When an @-edge carries identity (per Core Spec §7.4 axiom E6), it becomes addressable as a persistent substance. A REF prefixed `%@OBJ` or `%@REL` is a handle to such an edge:
+**Reification — REF to an @-edge.** When an @-edge carries identity (per Core Spec §6.4 axiom E6), it becomes addressable as a persistent substance. A REF prefixed `%@OBJ` or `%@REL` is a handle to such an edge:
 
 ```
 <OBJ alice
@@ -647,7 +647,7 @@ When the referencing element shares a document with the Keyed target, the `@Iden
 >
 ```
 
-Key uniqueness is scoped to the enclosing Object (or to the document for transport-layer elements); see Core Specification §5.4.5. Two different audit-log Objects MAY each have their own `&entry-12345` without collision, because Key resolution is scoped to one Object at a time.
+Key uniqueness is scoped to the enclosing Object (or to the document for transport-layer elements); see Core Specification §4.4.5. Two different audit-log Objects MAY each have their own `&entry-12345` without collision, because Key resolution is scoped to one Object at a time.
 
 When the anchor is not an Object — for example, a Keyed annotation on a REL declaration or a Keyed slot-documentation inside a Template — use an explicit anchor role marker. The marker is one of the closed prefix-vocabulary keywords (`OBJ`, `REL`, `DEFOBJ`, `PKG`, `GRP`, etc.) followed by `:`:
 
