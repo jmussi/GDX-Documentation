@@ -990,7 +990,7 @@ Examples:
 
 **Refinement modifiers do not stack with each other.** `*.STR`, `.NSTR`, `N.STR`, `_NSTR` and similar combinations are all malformed. Each element carries at most one refinement modifier.
 
-**Refinement modifiers MAY combine with `*` and `@`.** `.STR*` is a Set of Qualifiers; `_STR*` is a Set of Extensions. The reference operator `@` may prefix any modifier-base composition: `@.STR`, `@_BOOL`, `@NSTR`. The pattern `[@?][refinement-modifier?][base][*?]` governs which combinations are well-formed.
+**Refinement modifiers MAY combine with `*` and `%`.** `.STR*` is a Set of Qualifiers; `_STR*` is a Set of Extensions. The REF sigil `%` may wrap any modifier-base composition: `%.STR`, `%_BOOL`, `%NSTR` (§5.3.3). The `@` sigil does NOT combine with refinement modifiers — the @-Edge family is closed at `@OBJ` and `@REL` (§5.3.2, rule 14). The pattern `[%?][@?][refinement-modifier?][base][*?]` governs which combinations are well-formed, subject to the family restrictions of §5.3.
 
 **The `DEF` declaration construct** (§6.14) shares the prefix-position slot with the refinement modifiers but is structurally different — it declares a Template rather than refining an element's contextual role. See §6.14 for details.
 
@@ -2701,6 +2701,7 @@ This appendix records the per-revision change descriptions accumulated during th
 - **`%PKG` and `%GRP` confirmed as REF-family members (§5.2, §5.3.3, §6.16).** The generation rule ("% wraps any layer-1 role-prefix") produces them, and the §4.2.6 anchor-role set already included PKG and GRP, but the family enumerations omitted them. They are now listed, with a lifecycle note: transport wrappers are transient, so such REFs are meaningful within the transport context that carries them and SHOULD NOT be persisted beyond it.
 - **Example-annotation marker normalized (` -- ` → ` ← `).** Example blocks used ` -- ` as an inline annotation marker — visually colliding with the `--` Type sigil and producing non-parseable example lines. All example annotations now use ` ← `, the marker §6.10's examples already used. GDX itself remains comment-free (§4.6).
 - **Mechanical staleness:** §8 status note renumbered (pre-v0.17 "9.1–9.5" → "8.1–8.5"); Appendix A.7's matrix reference corrected (§8.1 → §7.1) and its suffix enumeration completed (`bigint`, `d`/`d32`/`d64`/`d128`); §6.12's "for v0.9 conformance" version pin dropped.
+- **§5.4 stale `@`-composition sentence corrected (addendum, found during implementation conformance).** §5.4 still said "the reference operator `@` may prefix any modifier-base composition: `@.STR`, `@_BOOL`, `@NSTR`" — a pre-v0.13 leftover contradicting rule 14 and axiom E5 (the @-Edge family is closed at two members). Corrected to the `%` sigil, which is the operator that wraps modifier-base compositions.
 
 Migration: none for documents. One previously-underspecified case is now explicitly malformed (a `DEF…` element nested in a data-layer position, per rule 9(c)) and one previously-contradicted case is now explicitly valid (Extensions outside Templates, Record members in `REC*` Sets, Blocks under REL, REFs under transport wrappers) — implementations should re-derive their composition tables from the §7.1 matrix as revised.
 
