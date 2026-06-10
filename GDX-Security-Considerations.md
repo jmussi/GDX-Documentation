@@ -1,7 +1,7 @@
 # GDX — Security Considerations
 
-- **Status:** Draft v0.14.0 (companion to GDX Core Specification v0.18.0, working draft, pre-1.0)
-- **Date:** 2026-05-20
+- **Status:** Draft v0.14.0 (companion to GDX Core Specification v0.20.0, working draft, pre-1.0)
+- **Date:** 2026-06-09
 - **Editors:** 
 - **Authors:** Julian Mussi
 

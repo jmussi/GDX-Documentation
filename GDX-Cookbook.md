@@ -1,7 +1,7 @@
 # GDX — Cookbook of Canonical Patterns
 
-- **Status:** Draft v0.14.0 (companion to GDX Core Specification v0.18.0, working draft, pre-1.0)
-- **Date:** 2026-05-20
+- **Status:** Draft v0.20.0 (companion to GDX Core Specification v0.20.0, working draft, pre-1.0)
+- **Date:** 2026-06-09
 - **Editors:** 
 - **Authors:** Julian Mussi
 
@@ -16,7 +16,9 @@ The vocabulary identifiers used in these examples (`gdx:`, `schema:`, `vocab:`, 
 
 ## Status of This Document
 
-This is the v0.13.0 working draft of the Cookbook, companion to the GDX Core Specification v0.13.0. The patterns documented here have stabilized alongside the core; future revisions will add patterns as common use cases emerge but will not remove existing entries except to merge or restructure them. v0.13.0 migrates all leaf-like `@KIND` references to the new `%KIND` REF family (Core Spec §6.16, entry 42 of the v0.13.0 changelog); Pattern 22 is rewritten as "Typed REF — Slot Holding a Handle to an Independent Element" and now includes a reification subsection (REF to an @-edge via `%@OBJ`/`%@REL`); Pattern 27 (Template Version Chain) is updated with the conceptual-shift note (Templates are vocabulary-layer, not graph-entities, so version chains are slot-bindings via `%DEFOBJ`, not graph statements). v0.13.0 also widens REL composition (Core Spec §6.15, entry 43): Pattern 17 (Predicate Declaration) is rewritten to demonstrate Properties (labels, descriptions, alias Sets) alongside @-edges and Extensions on a REL, with Property-vs-Extension choice guidance; Pattern 26 (Complete Vocabulary Document) updated to show the mixed-metadata-kinds pattern on RELs. v0.12.0 migrates `<EDGE …>` examples to `<@OBJ …>` per the @-Edge family (Core Spec §6.4, entry 41 of the v0.12.0 changelog); Pattern 7 (Edge Between Entities) is rewritten to demonstrate the new family including an edge-as-substance example (axiom E6 identity). v0.11.0 migrates leading-slash identifiers in examples to the new hierarchical-local form (no leading `/`); adds Pattern 16 (Parallel Constraint Vocabularies on One Template) demonstrating Layer 2b vocabulary pluralism; adds patterns demonstrating path-mode references (Pattern 23) and key-mode anchor references (Pattern 24); adds Pattern 20 (Adjunct Extension for Non-Schema Metadata) demonstrating Extensions beyond schema constraints; and adds Pattern 26 (Complete Vocabulary Document) showing how RELs with predicate-semantic Extensions, concept Objects, and Templates compose into a self-contained vocabulary.
+This is the v0.20.0 working draft of the Cookbook, companion to the GDX Core Specification v0.20.0. v0.20.0 adds a capture-first subsection to Pattern 7: an @-edge's `#rel` may be empty (the relationship exists by role, undefined as to nature, refined later on the same edge — Core Spec §6.4.2). v0.19.0 updates Pattern 22 with the value-resolution framing of REF (Core Spec §6.16) and expands the REF-vs-@-Edge choice guidance, which the Core Specification now routes to this document and the Primer as the non-normative home for borderline-case guidance.
+
+This document was previously the v0.13.0 working draft, companion to the GDX Core Specification v0.13.0. The patterns documented here have stabilized alongside the core; future revisions will add patterns as common use cases emerge but will not remove existing entries except to merge or restructure them. v0.13.0 migrates all leaf-like `@KIND` references to the new `%KIND` REF family (Core Spec §6.16, entry 42 of the v0.13.0 changelog); Pattern 22 is rewritten as "Typed REF — Slot Holding a Handle to an Independent Element" and now includes a reification subsection (REF to an @-edge via `%@OBJ`/`%@REL`); Pattern 27 (Template Version Chain) is updated with the conceptual-shift note (Templates are vocabulary-layer, not graph-entities, so version chains are slot-bindings via `%DEFOBJ`, not graph statements). v0.13.0 also widens REL composition (Core Spec §6.15, entry 43): Pattern 17 (Predicate Declaration) is rewritten to demonstrate Properties (labels, descriptions, alias Sets) alongside @-edges and Extensions on a REL, with Property-vs-Extension choice guidance; Pattern 26 (Complete Vocabulary Document) updated to show the mixed-metadata-kinds pattern on RELs. v0.12.0 migrates `<EDGE …>` examples to `<@OBJ …>` per the @-Edge family (Core Spec §6.4, entry 41 of the v0.12.0 changelog); Pattern 7 (Edge Between Entities) is rewritten to demonstrate the new family including an edge-as-substance example (axiom E6 identity). v0.11.0 migrates leading-slash identifiers in examples to the new hierarchical-local form (no leading `/`); adds Pattern 16 (Parallel Constraint Vocabularies on One Template) demonstrating Layer 2b vocabulary pluralism; adds patterns demonstrating path-mode references (Pattern 23) and key-mode anchor references (Pattern 24); adds Pattern 20 (Adjunct Extension for Non-Schema Metadata) demonstrating Extensions beyond schema constraints; and adds Pattern 26 (Complete Vocabulary Document) showing how RELs with predicate-semantic Extensions, concept Objects, and Templates compose into a self-contained vocabulary.
 
 Changes in v0.10.0 from v0.9.6 reflect Core Specification v0.10.0:
 
@@ -192,7 +194,25 @@ An @-edge with identity is a persistent edge-entity — its substance endures ac
 
 The identifier `employmentEdge` is the edge's substance (per §7.4 axiom E6); the `#worksFor` predicate is its current assertion; the attributes describe the edge itself. Two edges with the same source, predicate, and target are distinct if their identities differ.
 
-An @-edge asserts a graph statement and admits attribute children. When you want a leaf-like typed pointer instead (no graph-statement framing, no attribute children), use the Reference family (§22). Use an @-edge when the relationship matters and the target is a graph-entity (Object or REL); use a Reference for typed pointers to non-graph-entities (Templates, interior elements addressed by path or key).
+An @-edge asserts a graph statement and admits attribute children. When you want value-resolution instead — a slot whose content is sourced from another element, with no relationship assertion — use the Reference family (§22, which also carries the guidance for borderline cases).
+
+**Capture-first: the undefined relationship.** An edge's `#rel` may be omitted entirely. The role asserts that a relationship *exists* (it's an edge); the `#rel` field specifies *what* it is, and may be empty — the relationship is then undefined as to nature (Core Spec §6.4.2). This is the shape for connections captured before their form is known: real-time capture, pending classification, a link observed before its nature is determined.
+
+```
+<OBJ sensor-hub
+    <@OBJ &link-0192 : @device-7>
+>
+```
+
+"sensor-hub stands in some relationship to device-7 — nature pending." Give the edge a `Key` (or `Id`) so it stays addressable; when the relationship is classified, refine the *same* edge by filling the field:
+
+```
+<OBJ sensor-hub
+    <@OBJ &link-0192 #gdx:controls : @device-7>
+>
+```
+
+Same edge, same key, same target — identity and any references to the edge survive the refinement. Keep undefined relationships a visible backlog, not a resting place: they are queryable as a distinct state ("show all edges with an empty rel"), and a Template can forbid them where strictness matters (a vocabulary-defined constraint, Core Spec §8.4) — a capture pipeline allows them, a published ontology rejects them.
 
 ## 8. Refining a Property with Constraints
 
@@ -518,7 +538,7 @@ The resolver determines how each reference resolves; the format does not constra
 
 ## 22. Typed REF — Slot Holding a Handle to an Independent Element
 
-When you want a slot whose value is a typed handle to an independently-existing element — a configuration pointing at a service, a schema-bound instance pointing at its Template, a derived view pointing at an interior position in a source document — use the REF family (Core Spec §6.16). REFs are slot-fillers: they identify the target and stop, with no relationship assertion about the parent and no attribute children. REFs use the `%KIND` prefix, distinguishing them from @-edges (`@OBJ`, `@REL`) which assert relationships and belong to graph-entity targets.
+When a slot's content should be *sourced from another element* — a configuration pointing at a service, a schema-bound instance pointing at its Template, a derived view pulling a value from an interior position in a source document — use the REF family (Core Spec §6.16). A REF is GDX's **value-resolution** construct: "the value here is the value of the resolved target." The document stores the address (that is what round-trips); dereferencing yields the target — a whole element used as a value, or a field inside one. REFs are slot-fillers: they identify the target and stop, with no relationship assertion about the parent and no attribute children. REFs use the `%KIND` prefix, distinguishing them from @-edges (`@OBJ`, `@REL`) which assert relationships and belong to graph-entity targets.
 
 Configuration / wiring:
 
@@ -544,12 +564,19 @@ The closed REF family is generated by a single rule: `%` wraps any role-prefix t
 
 The Qualifier annotates the slot binding: "this pointer is the read-write database."
 
-**REF vs @-Edge — choosing the right construct.** Both `%OBJ` and `@OBJ` carry a Resource pointing at an Object, but they mean different things:
+**REF vs @-Edge — choosing the right construct.** Both `%OBJ` and `@OBJ` carry a Resource pointing at an Object, but they make different assertions:
 
-- `<%OBJ database : @primary-db>` — "this slot named `database` holds a handle to `primary-db`." A slot-content assertion, with no claim about a relationship.
+- `<%OBJ database : @primary-db>` — "this slot named `database` holds a handle to `primary-db`; its value resolves to that Object." Value-sourcing, with no claim about a relationship.
 - `<@OBJ #usesBackend : @primary-db>` — "the parent stands in a `usesBackend` relationship to `primary-db`." A graph statement, asserting the relationship.
 
-Pick `%` when you want a typed handle in a slot; pick `@` when you want GDX to record the relationship as a first-class graph statement.
+For borderline cases, ask what you are asserting, not what you are pointing at:
+
+- *"This field's value is that whole object"* — a REF. Value-sourcing stays a REF even when the target is a whole, identified entity; what makes a REF a REF is that the slot's content comes from the target, not that the target is small or interior.
+- *"These two entities are related"* — an @-edge. A relationship is a thing in its own right: it can be labeled, carry attributes, bear identity, and be traversed as graph structure.
+- *Need to reach inside an element* (a field, a Qualifier, an interior Record)? — necessarily a REF. Value-resolution naturally reaches interior resources; a graph edge connects whole elements only and never points into one (Core Spec §6.16, §6.4).
+- *Should removing it delete a fact about how things relate?* — if yes, it was an @-edge. Removing a REF empties a slot; removing an edge retracts a relationship.
+
+Pick `%` when the slot's content is sourced from elsewhere; pick `@` when you want GDX to record the relationship as a first-class graph statement.
 
 **Reification — REF to an @-edge.** When an @-edge carries identity (per Core Spec §6.4 axiom E6), it becomes addressable as a persistent substance. A REF prefixed `%@OBJ` or `%@REL` is a handle to such an edge:
 

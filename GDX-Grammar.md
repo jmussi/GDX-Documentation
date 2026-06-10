@@ -1,8 +1,8 @@
 # GDX Standard Form — Grammar Specification
 
-- **Status:** Draft v0.10 (companion to GDX Core Specification v0.18.0, working draft)
-- **Date:** 2026-05-20
-- **Companion to:** GDX Core Specification v0.11.0
+- **Status:** Draft v0.11 (companion to GDX Core Specification v0.20.0, working draft)
+- **Date:** 2026-06-09
+- **Companion to:** GDX Core Specification v0.20.0
 - **Authors:** Julian Mussi
 
 
@@ -22,6 +22,8 @@ Changes from v0.5 (revision v0.6): conformance with Core Specification v0.10.0. 
 
 Changes from v0.6 (this revision, v0.7): conformance with Core Specification v0.11.0. (1) **§5.6 reference literal grammar normatively specifies path-mode and key-mode.** The placeholder `PathExpression ::= (* reserved; grammar deferred *)` is replaced by a forward reference to the companion GDX Path Expressions Specification (`GDX-Path.md`). Five `ReferenceLiteral` productions are recognized: `IdentifierReference` (`@Anchor`), `PathReference` (`$PathExpression`), `KeyReference` (`&KeyToken`), `IdPathReference` (`@Anchor$PathExpression`), and `IdKeyReference` (`@Anchor&KeyToken`). The `KeyReference` and `IdKeyReference` forms address an element by its location-stable `Key` anchor, scoped per Core Specification §4.4.5. The `Anchor` production extends the identifier portion of `@`-references with an optional `AnchorRole` keyword drawn from the closed prefix vocabulary (`OBJ`, `REL`, `DEFOBJ`, `PKG`, etc.) followed by `:`, disambiguating the role of the resolved element. Default anchor role in composed references is `OBJ`. (2) **§6 identifier grammar narrows.** `IdStartChar` no longer admits `/`. Identifiers may continue to contain `/` (`IdContChar` unchanged); only the leading-`/` form is removed. This change is a breaking change for documents conforming to v0.6 or earlier; the migration is mechanical (drop the leading `/` or move to a path-mode reference). (3) Appendix A updated to reflect the new reference-literal productions, the `Anchor` production, and the narrowed identifier grammar. (4) Cross-references to Core Specification updated to v0.11.0.
 
+
+Changes from v0.10 (this revision, v0.11): conformance with Core Specification v0.20.0. **No production changes.** Core v0.20.0 makes the `#rel` field semantically optional on @-Edge elements (an edge with no Rel field is well-formed; the empty rel denotes a relationship undefined as to nature — Core Spec §6.4.2). The grammar already expresses this: `IdentitySection` carries `(WS Rel)?` as optional on every element, and the former mandatory-predicate rule was a semantic rule (Core Spec axiom E4) validated outside this grammar. The `Rel ::= "#" RelContent` production is unchanged and continues to require content after the sigil — a bare `#` remains malformed everywhere; an empty Rel field is expressed by omitting the field entirely. A clarifying note is added to §4.2. Core v0.19.0 (REF reframed as value-resolution, §-allocation ADR, role-explicit endpoints note) changes no syntax and requires no grammar change.
 
 ## Table of Contents
 
@@ -130,7 +132,7 @@ BlockElement        ::= "<" WS? BlockPrefix ElementBody WS? ">"
 AnnotationElement   ::= "<" WS? AnnotationPrefix ElementBody WS? ">"
 
 (* @-Edge elements (@OBJ, @REL) are produced by the Reference operator
-   composing with ObjectPrefix or RelPrefix and follow §7.4 of the Core
+   composing with ObjectPrefix or RelPrefix and follow §6.4 of the Core
    Specification. They do not have a separate EdgeElement production. *)
 
 (* Refinement-modifier compositions *)
@@ -187,7 +189,7 @@ RelContent      ::= UriReference
                   | Id
 ```
 
-The `#` sigil MUST be immediately followed by the rel content with no intervening whitespace. A Rel content is either a full URI reference (recognized by the `://` sequence) or an identifier (typically a CURIE).
+The `#` sigil MUST be immediately followed by the rel content with no intervening whitespace. A Rel content is either a full URI reference (recognized by the `://` sequence) or an identifier (typically a CURIE). A bare `#` — the sigil with no following content — is malformed; an empty Rel field is expressed by omitting the field entirely. The Rel field is lexically optional on every element (`IdentitySection`, §3); on @-Edge elements an omitted `#rel` is semantically well-formed and denotes a relationship undefined as to nature (Core Spec §6.4.2, added in Core v0.20.0).
 
 ```ebnf
 UriReference    ::= UriScheme "://" UriChars

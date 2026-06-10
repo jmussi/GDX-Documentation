@@ -1,8 +1,8 @@
 # GDX Compact Form — Grammar Specification
 
-- **Status:** Draft v0.7 (companion to GDX Core Specification v0.18.0, working draft)
-- **Date:** 2026-05-20
-- **Companion to:** GDX Core Specification v0.11.0, GDX Standard Grammar v0.7, GDX Path Expressions v0.1
+- **Status:** Draft v0.8 (companion to GDX Core Specification v0.20.0, working draft)
+- **Date:** 2026-06-09
+- **Companion to:** GDX Core Specification v0.20.0, GDX Standard Grammar v0.11, GDX Path Expressions v0.4
 - **Authors:** Julian Mussi
 
 
@@ -22,6 +22,8 @@ This is the v0.3 working draft. The grammar, indentation model, and Standard For
 Changes from v0.1 to v0.2: conformance with Core Specification v0.9.10. Cross-references updated to current section numbering: §8.2 rule 1 (root rule) → §7.2 rule 1; §5.10 (REM Annotation) → §6.3.6; §4.2 (Resource Literals) → §5.2; §3.3.4 (Null Forms) → §5.1.3; §3.1, §4.1 (field order/sigils) → §5.1 and §5.1.1; "§4" in the intro (Standard Form definition) → §5. Example fixes: the §1.1 opening example, the §6.2 standard-to-compact example, and the §7.1 Simple Configuration example were updated to use an Object root (`O config`) rather than a bare Record (`R config`), which is non-conformant per §7.2 rule 1. The §7.4 example was updated from the legacy `TDR Customer` Template form to the current `DEFOBJ Customer`. The §7.6 Transport Wrappers example was updated from `PACKAGE`/`BLOCK` (legacy names) to `PKG`/`GRP` (current names); Block is a data-layer construct, while Group is the transport-layer partition. Companion-version line updated to GDX Core Specification v0.9.10 and GDX Standard Grammar v0.5.
 
 Changes from v0.2 to v0.3: conformance with Core Specification v0.10.0 and Standard Grammar v0.6. (1) The Set marker `*` migrated from prefix to suffix throughout examples: `*S tags` becomes `S* tags`; `*R contacts` becomes `R* contacts`. (2) The `@` reference operator and `@KIND` reference elements are introduced; §4.1 adds an example showing `@OBJ employer : @com.acme` in Compact Form. (3) The `$` reference-literal sigil is reserved for future path-mode references; identifier-mode `@id` is normatively specified. (4) The Appendix A grammar reframes the Prefix production around the composition pattern `[@?][refinement-modifier?][base][*?]`, inheriting the sub-prefix vocabulary from the Standard Grammar. Cross-reference to REM Annotation updated to §6.5.6 (its new location in Core v0.10.0). Companion-version line updated to GDX Core Specification v0.10.0 and GDX Standard Grammar v0.6.
+
+Changes from v0.7 to v0.8: conformance with Core Specification v0.20.0. No grammar change. Core v0.20.0 makes the `#rel` field semantically optional on @-Edge elements: an edge line with no `#rel` is well-formed and denotes a relationship that exists but is undefined as to nature (Core Spec §6.4.2); the Rel field was already optional in this document's line grammar ("if present", §4). A bare `#` remains malformed; the empty Rel is expressed by omitting the field. An empty-rel example is added to §4.1. Core v0.19.0 (REF reframed as value-resolution) changes no syntax. Companion-version line updated to Core v0.20.0 and Standard Grammar v0.11.
 
 Changes from v0.3 to v0.4: conformance with Core Specification v0.11.0, Standard Grammar v0.7, and the new GDX Path Expressions Specification v0.1. (1) The `$`-introduced path-mode reference literal and the `&`-introduced key-mode reference literal are now normatively specified by `GDX-Path.md`; the §4 prose updates to recognize five reference-literal forms (`@anchor`, `$path`, `&key`, `@anchor$path`, `@anchor&key`). The composed forms express cross-document addressing by path or by key. The `@anchor` production carries an optional role marker (`@OBJ:id`, `@REL:id`, `@DEFOBJ:id`, etc.) drawn from the closed prefix vocabulary; when omitted, composed references default to an Object anchor. (2) The identifier grammar narrows in line with Core Spec §4.4.1: identifiers may not begin with `/`. Examples in this document that used leading-slash identifiers are migrated accordingly. (3) Companion-version line updated to GDX Core Specification v0.11.0, GDX Standard Grammar v0.7, and GDX Path Expressions v0.1.
 
@@ -362,6 +364,13 @@ O alice
   S name : "Alice"
   %DEFOBJ #conformsTo : @Customer
   @OBJ #knows : @bob
+```
+
+An @-edge MAY omit `#rel` entirely: the relationship exists by virtue of the role, but is undefined as to nature, pending later refinement (Core Spec §6.4.2). The empty Rel is expressed by omitting the field — there is no bare-`#` form:
+
+```
+O sensor-hub
+  @OBJ &link-0192 : @device-7
 ```
 
 ### 4.2 Multi-Line String Literals

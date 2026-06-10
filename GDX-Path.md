@@ -1,8 +1,8 @@
 # GDX Path Expressions — Specification
 
-- **Status:** Draft v0.4 (companion to GDX Core Specification v0.18.0, working draft)
-- **Date:** 2026-05-20
-- **Companion to:** GDX Core Specification v0.11.0
+- **Status:** Draft v0.5 (companion to GDX Core Specification v0.20.0, working draft)
+- **Date:** 2026-06-09
+- **Companion to:** GDX Core Specification v0.20.0
 - **Authors:** Julian Mussi
 
 
@@ -167,7 +167,7 @@ The `SegContChar` alphabet excludes `/` (cf. Core Spec §4.4.1 `IdContChar`). To
 RelSegment      ::= "#" SegmentName
 ```
 
-A `RelSegment` matches a child element whose `Rel` field is string-equal to `SegmentName`. CURIEs and other identifier forms admitted by `SegmentName` are valid as the Rel value.
+A `RelSegment` matches a child element whose `Rel` field is string-equal to `SegmentName`. CURIEs and other identifier forms admitted by `SegmentName` are valid as the Rel value. An element whose Rel field is empty — for example, an @-edge whose relationship is undefined as to nature (Core Spec §6.4.2, added in Core v0.20.0) — is matched by no `RelSegment`; only a named Rel can be selected by `#SegmentName`. To address such an element, use an `OrdinalSegment` or, when it carries a `Key`, the `&Key` reference literal.
 
 Examples:
 

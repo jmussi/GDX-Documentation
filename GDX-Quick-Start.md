@@ -1,7 +1,7 @@
 # GDX — Quick Start
 
-- **Status:** Draft v0.14.0 (companion to GDX Core Specification v0.18.0, working draft, pre-1.0)
-- **Date:** 2026-05-20
+- **Status:** Draft v0.20.0 (companion to GDX Core Specification v0.20.0, working draft, pre-1.0)
+- **Date:** 2026-06-09
 - **Editors:** 
 - **Authors:** Julian Mussi
 
@@ -15,7 +15,7 @@ A reader who finishes this document should understand enough GDX to recognize th
 
 ## Status of This Document
 
-This is the v0.11.0 working draft of the Quick Start, companion to the GDX Core Specification v0.11.0. It was previously published as Appendix D of the Core Specification through v0.10.0; it is now a separate companion document and is recommended as the entry-point for newcomers to GDX.
+This is the v0.20.0 working draft of the Quick Start, companion to the GDX Core Specification v0.20.0. It was previously published as Appendix D of the Core Specification through v0.10.0; it is now a separate companion document and is recommended as the entry-point for newcomers to GDX.
 
 ---
 
@@ -112,6 +112,8 @@ Objects can carry @-edges to other Objects, forming graph relationships:
 ```
 
 The @-edge `<@OBJ #knows : @bob>` says: from `alice`, there is a `knows` relationship to `bob`. The `@OBJ` prefix declares the target is an Object; the `#` introduces the predicate (`knows`); the `@bob` Resource is a reference to another Object's identifier.
+
+The predicate can be left out when the relationship's nature isn't known yet: `<@OBJ &link1 : @bob>` says "alice stands in *some* relationship to bob, to be classified later." The edge exists either way — being an edge is what asserts the relationship; the `#` predicate says what it is, and an edge without one is simply undefined as to nature until the field is filled in (spec §6.4.2).
 
 This is the graph dimension of GDX: tree-structured documents with explicit relationships between elements that aren't parent-child.
 
