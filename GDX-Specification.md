@@ -1,7 +1,7 @@
 # GDX — Graph Data eXchange Specification
 
-- **Status:** Draft v0.18.0 (working draft, pre-1.0)
-- **Date:** 2026-05-25
+- **Status:** Draft v0.20.0 (working draft, pre-1.0)
+- **Date:** 2026-06-09
 - **Editors:** 
 - **Authors:** Julian Mussi
 
@@ -18,6 +18,8 @@ This is a pre-1.0 working draft. The specification is under active refinement; r
 
 | Version | Date       |
 |---------|------------|
+| v0.20.0 | 2026-06-09 |
+| v0.19.0 | 2026-06-09 |
 | v0.18.0 | 2026-05-25 |
 | v0.17.0 | 2026-05-25 |
 | v0.16.0 | 2026-05-25 |
@@ -196,6 +198,8 @@ An element has six defined fields. The Prefix is required; the others are option
 
 All identity fields (`Id`, `Key`, `Rel`) use case-sensitive ordinal comparison.
 
+On an @-Edge element (§6.4), an existence/specification split applies to the `Rel` field: the *role* asserts that a relationship exists (an @-edge is, by its role, a relationship), while the `Rel` field specifies *what* the relationship is — and MAY be empty. An empty Rel parses to null and means the relationship is **undefined as to nature**: it exists (the role settled that), but its form is not yet specified (§6.4.2). The empty Rel is the field's ordinary null/absent state — no special syntax and no distinct construct are involved.
+
 Implementations MUST represent these fields as distinct elements of an element's runtime structure. The order in which fields are stored or accessed is implementation-defined; only the children list has a normative order (§3.4).
 
 **Decision: every element divides into an identity portion and a value portion.** The six fields partition into identity (`Prefix`, `Key`, `Rel`, `Id`) and value (`Resource`, `Type`), with the `:` separator marking the boundary in the text form (§4). *Alternatives considered:* JSON-style bare key-value pairs (identity and content on one syntactic level, with no way to distinguish "this element claims to be of type X" from "this element has value X"); XML-style attribute-versus-element placement (where either can carry identity or content by convention); RDF-style separate triples that must be reassembled to recover an element's full meaning. *Rejected because:* collapsing identity and value forces every richer claim — type, predicate alignment, stable anchor — to be bolted on by external convention rather than stated on the element itself. The explicit split is what makes an element self-describing (the self-describing-element concept; see the GDX Primer): a consumer can read the identity portion and know the element's role, type, and alignment, then read the value portion for its content, with no external schema. This is the structural basis for the typed-elements and inline-semantic-alignment goals (§1.2). The split is introduced conceptually in the GDX Primer; this is its authoritative basis in the data model.
@@ -341,7 +345,7 @@ A *sigil* is a single non-alphabetic character (or short character sequence) tha
 
 The character `:` is a *separator*, not a sigil. It divides an element into an identity portion (Prefix, Key, Rel, Id) and a value portion (Resource, Type). The Resource itself has no sigil; it is identified by appearing on the value side of `:`.
 
-The sigils `&`, `#`, and `--` MUST be immediately followed by their field content with no intervening whitespace. Whitespace MAY appear before a sigil to separate it from the preceding token. Whitespace MAY appear on either side of `:`.
+The sigils `&`, `#`, and `--` MUST be immediately followed by their field content with no intervening whitespace. Whitespace MAY appear before a sigil to separate it from the preceding token. Whitespace MAY appear on either side of `:`. A bare sigil — `&`, `#`, or `--` followed by anything other than its field content — is malformed; an empty field is expressed by omitting the sigil entirely (for the significance of an omitted `#rel` on an @-Edge element, see §6.4.2).
 
 When the `:` separator appears with no identity field on the left in a context where an identifier is required, the element is malformed; conforming parsers MUST reject it. When the `--` sigil appears without a type identifier following, the element is malformed.
 
@@ -898,7 +902,7 @@ The `@` prefix marks an element as a member of the **@-Edge family** (§6.4) —
 - `@OBJ` — @-edge to an Object (data-Objects, including concept-Objects per §6.15)
 - `@REL` — @-edge to a REL declaration (predicate-to-predicate or REL-to-concept-Object)
 
-@-edges MUST carry `#rel` (associative — asserts a parent-to-target relationship; see §6.4 axiom E4) and MAY carry attribute children, identity (`Id`/`Key`), Qualifiers, Extensions, and Annotations.
+@-edges carry an associative `#rel` specifying the relationship's nature — the field MAY be empty, leaving the relationship undefined pending refinement (§6.4 axiom E4, §6.4.2) — and MAY carry attribute children, identity (`Id`/`Key`), Qualifiers, Extensions, and Annotations.
 
 ```
 <@OBJ #knows : @bob>                  -- @-edge: alice knows bob
@@ -907,6 +911,8 @@ The `@` prefix marks an element as a member of the **@-Edge family** (§6.4) —
 >
 <@REL #gdx:inverse : @gdx:knownBy>    -- @-edge: predicate-to-predicate
 ```
+
+**Decision: the `@` sigil marks the @-Edge family.** When the v0.12–v0.13 revisions split the link constructs, the `@` sigil — previously the reference operator — was reallocated to edges, and the leaf-like reference family moved to `%`. *Alternative considered:* keeping `@` on references and minting a new sigil for edges. *Rejected because:* three independent grounds point the same way. **Origin** — GDX began with the edge as its only link construct; the reference family was a later accretion, added to handle REL-to-REL linking before role-explicit edges existed, and the prime symbol belongs to the original primitive. **Frequency** — the primary GDX use cases are edge-shaped: REL-to-REL ontology axioms (inverse, subproperty, equivalence) and Object-to-Object labeled property graphs; value-resolution is the minority specialist. **Centrality** — edges are central to what GDX is (a property graph with a light ontology layer); references are a supporting tool. The reallocation restores `@` to the primary construct after a period in which the reference family had been stretched to do edge-shaped work; recording the grounds here is what keeps the reallocation from reading as arbitrary churn.
 
 Three compositions are malformed:
 
@@ -1058,14 +1064,16 @@ Properties require an identifier when in named-attribute position and may carry 
 
 | Canonical | Minified | Resource value-kind | Identifier |
 |-----------|----------|---------------------|------------|
-| `@OBJ`    | —        | `reference` (target: Object) | `#rel` field REQUIRED; `Id`/`Key` OPTIONAL |
-| `@REL`    | —        | `reference` (target: REL)    | `#rel` field REQUIRED; `Id`/`Key` OPTIONAL |
+| `@OBJ`    | —        | `reference` (target: Object) | `#rel` OPTIONAL (empty = undefined nature, §6.4.2); `Id`/`Key` OPTIONAL |
+| `@REL`    | —        | `reference` (target: REL)    | `#rel` OPTIONAL (empty = undefined nature, §6.4.2); `Id`/`Key` OPTIONAL |
 
-An **@-edge** is a **first-class but dependent relationship** — a persistent entity owned by and serialized within its source element, asserting a directed, predicate-labeled link to an independent graph-entity that exists elsewhere. The prefix asserts the *target's role*; the Resource asserts the *target's identity*; the `#rel` predicate asserts what the relationship currently means; an optional `Id` or `Key` makes the relationship itself a trackable, reference-able substance; optional attribute children describe that substance.
+An **@-edge** is a **first-class but dependent relationship** — a persistent entity owned by and serialized within its source element, asserting a directed link to an independent graph-entity that exists elsewhere. The prefix asserts the *target's role*; the Resource asserts the *target's identity*; the `#rel` predicate, when specified, asserts what the relationship currently means (an empty rel leaves the relationship undefined as to nature — §6.4.2); an optional `Id` or `Key` makes the relationship itself a trackable, reference-able substance; optional attribute children describe that substance.
 
 @-edges are GDX's labeled-property-graph mechanism. They are how a document carries the assertion that one graph-entity stands in some named relation to another, optionally with attributes refining the relation.
 
 **Family enumeration.** The @-Edge family has exactly two members: `@OBJ` (target is a data-Object, including concept-Objects) and `@REL` (target is a predicate, i.e., a REL declaration). The membership is restricted to *independent graph-entities*. Targets that are not independent graph-entities — Templates (vocabulary-layer artifacts), value Properties (interior to their parent), Qualifiers/Extensions/Annotations (refinement-only), VAL slots (a container, not an entity), Records/Blocks (composite parts of an Object), or any element addressed by path or key into another element's interior — are not @-edges; pointing at such targets is the job of the Reference family (§6.16).
+
+**Both endpoints are role-explicit.** The *source* endpoint of an @-edge is its containing element, whose role is self-declared by its own prefix; the *target* endpoint's role is declared by the @-edge prefix and verified at resolution (E1). No endpoint's role is ever discovered by resolution — the declared-not-discovered discipline holds at both ends, and any source/target role combination admitted by the composition matrix (§7.1) is expressible (Object-to-Object data graphs, REL-to-REL predicate axioms, REL-to-concept-Object domain/range statements, and so on). This is also why @-edges connect whole, self-declaring elements only: a `$path`- or `&key`-addressed interior has no role-declaring definition of its own for the endpoint claim to verify against, so interior addressing is value-resolution territory (REF, §6.16), never edge territory.
 
 ```
 <OBJ alice
@@ -1091,11 +1099,11 @@ An **@-edge** is a **first-class but dependent relationship** — a persistent e
 
 **E3 — Attribute children describe the relationship-entity.** Children of an @-edge — Properties (`STR`, `INT`, …), Qualifiers, and other adjunct elements — describe the edge itself: when it started, its confidence, who recorded it, and so on. When the edge carries identity (per E6), those attributes belong to the persistent edge-entity, not to any single predication; an edge whose `#rel` is rewritten retains its attribute children unless those attributes are also rewritten. Attributes are properties of the edge-as-substance, not of the current predication.
 
-**E4 — Predicate (`#rel`) is mandatory.** Every @-edge MUST carry a `#rel` field. The predicate is the edge's current meaning and is the structural discriminator between @-Edge and Reference: an @-prefixed element without `#rel` is not a well-formed @-edge. Unlabeled adjacency is not supported; this is a deliberate design choice. GDX edges are typed property-graph edges, and "adjacency without a type" is expressed as a designated predicate value (e.g., `<@OBJ #gdx:adjacent : @target>`), not as the absence of a predicate.
+**E4 — The role asserts existence; the `#rel` field specifies nature and MAY be empty.** An @-edge is, by its role, the assertion that a relationship *exists* between its source and its target. The `#rel` field specifies *what* that relationship is; when present, it is associative (it asserts the parent-to-target meaning), and it MAY be empty. An edge with no `#rel` parses to a null Rel, is well-formed, and denotes a relationship **undefined as to nature** — to be refined later by filling the field on the same edge (§6.4.2). An empty rel is therefore never ambiguous about whether a relationship exists; the role settled that. Since the v0.13 sigil partition, the construct discrimination this field once carried lives in the sigil itself: `@`-prefixed elements are @-edges and `%`-prefixed elements are REFs, with or without a `#rel`. The empty rel is not an idiom for *permanent* type-free adjacency — empty means "not yet specified," and a relationship whose intended meaning is bare adjacency is expressed with a designated predicate value (e.g., `<@OBJ #gdx:adjacent : @target>`).
 
 **E5 — Family is enumerated by target role and restricted to independent graph-entities.** The family consists of exactly `@OBJ` and `@REL`. The restriction is principled: only Objects (including concept-Objects, since GDX uses concept-as-Object for ontology layering — see §6.15) and REL declarations are independent graph-entities. Source role is orthogonal to membership: any role admitted as a parent of an @-edge by the composition matrix (§7.1) may carry @-edges; the family enumeration is over targets only. The Set forms `@OBJ*` and `@REL*` are **malformed** — each @-edge is a single graph statement (per E2′); multiple edges from one source are expressed as siblings, not as Set members. To address multiple edges as a collection (e.g., for iteration or query), the parent Object's children are filtered by prefix — the structure is implicit in the document, not collected into a Set.
 
-**E6 — Identity is optional and orthogonal to predicate.** An @-edge MAY carry an `Id` and/or a `Key`. Identity is the edge's *substance* — the persistent entity (per E2′) that endures across changes to predicate, attributes, or target, and that disambiguates multiple edges between the same endpoints. The substance/predication distinction is the spine of the model: the `Id` is what the edge *is* (the enduring thing); the `#rel` is what it currently *asserts*; attribute children ride on the substance. Identity-without-predicate is malformed (an edge with no current assertion is not an edge); predicate-without-identity is the common case (most edges are content with anonymous substance). Two @-edges that share the same source, predicate, and target ARE distinct edges if they carry different identities; uniqueness is by identity, not by the (source, predicate, target) triple.
+**E6 — Identity is optional and orthogonal to predicate.** An @-edge MAY carry an `Id` and/or a `Key`. Identity is the edge's *substance* — the persistent entity (per E2′) that endures across changes to predicate, attributes, or target, and that disambiguates multiple edges between the same endpoints. The substance/predication distinction is the spine of the model: the `Id` is what the edge *is* (the enduring thing); the `#rel` is what it currently *asserts*; attribute children ride on the substance. Identity with an empty rel is well-formed and is the canonical capture-first pattern (§6.4.2 — the substance exists, the predication is pending); predicate-without-identity is the common case (most edges are content with anonymous substance). Two @-edges that share the same source, predicate, and target ARE distinct edges if they carry different identities; uniqueness is by identity, not by the (source, predicate, target) triple.
 
 **Resolution.** An @-edge's Resource is name-addressed only — `@identifier` per §4.2.6. Bare `$path` and `&key` reference literals address interior elements of other Objects and are handled by the Reference family (§6.16), not by @-Edges. The composed `@Anchor$PathExpression` and `@Anchor&Key` forms similarly address interior locations and are Reference territory. An @-edge resolves to a single named entity; interior-reaching is by definition not an @-edge concern.
 
@@ -1127,6 +1135,45 @@ When an @-edge reference cannot be resolved:
 A resolution failure means the named target does not exist in any resolvable scope. The unresolved reference does not become a placeholder, virtual entity, or tombstone — the data is exactly what was authored, and the validator's report indicates that the reference does not resolve. Applications that want placeholder behavior must construct it at the application layer.
 
 Implementations MAY support modes where unresolved references are treated as warnings rather than errors, useful for ingesting partial data sets or for documents that intentionally reference targets in other systems. When such modes are supported, the strict mode (errors on unresolved references) SHOULD remain the default.
+
+#### 6.4.2 Undefined Relationships — the Empty Rel
+
+An @-edge's `#rel` field MAY be empty. An edge with no `#rel` parses to a null Rel and round-trips as empty — no special syntax, no distinct construct. The interpretation follows from the **existence/specification split**:
+
+- **Role** (`@OBJ`, `@REL`) — asserts that a relationship *exists*. An @-edge is, by its role, a relationship (E1, E2′); its presence in the document is the existence assertion.
+- **Rel field** — specifies *what* the relationship is. It MAY be empty, in which case the relationship is **undefined as to nature**.
+
+An empty rel is therefore never ambiguous about whether a relationship exists — the role settled that. Emptiness speaks only to the relationship's nature, which is not yet specified.
+
+**Motivation.** Sometimes an edge must be created before the form of the relationship is known — real-time capture, pending classification, a connection observed before its nature is determined. Forcing a fully-specified rel at creation time would mean either inventing a placeholder predicate or failing to capture the connection; both are worse than recording "connected, nature to be determined."
+
+**Position in the model.** The empty rel is the natural limit of the identity-present / meaning-deferred principle that runs through GDX — not merely "meaning needs the schema" but "meaning not yet assigned at all." The edge is a declared-but-unbound relationship: well-formed and *undefined-pending*, never malformed. This is consistent with the well-formed-but-undefined posture GDX takes elsewhere (predicates need no REL declaration to be used; constraint identifiers are recorded without interpretation).
+
+**Refinement.** Later refinement fills the `#rel` field on the same edge. Edges are first-class identifiable entities (E6): the edge's identity persists across refinement — nothing is created or replaced; an open field is filled. This is the open-slot refinement pattern of the universal claim rule (§8.2.3): narrowing what was left open, never mutating a prior claim. Because refinement addresses the edge after the fact, an edge with an empty rel SHOULD carry an `Id` or `Key` so it remains addressable; an unidentified one can be refined only by structural position, which is fragile under restructuring.
+
+**Required disciplines.** Three disciplines keep undefined relationships from becoming invisible debt:
+
+- **Queryable as undefined.** "Show all undefined relationships" MUST be answerable by any consumer that can enumerate edges — an edge with a null Rel is a distinct, selectable state. Undefined relationships are a visible backlog, not hidden debt.
+- **Schema can require specification.** A Template or vocabulary MAY declare empty rels unacceptable for a given slot or document class (a vocabulary-defined constraint, §8.4), so the permissiveness is opt-out-able where strictness matters — a real-time capture context allows them; a published ontology forbids them. See §8.2.3 for how empty rels reconcile with Template-declared predicates.
+- **Staleness is a tooling concern.** Long-lived undefined relationships are a data-quality signal for tooling to surface; the core takes no position on edge age.
+
+The empty rel is a legitimate *transitional* state, not a permanent resting place: easy to create when needed, easy to find, and easy to require resolution of where appropriate.
+
+```
+<OBJ sensor-hub
+    <@OBJ &link-0192 : @device-7>
+>
+```
+
+The edge asserts "sensor-hub stands in some relationship to device-7, nature pending," keyed for later address. Once classified, the same edge is refined in place:
+
+```
+<OBJ sensor-hub
+    <@OBJ &link-0192 #gdx:controls : @device-7>
+>
+```
+
+Same edge, same key, same target — the field is filled.
 
 ### 6.5 Block — `BLK`
 
@@ -1642,7 +1689,11 @@ A REL declaration MAY appear at the document root (alongside or instead of prima
 
 ### 6.16 The %-Reference Family — `%KIND`
 
-A %-Reference is a **slot-filler whose Resource is a typed handle to an independently-existing element**. The slot carries the handle; the target lives elsewhere. A Reference says "this slot holds a handle to that element" — nothing more, nothing less. It asserts no relationship about its parent (that is Edge's job, §6.4), does not contain its target (that is VAL's job, §6.11), and is inert toward the target while elaborated toward its own slot, exactly as any Property is.
+A %-Reference is GDX's **value-resolution construct**: a slot whose effective content is the resolved target — "my content comes from there." Structurally, it is a **slot-filler whose Resource is a typed handle to an independently-existing element**: the slot carries the address; the target lives elsewhere; dereferencing yields the target. A Reference asserts no relationship about its parent (that is Edge's job, §6.4), does not contain its target (that is VAL's job, §6.11), and is inert toward the target while elaborated toward its own slot, exactly as any Property is.
+
+REF is *defined* by value-resolution, not by what it may target. Resolving to a non-identifiable interior field (a Record's street, a Qualifier's unit) is its most common use, but resolving to a whole identifiable element used as a value is equally a REF. The capability boundary between the two link constructs falls exactly on their conceptual boundary: REF-into-a-field is coherent — value-resolution naturally reaches interior resources — while EDGE-into-a-field is incoherent — a labeled relationship connects whole elements; one does not draw a graph edge to half of an object. That what each construct *can address* coincides with what each construct *means* is the structural evidence that REF and @-Edge are genuinely different constructs, not variants of one mechanism.
+
+Choosing between REF and @-Edge in borderline cases is authoring guidance, not spec ambiguity: value-sourcing ("this slot's value is that element, or that field") takes a REF; a labeled relationship ("these two stand in this relation") takes an @-edge. The non-normative guidance lives in the GDX Primer and the Cookbook.
 
 #### Family Generation: `%` Wraps Any Role-Prefix
 
@@ -1672,7 +1723,7 @@ Three compositions are malformed:
 
 **R1 — Prefix asserts target role; Resource asserts target identity.** The `%KIND` prefix declares the role the resolved target MUST occupy. `%OBJ` declares an Object target; `%STR` declares a string-Property target; `%@OBJ` declares an Object-edge target; and so on. The Resource is a reference literal (`@id`, `$path`, `&key`, `@anchor$path`, or `@anchor&key` per §4.2.6) naming the target's address. Resolution dereferences the address and verifies the resolved element's role matches the prefix; mismatch yields an unresolved reference (the REF element remains structurally well-formed; the resolution fails).
 
-The prefix is always a *role-to-dereference* (`%OBJ` → points at an Object element), never a *value-kind-to-fetch*. What the slot holds is a handle — the address — not the target's value and not the target's content.
+The prefix is a *role-to-dereference* (`%OBJ` → resolves to an Object element): it declares the role of the element the address resolves to, and resolution verifies that role. What the slot *stores* is the address — that is what serializes, signs, and round-trips (Appendix A.2); the target's content is never copied into the document. What the slot *means* is the resolved target: dereferencing yields the target element and, for value-Property targets, its value. This is the value-resolution reading (see the lead of this section) of the same structural fact. The two views are layered, not competing — address at the representation layer, resolved value at the consumption layer.
 
 **R1a — The role-assertion is a resolution constraint, particularly pronounced for path/key resolution.** Because path/key targets may be locatable only at resolution time, the role-check piggybacks on the dereference step rather than being verifiable at parse time. The same constraint applies in principle to identifier-mode resolution but can often be verified earlier (when the target is locally declared). The constraint is structural — it stands whether enforcement happens at parse time or resolution time.
 
@@ -1788,7 +1839,7 @@ A REF whose Resource is any non-`IdRef` literal MUST resolve to exactly one elem
 
 #### Summary
 
-A %-reference is a slot-filler whose Resource is a typed handle: the content of a slot is the resolved address of an independently-existing target whose role the prefix asserts. The prefix declares the target's role; the Resource gives its address by name, path, or key; resolution dereferences and verifies the role. A REF asserts no relationship about its parent (its `#rel`, if present, aligns the slot — it never associates), does not contain its target (vs. VAL), and is inert toward the target while elaborated toward its own slot, exactly as any Property is.
+A %-reference is GDX's value-resolution construct: structurally, a slot-filler whose Resource is a typed handle — the slot stores the resolved address of an independently-existing target whose role the prefix asserts, and dereferencing yields that target as the slot's effective content. The prefix declares the target's role; the Resource gives its address by name, path, or key; resolution dereferences and verifies the role. A REF asserts no relationship about its parent (its `#rel`, if present, aligns the slot — it never associates), does not contain its target (vs. VAL), and is inert toward the target while elaborated toward its own slot, exactly as any Property is.
 
 ---
 
@@ -1966,7 +2017,7 @@ A conforming parser MUST reject any document containing:
 - A Block missing its required identifier.
 - A Group missing its required identifier.
 
-A conforming parser MUST accept any element with an identifier but no Resource section. Such elements are well-formed and represent null values (instance context) or slot declarations (Template context).
+A conforming parser MUST accept any element with an identifier but no Resource section. Such elements are well-formed and represent null values (instance context) or slot declarations (Template context). A conforming parser MUST likewise accept an @-Edge element with no `#rel` field: the empty rel parses to null and denotes a relationship that exists but is undefined as to nature (§6.4.2).
 
 The above are the *primitive axioms* of GDX validity — Layer 1 (§2.2). They are owned by GDX, evaluated at parse time, and absolute. Constraint validity beyond these axioms (numeric bounds, string patterns, regex matches, semantic types) is vocabulary-defined and evaluated externally; GDX hosts those constraints as Extension elements but does not interpret them. See §8 for the schema-layer validation model (Layer 2a — Template structural conformance) and Constraint Extensions (Layer 2b — vocabulary-defined constraint conformance).
 
@@ -2060,6 +2111,8 @@ A Template MAY declare values for fields that the instance can also carry: the `
 The rule applies independently to each field. An instance MAY satisfy the rule for `Rel` (case 3 — Template-supplied) while supplying its own value for `Key` (case 2 — free instance claim), with both outcomes being valid.
 
 The differing-claims case (the conflict row) MUST be reported as a Layer 2a non-conformance. Implementations MUST NOT silently prefer one side over the other.
+
+**Empty rels under the claim rule.** An @-edge with an empty rel (§6.4.2) is *silent* on the `Rel` field: the relationship's existence is asserted by the role, but the field carries no claim about its nature. The standard matrix applies — when the aligned Template slot declares a predicate, the Template's name is the effective value (case 3), and materialization (§8.2.4) fills the field on the same edge: refinement of what was left open, never mutation of a prior claim. A Template MAY instead declare, through a vocabulary-defined constraint (§8.4), that undefined relationships are unacceptable for a slot or document class; an instance edge with an empty rel is then Layer 2b non-conforming with respect to that vocabulary.
 
 **Scope of "default."** Templates declaring a default `Resource` value declare the value as a fallback: when the instance is silent, the default applies; when the instance carries a value, the instance's value is the effective value. This is case 3 of the rule. A future revision MAY define a "fixed" claim scope, in which a Template's value is required (and a differing instance is a conflict) rather than a default; the distinction is one of claim scope, but the four-case matrix above is unchanged.
 
@@ -2480,7 +2533,7 @@ The layers are independent: a document may be Layer 1-conforming but Layer 2a-no
 A serialization is **representation-conforming** if and only if a round-trip through it preserves, for every element in the document:
 
 1. The Prefix.
-2. The presence and value of `Key`, `Rel`, `Id`, and `Type` (string-equal, ordinal comparison).
+2. The presence and value of `Key`, `Rel`, `Id`, and `Type` (string-equal, ordinal comparison). An @-edge's empty Rel (§6.4.2) round-trips as empty — the field is not invented, defaulted, or dropped.
 3. The Resource — including:
    - The null state (an element with no Resource value MUST round-trip as a null-state element).
    - The value-kind of the Resource (per §3.3).
@@ -2572,6 +2625,7 @@ A conforming implementation SHOULD verify its behavior against a test suite cove
 - Identifier forms: local names, single letters, paths, CURIEs, GUIDs, IRIs (one positive test per form per applicable position).
 - Literal forms: each value-kind including representation suffixes (`i8` through `u64`, `f32`/`f64`, `decimal` family), boolean variants (`true`/`false`/`t`/`f` and case variants), bytes (`0x` and `0z` forms), null forms (bare and empty-value).
 - Sigil tightness: positive tests for valid `&`, `#`, `--`, `@` usage; negative tests for whitespace violations.
+- Empty rels on edges: an @-Edge element with no `#rel` accepted (positive); bare `#` rejected everywhere (negative); round-trip preserves the empty Rel without inventing or defaulting a predicate (§6.4.2); Template-declared predicate fills the empty field under the claim rule and materialization (§8.2.3, §8.2.4).
 - Whitespace handling: documents with various legal whitespace patterns; round-trip equivalence to canonical form.
 - Comments: file-level `#` comments in Compact Form (positive); rejection of comment-position `#` in Standard Form (negative).
 
@@ -2626,6 +2680,37 @@ The test suite is exhaustive in concept and bounded in practice. Each category a
 ## Appendix B — Detailed Revision History
 
 This appendix records the per-revision change descriptions accumulated during the pre-1.0 working-draft phase. The Revision History table at the top of this document gives the version + date summary; this appendix carries the prose detail. Once the specification reaches v1.0, this appendix will be archived and subsequent revisions will use a leaner change-log format.
+
+### v0.20.0 — Empty rels on @-edges (the existence/specification split)
+
+(50) **An @-edge's `#rel` field MAY be empty — the relationship exists by role, undefined as to nature.** Previously E4 made the predicate mandatory on every @-edge. This revision splits what that rule had fused: the *role* (`@OBJ`, `@REL`) asserts that a relationship **exists** — an @-edge is, by its role, a relationship — while the `#rel` field **specifies** what the relationship is, and may be empty. An edge with no `#rel` parses to a null Rel, is well-formed, and round-trips as empty; no special syntax and no distinct construct are involved. The empty rel is never ambiguous about whether a relationship exists (the role settled that); it is silent only as to the relationship's nature. Later refinement fills the field on the same edge — edges are identity-bearing entities (E6), so the edge's identity and any references to it survive refinement; nothing is created or replaced.
+
+The motivating need: an edge must sometimes be created before the form of the relationship is known (real-time capture, pending classification, a connection observed before its nature is determined). Forcing a fully-specified rel at creation time means inventing a placeholder or failing to capture the connection; both are worse than recording "connected, nature to be determined."
+
+Normative changes:
+- **§3.1** — the existence/specification split stated at the model layer: role asserts existence; Rel specifies nature and may be empty (null).
+- **§4.1.1** — sigil tightness restated: a bare sigil is malformed everywhere; an empty field is expressed by omitting the sigil.
+- **§6.4 E4** — rewritten from "predicate is mandatory" to "role asserts existence; `#rel` specifies nature and MAY be empty." The construct-discrimination function the mandatory field once served is obsolete since the v0.13 sigil partition (`@` is edges, `%` is REFs). The empty rel is not an idiom for permanent type-free adjacency — that remains a designated predicate value.
+- **§6.4 E6** — identity with an empty rel is well-formed and is the canonical capture-first pattern.
+- **§6.4.2 (new), "Undefined Relationships — the Empty Rel"** — the split, the motivation, the refinement model (same edge, field filled; `Id`/`Key` RECOMMENDED for addressability), and the three disciplines: queryable-as-undefined (MUST), schema-may-require-specification (vocabulary constraint, §8.4), staleness-is-tooling. Empty rels are a transitional state — easy to create, easy to find, easy to require resolution of.
+- **§6.4 identifier table, §5.3.2** — `#rel` is OPTIONAL (empty = undefined nature).
+- **§7.5** — a conforming parser MUST accept an @-Edge element with no `#rel` field.
+- **§8.2.3** — an empty instance rel is the instance-silent case of the universal claim rule: a Template-declared predicate supplies the name (case 3) and materialization (§8.2.4) fills the field on the same edge; a vocabulary constraint may instead forbid undefined relationships (Layer 2b).
+- **Appendix A.2 / A.7** — an empty Rel round-trips as empty (not invented, defaulted, or dropped); test-suite outline updated.
+
+Migration: none. The change is additive permissiveness — documents previously rejected for a missing edge predicate become well-formed; no existing well-formed document changes meaning.
+
+### v0.19.0 — REF as value-resolution; link-construct rationale recorded
+
+This revision reconciles the Link-Types design memo (REF/EDGE, 2026-05-23) against the v0.12–v0.13 revisions that implemented its sigil reallocation. Most of the memo had already landed: `@` is the edge sigil, `%` the reference sigil, embedding is a role, edge targets are role-explicit and name-addressed only, REL-to-REL axioms are edges. The memo's "EMBED role" is the VAL role (§6.11) under its adopted name; the memo's open verification item — that the role form preserves everything the `%`-embedding sigil expressed — was discharged by the v0.12 VAL design (two-level identity, closed occupant enumeration; changelog entry 40). Three items from the memo are integrated here:
+
+(47) **§6.16 reframed: REF is GDX's value-resolution construct.** The section lead now defines a %-Reference by what it asserts — "the value here is the value of the resolved target" — with the slot-filler/typed-handle description retained as its structural realization. Axiom R1 is reworded to layer the two views instead of opposing them: what the slot *stores* is the address (the representation-layer content that serializes, signs, and round-trips per A.2); what the slot *means* is the resolved target (dereferencing yields the target element and, for value-Property targets, its value). The prior "never a value-kind-to-fetch" sentence, which denied the value-resolution reading outright, is replaced. Two clarifications from the memo are adopted: REF is defined by value-resolution, *not* by "non-identifiable targets only" (interior fields are the most common use, not the definition); and the capability boundary is the conceptual boundary — REF-into-a-field is coherent, EDGE-into-a-field is incoherent, which is the structural evidence the two link constructs are genuinely different. A non-normative pointer on choosing REF vs @-Edge in borderline cases routes to the Primer and Cookbook. The §6.16 summary paragraph is aligned. No grammar, vocabulary, composition, or conformance requirement changes.
+
+(48) **§5.3.2 ADR: the `@` sigil marks the @-Edge family.** Records the three grounds for the v0.12–v0.13 sigil reallocation (origin: the edge is GDX's original link construct; frequency: the primary use cases are edge-shaped; centrality: GDX is a property graph with a light ontology layer) against the rejected alternative of keeping `@` on references, so the reallocation is not mistaken for arbitrary churn.
+
+(49) **§6.4: both endpoints are role-explicit.** A new paragraph makes explicit what the model implied: the source endpoint's role is self-declared by the containing element's prefix, the target endpoint's role is declared by the @-edge prefix and verified at resolution (E1), and any source/target combination admitted by the composition matrix is expressible. The same paragraph states why interior (`$path`/`&key`) addressing is barred at edge endpoints: an interior has no role-declaring definition for the endpoint claim to verify against.
+
+Migration: none. Documents and implementations conforming to v0.18.0 remain conforming.
 
 ### v0.18.0 — §1.1 reframed around model primacy and realizations
 
