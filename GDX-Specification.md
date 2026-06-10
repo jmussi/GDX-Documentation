@@ -1969,7 +1969,7 @@ The following rules are consequences of the matrix and are repeated here for cla
     - `%%KIND` — no REF whose target is itself a REF (§6.16 axiom R6). A REF is not a reference target; to point at what a REF points at, address the target directly.
     - `@%KIND` — no @-edge whose target is a REF. @-edges target independent graph-entities (§6.4 axiom E5); REFs are slot-contents, not graph-entities.
 
-16. **REF is Property-shaped; @-Edge is statement-shaped.** A REF element (any `%KIND`, §6.16) MAY carry a `#rel` (compositional alignment per R4), Qualifiers, Extensions, and Annotations as children, but MUST NOT carry structural children (Properties, @-edges, Sets, Records, Objects, Blocks, VAL, REL, Template). Its Resource is a reference literal; the target lives elsewhere. An @-Edge element (`@OBJ`, `@REL`, §6.4) MUST carry a `#rel` predicate (associative per E4) and MAY carry attribute children describing the edge-as-substance (per E3). The REF and @-Edge composition rows in §7.1 reflect this structural split. See §6.16 axiom R4 for the genus distinction and the proof-by-collapse that establishes the sigil partition.
+16. **REF is Property-shaped; @-Edge is statement-shaped.** A REF element (any `%KIND`, §6.16) MAY carry a `#rel` (compositional alignment per R4), Qualifiers, Extensions, and Annotations as children, but MUST NOT carry structural children (Properties, @-edges, Sets, Records, Objects, Blocks, VAL, REL, Template). Its Resource is a reference literal; the target lives elsewhere. An @-Edge element (`@OBJ`, `@REL`, §6.4) carries an associative `#rel` specifying the relationship's nature — the field MAY be empty, leaving the relationship undefined pending refinement (E4, §6.4.2) — and MAY carry attribute children describing the edge-as-substance (per E3). The REF and @-Edge composition rows in §7.1 reflect this structural split. See §6.16 axiom R4 for the genus distinction and the proof-by-collapse that establishes the sigil partition.
 
 ### 7.3 Identifier Rules
 
@@ -1994,11 +1994,12 @@ Other roles MAY carry identifiers but do not require them.
 
 Per §3.3, when a Resource is present, its value-kind MUST be consistent with the element's prefix family:
 
-- String-family prefixes (`STR`/`S`, `STR*`/`S*`, `.STR`/`.S`, `_STR`/`_S`, `NSTR`/`NS`) carry `string` resources.
-- Int-family prefixes (`INT`/`I`, `INT*`/`I*`, `.INT`/`.I`, `_INT`/`_I`, `NINT`/`NI`) carry `int` resources.
-- Float-family prefixes (`FLOAT`/`F`, `FLOAT*`/`F*`, `.FLOAT`/`.F`, `_FLOAT`/`_F`, `NFLOAT`/`NF`) carry `float` resources.
-- Bool-family prefixes (`BOOL`/`L`, `BOOL*`/`L*`, `.BOOL`/`.L`, `_BOOL`/`_L`, `NBOOL`/`NL`) carry `bool` resources.
-- Bytes-family prefixes (`BYTE`/`B`, `BYTE*`/`B*`, `.BYTE`/`.B`, `_BYTE`/`_B`, `NBYTE`/`NB`) carry `bytes` resources.
+- String-family prefixes (`STR`/`S`, `.STR`/`.S`, `_STR`/`_S`, `NSTR`/`NS`) carry `string` resources.
+- Int-family prefixes (`INT`/`I`, `.INT`/`.I`, `_INT`/`_I`, `NINT`/`NI`) carry `int` resources.
+- Float-family prefixes (`FLOAT`/`F`, `.FLOAT`/`.F`, `_FLOAT`/`_F`, `NFLOAT`/`NF`) carry `float` resources.
+- Bool-family prefixes (`BOOL`/`L`, `.BOOL`/`.L`, `_BOOL`/`_L`, `NBOOL`/`NL`) carry `bool` resources.
+- Bytes-family prefixes (`BYTE`/`B`, `.BYTE`/`.B`, `_BYTE`/`_B`, `NBYTE`/`NB`) carry `bytes` resources.
+- Set prefixes (`STR*`, `INT*`, `REC*`, and the other `*` forms) carry NO Resource of their own — a Set's content is its member children (§6.13). The members carry resources of the base family.
 - @-Edge prefixes (`@OBJ`, `@REL`) carry `reference` resources whose target-kind matches the prefix: `@OBJ` resolves to an Object; `@REL` resolves to a REL declaration (see §6.4).
 - REF prefixes (every `%KIND` form, §6.16) carry `reference` resources. The Resource is a reference literal (any of the five forms per §4.2.6) whose resolved-element role is declared by the wrapped layer-1 prefix: `%OBJ` → Object; `%REC` → Record; `%DEFOBJ` → Template; `%@OBJ` → Object-edge; `%STR*` → Set of strings; and so on.
 - Annotation prefix (`REM`) carries `string` resources.
@@ -2701,6 +2702,8 @@ This appendix records the per-revision change descriptions accumulated during th
 - **`%PKG` and `%GRP` confirmed as REF-family members (§5.2, §5.3.3, §6.16).** The generation rule ("% wraps any layer-1 role-prefix") produces them, and the §4.2.6 anchor-role set already included PKG and GRP, but the family enumerations omitted them. They are now listed, with a lifecycle note: transport wrappers are transient, so such REFs are meaningful within the transport context that carries them and SHOULD NOT be persisted beyond it.
 - **Example-annotation marker normalized (` -- ` → ` ← `).** Example blocks used ` -- ` as an inline annotation marker — visually colliding with the `--` Type sigil and producing non-parseable example lines. All example annotations now use ` ← `, the marker §6.10's examples already used. GDX itself remains comment-free (§4.6).
 - **Mechanical staleness:** §8 status note renumbered (pre-v0.17 "9.1–9.5" → "8.1–8.5"); Appendix A.7's matrix reference corrected (§8.1 → §7.1) and its suffix enumeration completed (`bigint`, `d`/`d32`/`d64`/`d128`); §6.12's "for v0.9 conformance" version pin dropped.
+- **Rule 16 aligned with v0.20 (addendum).** §7.2 rule 16 still said an @-Edge "MUST carry a `#rel` predicate" — missed in the v0.20 empty-rel pass. Corrected: the field may be empty per E4/§6.4.2.
+- **§7.4 Set-resource contradiction resolved (addendum).** The five family bullets listed Set forms (`STR*`, `INT*`, …) as resource-carrying while the closing paragraph correctly listed Set among the no-Resource roles (and §6.13 defines a Set's content as its members). Set forms removed from the family bullets; an explicit no-Resource bullet added for Sets.
 - **§5.4 stale `@`-composition sentence corrected (addendum, found during implementation conformance).** §5.4 still said "the reference operator `@` may prefix any modifier-base composition: `@.STR`, `@_BOOL`, `@NSTR`" — a pre-v0.13 leftover contradicting rule 14 and axiom E5 (the @-Edge family is closed at two members). Corrected to the `%` sigil, which is the operator that wraps modifier-base compositions.
 
 Migration: none for documents. One previously-underspecified case is now explicitly malformed (a `DEF…` element nested in a data-layer position, per rule 9(c)) and one previously-contradicted case is now explicitly valid (Extensions outside Templates, Record members in `REC*` Sets, Blocks under REL, REFs under transport wrappers) — implementations should re-derive their composition tables from the §7.1 matrix as revised.
