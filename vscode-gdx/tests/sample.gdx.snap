@@ -1,0 +1,496 @@
+><REM : "GDX sample document — exercises the Standard Form constructs the highlighter supports (grammar v0.11 / Core Spec v0.20.0)">
+#^ source.gdx comment.block.gdx punctuation.definition.comment.begin.gdx
+# ^^^ source.gdx comment.block.gdx storage.type.prefix.annotation.gdx
+#    ^^^ source.gdx comment.block.gdx
+#       ^ source.gdx comment.block.gdx
+#        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ source.gdx comment.block.gdx
+#                                                                                                                                 ^ source.gdx comment.block.gdx
+#                                                                                                                                  ^ source.gdx comment.block.gdx punctuation.definition.comment.end.gdx
+>
+><PKG gdx-sample
+#^ source.gdx punctuation.definition.element.begin.gdx
+# ^^^ source.gdx storage.type.prefix.gdx
+#    ^ source.gdx
+#     ^^^^^^^^^^ source.gdx variable.other.identifier.gdx
+>    <REM : "Templates declare shapes; DEF* prefixes are canonical-only.">
+#^^^^ source.gdx
+#    ^ source.gdx comment.block.gdx punctuation.definition.comment.begin.gdx
+#     ^^^ source.gdx comment.block.gdx storage.type.prefix.annotation.gdx
+#        ^^^ source.gdx comment.block.gdx
+#           ^ source.gdx comment.block.gdx
+#            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ source.gdx comment.block.gdx
+#                                                                       ^ source.gdx comment.block.gdx
+#                                                                        ^ source.gdx comment.block.gdx punctuation.definition.comment.end.gdx
+>    <DEFOBJ PersonShape
+#^^^^ source.gdx
+#    ^ source.gdx punctuation.definition.element.begin.gdx
+#     ^^^^^^ source.gdx storage.type.prefix.gdx
+#           ^ source.gdx
+#            ^^^^^^^^^^^ source.gdx variable.other.identifier.gdx
+>        <DEFSTR name --gdx:required>
+#^^^^^^^^ source.gdx
+#        ^ source.gdx punctuation.definition.element.begin.gdx
+#         ^^^^^^ source.gdx storage.type.prefix.gdx
+#               ^ source.gdx
+#                ^^^^ source.gdx variable.other.identifier.gdx
+#                    ^ source.gdx
+#                     ^^ source.gdx keyword.operator.sigil.type.gdx
+#                       ^^^^^^^^^^^^ source.gdx entity.name.type.gdx
+#                                   ^ source.gdx punctuation.definition.element.end.gdx
+>        <DEFINT age : 0>
+#^^^^^^^^ source.gdx
+#        ^ source.gdx punctuation.definition.element.begin.gdx
+#         ^^^^^^ source.gdx storage.type.prefix.gdx
+#               ^ source.gdx
+#                ^^^ source.gdx variable.other.identifier.gdx
+#                   ^ source.gdx
+#                    ^ source.gdx punctuation.separator.resource.gdx
+#                     ^ source.gdx
+#                      ^ source.gdx constant.numeric.integer.gdx
+#                       ^ source.gdx punctuation.definition.element.end.gdx
+>    >
+#^^^^ source.gdx
+#    ^ source.gdx punctuation.definition.element.end.gdx
+>
+>    <REL #https://schema.org/knows knows>
+#^^^^ source.gdx
+#    ^ source.gdx punctuation.definition.element.begin.gdx
+#     ^^^ source.gdx storage.type.prefix.gdx
+#        ^ source.gdx
+#         ^ source.gdx keyword.operator.sigil.rel.gdx
+#          ^^^^^^^^^^^^^^^^^^^^^^^^ source.gdx entity.other.attribute-name.rel.gdx
+#                                  ^ source.gdx
+#                                   ^^^^^ source.gdx variable.other.identifier.gdx
+#                                        ^ source.gdx punctuation.definition.element.end.gdx
+>
+>    <OBJ alice
+#^^^^ source.gdx
+#    ^ source.gdx punctuation.definition.element.begin.gdx
+#     ^^^ source.gdx storage.type.prefix.gdx
+#        ^ source.gdx
+#         ^^^^^ source.gdx variable.other.identifier.gdx
+>        <STR #schema:givenName firstName : "Alice">
+#^^^^^^^^ source.gdx
+#        ^ source.gdx punctuation.definition.element.begin.gdx
+#         ^^^ source.gdx storage.type.prefix.gdx
+#            ^ source.gdx
+#             ^ source.gdx keyword.operator.sigil.rel.gdx
+#              ^^^^^^^^^^^^^^^^ source.gdx entity.other.attribute-name.rel.gdx
+#                              ^ source.gdx
+#                               ^^^^^^^^^ source.gdx variable.other.identifier.gdx
+#                                        ^ source.gdx
+#                                         ^ source.gdx punctuation.separator.resource.gdx
+#                                          ^ source.gdx
+#                                           ^ source.gdx string.quoted.double.gdx punctuation.definition.string.begin.gdx
+#                                            ^^^^^ source.gdx string.quoted.double.gdx
+#                                                 ^ source.gdx string.quoted.double.gdx punctuation.definition.string.end.gdx
+#                                                  ^ source.gdx punctuation.definition.element.end.gdx
+>        <STR &1 lastName : "Liddell">
+#^^^^^^^^ source.gdx
+#        ^ source.gdx punctuation.definition.element.begin.gdx
+#         ^^^ source.gdx storage.type.prefix.gdx
+#            ^ source.gdx
+#             ^ source.gdx keyword.operator.sigil.key.gdx
+#              ^ source.gdx constant.other.key.gdx
+#               ^ source.gdx
+#                ^^^^^^^^ source.gdx variable.other.identifier.gdx
+#                        ^ source.gdx
+#                         ^ source.gdx punctuation.separator.resource.gdx
+#                          ^ source.gdx
+#                           ^ source.gdx string.quoted.double.gdx punctuation.definition.string.begin.gdx
+#                            ^^^^^^^ source.gdx string.quoted.double.gdx
+#                                   ^ source.gdx string.quoted.double.gdx punctuation.definition.string.end.gdx
+#                                    ^ source.gdx punctuation.definition.element.end.gdx
+>        <INT age : 28i8>
+#^^^^^^^^ source.gdx
+#        ^ source.gdx punctuation.definition.element.begin.gdx
+#         ^^^ source.gdx storage.type.prefix.gdx
+#            ^ source.gdx
+#             ^^^ source.gdx variable.other.identifier.gdx
+#                ^ source.gdx
+#                 ^ source.gdx punctuation.separator.resource.gdx
+#                  ^ source.gdx
+#                   ^^^^ source.gdx constant.numeric.integer.gdx
+#                       ^ source.gdx punctuation.definition.element.end.gdx
+>        <INT flags : 0b1011>
+#^^^^^^^^ source.gdx
+#        ^ source.gdx punctuation.definition.element.begin.gdx
+#         ^^^ source.gdx storage.type.prefix.gdx
+#            ^ source.gdx
+#             ^^^^^ source.gdx variable.other.identifier.gdx
+#                  ^ source.gdx
+#                   ^ source.gdx punctuation.separator.resource.gdx
+#                    ^ source.gdx
+#                     ^^^^^^ source.gdx constant.numeric.integer.gdx
+#                           ^ source.gdx punctuation.definition.element.end.gdx
+>        <INT perms : 0o755>
+#^^^^^^^^ source.gdx
+#        ^ source.gdx punctuation.definition.element.begin.gdx
+#         ^^^ source.gdx storage.type.prefix.gdx
+#            ^ source.gdx
+#             ^^^^^ source.gdx variable.other.identifier.gdx
+#                  ^ source.gdx
+#                   ^ source.gdx punctuation.separator.resource.gdx
+#                    ^ source.gdx
+#                     ^^^^^ source.gdx constant.numeric.integer.gdx
+#                          ^ source.gdx punctuation.definition.element.end.gdx
+>        <FLOAT height : 1.62f32>
+#^^^^^^^^ source.gdx
+#        ^ source.gdx punctuation.definition.element.begin.gdx
+#         ^^^^^ source.gdx storage.type.prefix.gdx
+#              ^ source.gdx
+#               ^^^^^^ source.gdx variable.other.identifier.gdx
+#                     ^ source.gdx
+#                      ^ source.gdx punctuation.separator.resource.gdx
+#                       ^ source.gdx
+#                        ^^^^^^^ source.gdx constant.numeric.float.gdx
+#                               ^ source.gdx punctuation.definition.element.end.gdx
+>        <FLOAT slope : -inf>
+#^^^^^^^^ source.gdx
+#        ^ source.gdx punctuation.definition.element.begin.gdx
+#         ^^^^^ source.gdx storage.type.prefix.gdx
+#              ^ source.gdx
+#               ^^^^^ source.gdx variable.other.identifier.gdx
+#                    ^ source.gdx
+#                     ^ source.gdx punctuation.separator.resource.gdx
+#                      ^ source.gdx
+#                       ^^^^ source.gdx constant.numeric.float.gdx
+#                           ^ source.gdx punctuation.definition.element.end.gdx
+>        <FLOAT avogadro : 6.022e23>
+#^^^^^^^^ source.gdx
+#        ^ source.gdx punctuation.definition.element.begin.gdx
+#         ^^^^^ source.gdx storage.type.prefix.gdx
+#              ^ source.gdx
+#               ^^^^^^^^ source.gdx variable.other.identifier.gdx
+#                       ^ source.gdx
+#                        ^ source.gdx punctuation.separator.resource.gdx
+#                         ^ source.gdx
+#                          ^^^^^^^^ source.gdx constant.numeric.float.gdx
+#                                  ^ source.gdx punctuation.definition.element.end.gdx
+>        <BOOL active : true>
+#^^^^^^^^ source.gdx
+#        ^ source.gdx punctuation.definition.element.begin.gdx
+#         ^^^^ source.gdx storage.type.prefix.gdx
+#             ^ source.gdx
+#              ^^^^^^ source.gdx variable.other.identifier.gdx
+#                    ^ source.gdx
+#                     ^ source.gdx punctuation.separator.resource.gdx
+#                      ^ source.gdx
+#                       ^^^^ source.gdx constant.language.boolean.gdx
+#                           ^ source.gdx punctuation.definition.element.end.gdx
+>        <BYTE avatarHash : 0x4a3f8c>
+#^^^^^^^^ source.gdx
+#        ^ source.gdx punctuation.definition.element.begin.gdx
+#         ^^^^ source.gdx storage.type.prefix.gdx
+#             ^ source.gdx
+#              ^^^^^^^^^^ source.gdx variable.other.identifier.gdx
+#                        ^ source.gdx
+#                         ^ source.gdx punctuation.separator.resource.gdx
+#                          ^ source.gdx
+#                           ^^^^^^^^ source.gdx constant.numeric.bytes.hex.gdx
+#                                   ^ source.gdx punctuation.definition.element.end.gdx
+>        <BYTE thumbnail : 0zTWFu>
+#^^^^^^^^ source.gdx
+#        ^ source.gdx punctuation.definition.element.begin.gdx
+#         ^^^^ source.gdx storage.type.prefix.gdx
+#             ^ source.gdx
+#              ^^^^^^^^^ source.gdx variable.other.identifier.gdx
+#                       ^ source.gdx
+#                        ^ source.gdx punctuation.separator.resource.gdx
+#                         ^ source.gdx
+#                          ^^^^^^ source.gdx constant.numeric.bytes.base64.gdx
+#                                ^ source.gdx punctuation.definition.element.end.gdx
+>        <REC address
+#^^^^^^^^ source.gdx
+#        ^ source.gdx punctuation.definition.element.begin.gdx
+#         ^^^ source.gdx storage.type.prefix.gdx
+#            ^ source.gdx
+#             ^^^^^^^ source.gdx variable.other.identifier.gdx
+>            <STR street : "Main St">
+#^^^^^^^^^^^^ source.gdx
+#            ^ source.gdx punctuation.definition.element.begin.gdx
+#             ^^^ source.gdx storage.type.prefix.gdx
+#                ^ source.gdx
+#                 ^^^^^^ source.gdx variable.other.identifier.gdx
+#                       ^ source.gdx
+#                        ^ source.gdx punctuation.separator.resource.gdx
+#                         ^ source.gdx
+#                          ^ source.gdx string.quoted.double.gdx punctuation.definition.string.begin.gdx
+#                           ^^^^^^^ source.gdx string.quoted.double.gdx
+#                                  ^ source.gdx string.quoted.double.gdx punctuation.definition.string.end.gdx
+#                                   ^ source.gdx punctuation.definition.element.end.gdx
+>            <INT number : 100>
+#^^^^^^^^^^^^ source.gdx
+#            ^ source.gdx punctuation.definition.element.begin.gdx
+#             ^^^ source.gdx storage.type.prefix.gdx
+#                ^ source.gdx
+#                 ^^^^^^ source.gdx variable.other.identifier.gdx
+#                       ^ source.gdx
+#                        ^ source.gdx punctuation.separator.resource.gdx
+#                         ^ source.gdx
+#                          ^^^ source.gdx constant.numeric.integer.gdx
+#                             ^ source.gdx punctuation.definition.element.end.gdx
+>            <.STR verified : "postal">
+#^^^^^^^^^^^^ source.gdx
+#            ^ source.gdx punctuation.definition.element.begin.gdx
+#             ^^^^ source.gdx storage.type.prefix.gdx
+#                 ^ source.gdx
+#                  ^^^^^^^^ source.gdx variable.other.identifier.gdx
+#                          ^ source.gdx
+#                           ^ source.gdx punctuation.separator.resource.gdx
+#                            ^ source.gdx
+#                             ^ source.gdx string.quoted.double.gdx punctuation.definition.string.begin.gdx
+#                              ^^^^^^ source.gdx string.quoted.double.gdx
+#                                    ^ source.gdx string.quoted.double.gdx punctuation.definition.string.end.gdx
+#                                     ^ source.gdx punctuation.definition.element.end.gdx
+>            <_INT geohash : 42>
+#^^^^^^^^^^^^ source.gdx
+#            ^ source.gdx punctuation.definition.element.begin.gdx
+#             ^^^^ source.gdx storage.type.prefix.gdx
+#                 ^ source.gdx
+#                  ^^^^^^^ source.gdx variable.other.identifier.gdx
+#                         ^ source.gdx
+#                          ^ source.gdx punctuation.separator.resource.gdx
+#                           ^ source.gdx
+#                            ^^ source.gdx constant.numeric.integer.gdx
+#                              ^ source.gdx punctuation.definition.element.end.gdx
+>        >
+#^^^^^^^^ source.gdx
+#        ^ source.gdx punctuation.definition.element.end.gdx
+>        <STR* nicknames
+#^^^^^^^^ source.gdx
+#        ^ source.gdx punctuation.definition.element.begin.gdx
+#         ^^^ source.gdx storage.type.prefix.gdx
+#            ^ source.gdx keyword.operator.set.gdx
+#             ^ source.gdx
+#              ^^^^^^^^^ source.gdx variable.other.identifier.gdx
+>            <STR : "Ali">
+#^^^^^^^^^^^^ source.gdx
+#            ^ source.gdx punctuation.definition.element.begin.gdx
+#             ^^^ source.gdx storage.type.prefix.gdx
+#                ^ source.gdx
+#                 ^ source.gdx punctuation.separator.resource.gdx
+#                  ^ source.gdx
+#                   ^ source.gdx string.quoted.double.gdx punctuation.definition.string.begin.gdx
+#                    ^^^ source.gdx string.quoted.double.gdx
+#                       ^ source.gdx string.quoted.double.gdx punctuation.definition.string.end.gdx
+#                        ^ source.gdx punctuation.definition.element.end.gdx
+>            <STR : "escapes: \" \\ \n \t \u{1F600}">
+#^^^^^^^^^^^^ source.gdx
+#            ^ source.gdx punctuation.definition.element.begin.gdx
+#             ^^^ source.gdx storage.type.prefix.gdx
+#                ^ source.gdx
+#                 ^ source.gdx punctuation.separator.resource.gdx
+#                  ^ source.gdx
+#                   ^ source.gdx string.quoted.double.gdx punctuation.definition.string.begin.gdx
+#                    ^^^^^^^^^ source.gdx string.quoted.double.gdx
+#                             ^^ source.gdx string.quoted.double.gdx constant.character.escape.gdx
+#                               ^ source.gdx string.quoted.double.gdx
+#                                ^^ source.gdx string.quoted.double.gdx constant.character.escape.gdx
+#                                  ^ source.gdx string.quoted.double.gdx
+#                                   ^^ source.gdx string.quoted.double.gdx constant.character.escape.gdx
+#                                     ^ source.gdx string.quoted.double.gdx
+#                                      ^^ source.gdx string.quoted.double.gdx constant.character.escape.gdx
+#                                        ^ source.gdx string.quoted.double.gdx
+#                                         ^^^^^^^^^ source.gdx string.quoted.double.gdx constant.character.escape.gdx
+#                                                  ^ source.gdx string.quoted.double.gdx punctuation.definition.string.end.gdx
+#                                                   ^ source.gdx punctuation.definition.element.end.gdx
+>        >
+#^^^^^^^^ source.gdx
+#        ^ source.gdx punctuation.definition.element.end.gdx
+>        <@OBJ #knows : @bob>
+#^^^^^^^^ source.gdx
+#        ^ source.gdx punctuation.definition.element.begin.gdx
+#         ^ source.gdx keyword.operator.edge.gdx
+#          ^^^ source.gdx storage.type.prefix.gdx
+#             ^ source.gdx
+#              ^ source.gdx keyword.operator.sigil.rel.gdx
+#               ^^^^^ source.gdx entity.other.attribute-name.rel.gdx
+#                    ^ source.gdx
+#                     ^ source.gdx punctuation.separator.resource.gdx
+#                      ^ source.gdx
+#                       ^ source.gdx keyword.operator.reference.gdx
+#                        ^^^ source.gdx variable.other.reference.gdx
+#                           ^ source.gdx punctuation.definition.element.end.gdx
+>        <@REL #memberOf : @REL:knows>
+#^^^^^^^^ source.gdx
+#        ^ source.gdx punctuation.definition.element.begin.gdx
+#         ^ source.gdx keyword.operator.edge.gdx
+#          ^^^ source.gdx storage.type.prefix.gdx
+#             ^ source.gdx
+#              ^ source.gdx keyword.operator.sigil.rel.gdx
+#               ^^^^^^^^ source.gdx entity.other.attribute-name.rel.gdx
+#                       ^ source.gdx
+#                        ^ source.gdx punctuation.separator.resource.gdx
+#                         ^ source.gdx
+#                          ^ source.gdx keyword.operator.reference.gdx
+#                           ^^^ source.gdx keyword.other.anchor-role.gdx
+#                              ^ source.gdx punctuation.separator.anchor-role.gdx
+#                               ^^^^^ source.gdx variable.other.reference.gdx
+#                                    ^ source.gdx punctuation.definition.element.end.gdx
+>        <VAL preferred
+#^^^^^^^^ source.gdx
+#        ^ source.gdx punctuation.definition.element.begin.gdx
+#         ^^^ source.gdx storage.type.prefix.gdx
+#            ^ source.gdx
+#             ^^^^^^^^^ source.gdx variable.other.identifier.gdx
+>            <STR : "email">
+#^^^^^^^^^^^^ source.gdx
+#            ^ source.gdx punctuation.definition.element.begin.gdx
+#             ^^^ source.gdx storage.type.prefix.gdx
+#                ^ source.gdx
+#                 ^ source.gdx punctuation.separator.resource.gdx
+#                  ^ source.gdx
+#                   ^ source.gdx string.quoted.double.gdx punctuation.definition.string.begin.gdx
+#                    ^^^^^ source.gdx string.quoted.double.gdx
+#                         ^ source.gdx string.quoted.double.gdx punctuation.definition.string.end.gdx
+#                          ^ source.gdx punctuation.definition.element.end.gdx
+>        >
+#^^^^^^^^ source.gdx
+#        ^ source.gdx punctuation.definition.element.end.gdx
+>        <NSTR note : "node-zone string">
+#^^^^^^^^ source.gdx
+#        ^ source.gdx punctuation.definition.element.begin.gdx
+#         ^^^^ source.gdx storage.type.prefix.gdx
+#             ^ source.gdx
+#              ^^^^ source.gdx variable.other.identifier.gdx
+#                  ^ source.gdx
+#                   ^ source.gdx punctuation.separator.resource.gdx
+#                    ^ source.gdx
+#                     ^ source.gdx string.quoted.double.gdx punctuation.definition.string.begin.gdx
+#                      ^^^^^^^^^^^^^^^^ source.gdx string.quoted.double.gdx
+#                                      ^ source.gdx string.quoted.double.gdx punctuation.definition.string.end.gdx
+#                                       ^ source.gdx punctuation.definition.element.end.gdx
+>    >
+#^^^^ source.gdx
+#    ^ source.gdx punctuation.definition.element.end.gdx
+>
+>    <OBJ bob
+#^^^^ source.gdx
+#    ^ source.gdx punctuation.definition.element.begin.gdx
+#     ^^^ source.gdx storage.type.prefix.gdx
+#        ^ source.gdx
+#         ^^^ source.gdx variable.other.identifier.gdx
+>        <S firstName : "Bob">
+#^^^^^^^^ source.gdx
+#        ^ source.gdx punctuation.definition.element.begin.gdx
+#         ^ source.gdx storage.type.prefix.gdx
+#          ^ source.gdx
+#           ^^^^^^^^^ source.gdx variable.other.identifier.gdx
+#                    ^ source.gdx
+#                     ^ source.gdx punctuation.separator.resource.gdx
+#                      ^ source.gdx
+#                       ^ source.gdx string.quoted.double.gdx punctuation.definition.string.begin.gdx
+#                        ^^^ source.gdx string.quoted.double.gdx
+#                           ^ source.gdx string.quoted.double.gdx punctuation.definition.string.end.gdx
+#                            ^ source.gdx punctuation.definition.element.end.gdx
+>        <I age : 31>
+#^^^^^^^^ source.gdx
+#        ^ source.gdx punctuation.definition.element.begin.gdx
+#         ^ source.gdx storage.type.prefix.gdx
+#          ^ source.gdx
+#           ^^^ source.gdx variable.other.identifier.gdx
+#              ^ source.gdx
+#               ^ source.gdx punctuation.separator.resource.gdx
+#                ^ source.gdx
+#                 ^^ source.gdx constant.numeric.integer.gdx
+#                   ^ source.gdx punctuation.definition.element.end.gdx
+>        <F score : 99.5>
+#^^^^^^^^ source.gdx
+#        ^ source.gdx punctuation.definition.element.begin.gdx
+#         ^ source.gdx storage.type.prefix.gdx
+#          ^ source.gdx
+#           ^^^^^ source.gdx variable.other.identifier.gdx
+#                ^ source.gdx
+#                 ^ source.gdx punctuation.separator.resource.gdx
+#                  ^ source.gdx
+#                   ^^^^ source.gdx constant.numeric.float.gdx
+#                       ^ source.gdx punctuation.definition.element.end.gdx
+>        <L verified : f>
+#^^^^^^^^ source.gdx
+#        ^ source.gdx punctuation.definition.element.begin.gdx
+#         ^ source.gdx storage.type.prefix.gdx
+#          ^ source.gdx
+#           ^^^^^^^^ source.gdx variable.other.identifier.gdx
+#                   ^ source.gdx
+#                    ^ source.gdx punctuation.separator.resource.gdx
+#                     ^ source.gdx
+#                      ^ source.gdx constant.language.boolean.gdx
+#                       ^ source.gdx punctuation.definition.element.end.gdx
+>        <B blob : 0xdeadbeef>
+#^^^^^^^^ source.gdx
+#        ^ source.gdx punctuation.definition.element.begin.gdx
+#         ^ source.gdx storage.type.prefix.gdx
+#          ^ source.gdx
+#           ^^^^ source.gdx variable.other.identifier.gdx
+#               ^ source.gdx
+#                ^ source.gdx punctuation.separator.resource.gdx
+#                 ^ source.gdx
+#                  ^^^^^^^^^^ source.gdx constant.numeric.bytes.hex.gdx
+#                            ^ source.gdx punctuation.definition.element.end.gdx
+>    >
+#^^^^ source.gdx
+#    ^ source.gdx punctuation.definition.element.end.gdx
+>
+>    <%REC residence : $/alice/address>
+#^^^^ source.gdx
+#    ^ source.gdx punctuation.definition.element.begin.gdx
+#     ^ source.gdx keyword.operator.ref.gdx
+#      ^^^ source.gdx storage.type.prefix.gdx
+#         ^ source.gdx
+#          ^^^^^^^^^ source.gdx variable.other.identifier.gdx
+#                   ^ source.gdx
+#                    ^ source.gdx punctuation.separator.resource.gdx
+#                     ^ source.gdx
+#                      ^ source.gdx keyword.operator.path.gdx
+#                       ^^^^^^^^^^^^^^ source.gdx variable.other.path.gdx
+#                                     ^ source.gdx punctuation.definition.element.end.gdx
+>    <%STR anchorNote : @OBJ:alice&1>
+#^^^^ source.gdx
+#    ^ source.gdx punctuation.definition.element.begin.gdx
+#     ^ source.gdx keyword.operator.ref.gdx
+#      ^^^ source.gdx storage.type.prefix.gdx
+#         ^ source.gdx
+#          ^^^^^^^^^^ source.gdx variable.other.identifier.gdx
+#                    ^ source.gdx
+#                     ^ source.gdx punctuation.separator.resource.gdx
+#                      ^ source.gdx
+#                       ^ source.gdx keyword.operator.reference.gdx
+#                        ^^^ source.gdx keyword.other.anchor-role.gdx
+#                           ^ source.gdx punctuation.separator.anchor-role.gdx
+#                            ^^^^^ source.gdx variable.other.reference.gdx
+#                                 ^ source.gdx keyword.operator.sigil.key.gdx
+#                                  ^ source.gdx constant.other.key.gdx
+#                                   ^ source.gdx punctuation.definition.element.end.gdx
+>    <%DEFOBJ shape : @PersonShape>
+#^^^^ source.gdx
+#    ^ source.gdx punctuation.definition.element.begin.gdx
+#     ^ source.gdx keyword.operator.ref.gdx
+#      ^^^^^^ source.gdx storage.type.prefix.gdx
+#            ^ source.gdx
+#             ^^^^^ source.gdx variable.other.identifier.gdx
+#                  ^ source.gdx
+#                   ^ source.gdx punctuation.separator.resource.gdx
+#                    ^ source.gdx
+#                     ^ source.gdx keyword.operator.reference.gdx
+#                      ^^^^^^^^^^^ source.gdx variable.other.reference.gdx
+#                                 ^ source.gdx punctuation.definition.element.end.gdx
+>    <%STR* names : @alice$/nicknames>
+#^^^^ source.gdx
+#    ^ source.gdx punctuation.definition.element.begin.gdx
+#     ^ source.gdx keyword.operator.ref.gdx
+#      ^^^ source.gdx storage.type.prefix.gdx
+#         ^ source.gdx keyword.operator.set.gdx
+#          ^ source.gdx
+#           ^^^^^ source.gdx variable.other.identifier.gdx
+#                ^ source.gdx
+#                 ^ source.gdx punctuation.separator.resource.gdx
+#                  ^ source.gdx
+#                   ^ source.gdx keyword.operator.reference.gdx
+#                    ^^^^^ source.gdx variable.other.reference.gdx
+#                         ^ source.gdx keyword.operator.path.gdx
+#                          ^^^^^^^^^^ source.gdx variable.other.path.gdx
+#                                    ^ source.gdx punctuation.definition.element.end.gdx
+>>
+#^ source.gdx punctuation.definition.element.end.gdx
+>

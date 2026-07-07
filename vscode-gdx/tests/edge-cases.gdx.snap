@@ -1,0 +1,170 @@
+><OBJ edge-cases
+#^ source.gdx punctuation.definition.element.begin.gdx
+# ^^^ source.gdx storage.type.prefix.gdx
+#    ^ source.gdx
+#     ^^^^^^^^^^ source.gdx variable.other.identifier.gdx
+>    <STR name:"Alice">
+#^^^^ source.gdx
+#    ^ source.gdx punctuation.definition.element.begin.gdx
+#     ^^^ source.gdx storage.type.prefix.gdx
+#        ^ source.gdx
+#         ^^^^ source.gdx variable.other.identifier.gdx
+#             ^ source.gdx punctuation.separator.resource.gdx
+#              ^ source.gdx string.quoted.double.gdx punctuation.definition.string.begin.gdx
+#               ^^^^^ source.gdx string.quoted.double.gdx
+#                    ^ source.gdx string.quoted.double.gdx punctuation.definition.string.end.gdx
+#                     ^ source.gdx punctuation.definition.element.end.gdx
+>    <STR tight:"no-space separator">
+#^^^^ source.gdx
+#    ^ source.gdx punctuation.definition.element.begin.gdx
+#     ^^^ source.gdx storage.type.prefix.gdx
+#        ^ source.gdx
+#         ^^^^^ source.gdx variable.other.identifier.gdx
+#              ^ source.gdx punctuation.separator.resource.gdx
+#               ^ source.gdx string.quoted.double.gdx punctuation.definition.string.begin.gdx
+#                ^^^^^^^^^^^^^^^^^^ source.gdx string.quoted.double.gdx
+#                                  ^ source.gdx string.quoted.double.gdx punctuation.definition.string.end.gdx
+#                                   ^ source.gdx punctuation.definition.element.end.gdx
+>    <STRangle bad-prefix : "prefix not in closed vocabulary">
+#^^^^ source.gdx
+#    ^ source.gdx punctuation.definition.element.begin.gdx
+#     ^^^^^^^^ source.gdx invalid.illegal.prefix.gdx
+#             ^ source.gdx
+#              ^^^^^^^^^^ source.gdx variable.other.identifier.gdx
+#                        ^ source.gdx
+#                         ^ source.gdx punctuation.separator.resource.gdx
+#                          ^ source.gdx
+#                           ^ source.gdx string.quoted.double.gdx punctuation.definition.string.begin.gdx
+#                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ source.gdx string.quoted.double.gdx
+#                                                           ^ source.gdx string.quoted.double.gdx punctuation.definition.string.end.gdx
+#                                                            ^ source.gdx punctuation.definition.element.end.gdx
+>    <QUX also-bad : 1>
+#^^^^ source.gdx
+#    ^ source.gdx punctuation.definition.element.begin.gdx
+#     ^^^ source.gdx invalid.illegal.prefix.gdx
+#        ^ source.gdx
+#         ^^^^^^^^ source.gdx variable.other.identifier.gdx
+#                 ^ source.gdx
+#                  ^ source.gdx punctuation.separator.resource.gdx
+#                   ^ source.gdx
+#                    ^ source.gdx constant.numeric.integer.gdx
+#                     ^ source.gdx punctuation.definition.element.end.gdx
+>    <STR curie-id gdx:Person>
+#^^^^ source.gdx
+#    ^ source.gdx punctuation.definition.element.begin.gdx
+#     ^^^ source.gdx storage.type.prefix.gdx
+#        ^ source.gdx
+#         ^^^^^^^^ source.gdx variable.other.identifier.gdx
+#                 ^ source.gdx
+#                  ^^^^^^^^^^ source.gdx variable.other.identifier.gdx
+#                            ^ source.gdx punctuation.definition.element.end.gdx
+>    <STR multiline : "line one
+#^^^^ source.gdx
+#    ^ source.gdx punctuation.definition.element.begin.gdx
+#     ^^^ source.gdx storage.type.prefix.gdx
+#        ^ source.gdx
+#         ^^^^^^^^^ source.gdx variable.other.identifier.gdx
+#                  ^ source.gdx
+#                   ^ source.gdx punctuation.separator.resource.gdx
+#                    ^ source.gdx
+#                     ^ source.gdx string.quoted.double.gdx punctuation.definition.string.begin.gdx
+#                      ^^^^^^^^^ source.gdx string.quoted.double.gdx
+>        line two, still the same string with a > inside">
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ source.gdx string.quoted.double.gdx
+#                                                       ^ source.gdx string.quoted.double.gdx punctuation.definition.string.end.gdx
+#                                                        ^ source.gdx punctuation.definition.element.end.gdx
+>    <STR badescape : "\q is not a valid escape">
+#^^^^ source.gdx
+#    ^ source.gdx punctuation.definition.element.begin.gdx
+#     ^^^ source.gdx storage.type.prefix.gdx
+#        ^ source.gdx
+#         ^^^^^^^^^ source.gdx variable.other.identifier.gdx
+#                  ^ source.gdx
+#                   ^ source.gdx punctuation.separator.resource.gdx
+#                    ^ source.gdx
+#                     ^ source.gdx string.quoted.double.gdx punctuation.definition.string.begin.gdx
+#                      ^^ source.gdx string.quoted.double.gdx invalid.illegal.escape.gdx
+#                        ^^^^^^^^^^^^^^^^^^^^^^ source.gdx string.quoted.double.gdx
+#                                              ^ source.gdx string.quoted.double.gdx punctuation.definition.string.end.gdx
+#                                               ^ source.gdx punctuation.definition.element.end.gdx
+>    <I I : 42>
+#^^^^ source.gdx
+#    ^ source.gdx punctuation.definition.element.begin.gdx
+#     ^ source.gdx storage.type.prefix.gdx
+#      ^ source.gdx
+#       ^ source.gdx variable.other.identifier.gdx
+#        ^ source.gdx
+#         ^ source.gdx punctuation.separator.resource.gdx
+#          ^ source.gdx
+#           ^^ source.gdx constant.numeric.integer.gdx
+#             ^ source.gdx punctuation.definition.element.end.gdx
+>    <R r>
+#^^^^ source.gdx
+#    ^ source.gdx punctuation.definition.element.begin.gdx
+#     ^ source.gdx storage.type.prefix.gdx
+#      ^ source.gdx
+#       ^ source.gdx variable.other.identifier.gdx
+#        ^ source.gdx punctuation.definition.element.end.gdx
+>    <REM structured-annotation
+#^^^^ source.gdx
+#    ^ source.gdx comment.block.gdx punctuation.definition.comment.begin.gdx
+#     ^^^ source.gdx comment.block.gdx storage.type.prefix.annotation.gdx
+#        ^^^^^^^^^^^^^^^^^^^^^^^ source.gdx comment.block.gdx
+>        <STR note : "REM children are part of the comment">
+#^^^^^^^^ source.gdx comment.block.gdx
+#        ^ source.gdx comment.block.gdx
+#         ^^^^^^^^^^^ source.gdx comment.block.gdx
+#                    ^ source.gdx comment.block.gdx
+#                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ source.gdx comment.block.gdx
+#                                                         ^ source.gdx comment.block.gdx
+#                                                          ^ source.gdx comment.block.gdx
+>    >
+#^^^^ source.gdx comment.block.gdx
+#    ^ source.gdx comment.block.gdx punctuation.definition.comment.end.gdx
+>    <BLK section
+#^^^^ source.gdx
+#    ^ source.gdx punctuation.definition.element.begin.gdx
+#     ^^^ source.gdx storage.type.prefix.gdx
+#        ^ source.gdx
+#         ^^^^^^^ source.gdx variable.other.identifier.gdx
+>        <STR a : "x">
+#^^^^^^^^ source.gdx
+#        ^ source.gdx punctuation.definition.element.begin.gdx
+#         ^^^ source.gdx storage.type.prefix.gdx
+#            ^ source.gdx
+#             ^ source.gdx variable.other.identifier.gdx
+#              ^ source.gdx
+#               ^ source.gdx punctuation.separator.resource.gdx
+#                ^ source.gdx
+#                 ^ source.gdx string.quoted.double.gdx punctuation.definition.string.begin.gdx
+#                  ^ source.gdx string.quoted.double.gdx
+#                   ^ source.gdx string.quoted.double.gdx punctuation.definition.string.end.gdx
+#                    ^ source.gdx punctuation.definition.element.end.gdx
+>    >
+#^^^^ source.gdx
+#    ^ source.gdx punctuation.definition.element.end.gdx
+>    <GRP g
+#^^^^ source.gdx
+#    ^ source.gdx punctuation.definition.element.begin.gdx
+#     ^^^ source.gdx storage.type.prefix.gdx
+#        ^ source.gdx
+#         ^ source.gdx variable.other.identifier.gdx
+>        <STR b : "y">
+#^^^^^^^^ source.gdx
+#        ^ source.gdx punctuation.definition.element.begin.gdx
+#         ^^^ source.gdx storage.type.prefix.gdx
+#            ^ source.gdx
+#             ^ source.gdx variable.other.identifier.gdx
+#              ^ source.gdx
+#               ^ source.gdx punctuation.separator.resource.gdx
+#                ^ source.gdx
+#                 ^ source.gdx string.quoted.double.gdx punctuation.definition.string.begin.gdx
+#                  ^ source.gdx string.quoted.double.gdx
+#                   ^ source.gdx string.quoted.double.gdx punctuation.definition.string.end.gdx
+#                    ^ source.gdx punctuation.definition.element.end.gdx
+>    >
+#^^^^ source.gdx
+#    ^ source.gdx punctuation.definition.element.end.gdx
+>>
+#^ source.gdx punctuation.definition.element.end.gdx
+>

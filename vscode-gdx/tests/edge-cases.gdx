@@ -1,0 +1,21 @@
+<OBJ edge-cases
+    <STR name:"Alice">
+    <STR tight:"no-space separator">
+    <STRangle bad-prefix : "prefix not in closed vocabulary">
+    <QUX also-bad : 1>
+    <STR curie-id gdx:Person>
+    <STR multiline : "line one
+        line two, still the same string with a > inside">
+    <STR badescape : "\q is not a valid escape">
+    <I I : 42>
+    <R r>
+    <REM structured-annotation
+        <STR note : "REM children are part of the comment">
+    >
+    <BLK section
+        <STR a : "x">
+    >
+    <GRP g
+        <STR b : "y">
+    >
+>

@@ -1,0 +1,54 @@
+<REM : "GDX sample document — exercises the Standard Form constructs the highlighter supports (grammar v0.11 / Core Spec v0.20.0)">
+
+<PKG gdx-sample
+    <REM : "Templates declare shapes; DEF* prefixes are canonical-only.">
+    <DEFOBJ PersonShape
+        <DEFSTR name --gdx:required>
+        <DEFINT age : 0>
+    >
+
+    <REL #https://schema.org/knows knows>
+
+    <OBJ alice
+        <STR #schema:givenName firstName : "Alice">
+        <STR &1 lastName : "Liddell">
+        <INT age : 28i8>
+        <INT flags : 0b1011>
+        <INT perms : 0o755>
+        <FLOAT height : 1.62f32>
+        <FLOAT slope : -inf>
+        <FLOAT avogadro : 6.022e23>
+        <BOOL active : true>
+        <BYTE avatarHash : 0x4a3f8c>
+        <BYTE thumbnail : 0zTWFu>
+        <REC address
+            <STR street : "Main St">
+            <INT number : 100>
+            <.STR verified : "postal">
+            <_INT geohash : 42>
+        >
+        <STR* nicknames
+            <STR : "Ali">
+            <STR : "escapes: \" \\ \n \t \u{1F600}">
+        >
+        <@OBJ #knows : @bob>
+        <@REL #memberOf : @REL:knows>
+        <VAL preferred
+            <STR : "email">
+        >
+        <NSTR note : "node-zone string">
+    >
+
+    <OBJ bob
+        <S firstName : "Bob">
+        <I age : 31>
+        <F score : 99.5>
+        <L verified : f>
+        <B blob : 0xdeadbeef>
+    >
+
+    <%REC residence : $/alice/address>
+    <%STR anchorNote : @OBJ:alice&1>
+    <%DEFOBJ shape : @PersonShape>
+    <%STR* names : @alice$/nicknames>
+>
