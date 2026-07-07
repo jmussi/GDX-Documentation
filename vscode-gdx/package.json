@@ -1,0 +1,53 @@
+{
+  "name": "gdx-syntax",
+  "displayName": "GDX",
+  "description": "Syntax highlighting for GDX (Graph Data eXchange) Standard Form documents",
+  "version": "0.1.0",
+  "publisher": "jmussi",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "gdx",
+    "graph",
+    "data exchange",
+    "syntax highlighting"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jmussi/GDX-Documentation"
+  },
+  "contributes": {
+    "languages": [
+      {
+        "id": "gdx",
+        "aliases": [
+          "GDX",
+          "gdx"
+        ],
+        "extensions": [
+          ".gdx"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "gdx",
+        "scopeName": "source.gdx",
+        "path": "./syntaxes/gdx.tmLanguage.json"
+      }
+    ]
+  },
+  "scripts": {
+    "test": "vscode-tmgrammar-snap tests/*.gdx",
+    "test:update": "vscode-tmgrammar-snap tests/*.gdx --updateSnapshot",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "vscode-tmgrammar-test": "^0.1.3"
+  }
+}

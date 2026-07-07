@@ -1,0 +1,204 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "GDX",
+  "scopeName": "source.gdx",
+  "patterns": [
+    { "include": "#rem-element" },
+    { "include": "#element" },
+    { "include": "#unknown-element" }
+  ],
+  "repository": {
+    "element": {
+      "comment": "Element with a prefix from the closed vocabulary (GDX-Grammar.md §7.1). Composition pattern: %? @? [._N|DEF]? base *?. Prefix recognition is case-insensitive; the prefix is positional (first token after <).",
+      "begin": "(<)\\s*(?i:(%)?(@)?((?:DEF)?(?:OBJ|REC|STR|INT|FLOAT|BOOL|BYTE)|[._N](?:FLOAT|BOOL|BYTE|STR|INT|REC|[SIFLBR])|VAL|REL|REM|BLK|PKG|GRP|[ORSIFLBV])(\\*)?)(?=[\\s>:]|$)",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.element.begin.gdx" },
+        "2": { "name": "keyword.operator.ref.gdx" },
+        "3": { "name": "keyword.operator.edge.gdx" },
+        "4": { "name": "storage.type.prefix.gdx" },
+        "5": { "name": "keyword.operator.set.gdx" }
+      },
+      "end": ">",
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.element.end.gdx" }
+      },
+      "patterns": [
+        { "include": "#element-body" }
+      ]
+    },
+    "rem-element": {
+      "comment": "REM annotation elements are GDX's comments (Core Spec §6.5.6); scope the whole element as a comment. Nested brackets and strings are consumed so an inner > or a > inside a string does not terminate the annotation early.",
+      "name": "comment.block.gdx",
+      "begin": "(<)\\s*((?i:REM))(?=[\\s>:]|$)",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.comment.begin.gdx" },
+        "2": { "name": "storage.type.prefix.annotation.gdx" }
+      },
+      "end": ">",
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.comment.end.gdx" }
+      },
+      "patterns": [
+        { "include": "#comment-inner" }
+      ]
+    },
+    "comment-inner": {
+      "patterns": [
+        {
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            { "match": "\\\\." }
+          ]
+        },
+        {
+          "begin": "<",
+          "end": ">",
+          "patterns": [
+            { "include": "#comment-inner" }
+          ]
+        }
+      ]
+    },
+    "unknown-element": {
+      "comment": "Fallback for a token in prefix position that is not in the closed vocabulary — malformed per GDX-Grammar.md §7.1. The body is still highlighted so one bad prefix does not unhighlight the subtree.",
+      "begin": "(<)\\s*([^\\s<>]*)",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.element.begin.gdx" },
+        "2": { "name": "invalid.illegal.prefix.gdx" }
+      },
+      "end": ">",
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.element.end.gdx" }
+      },
+      "patterns": [
+        { "include": "#element-body" }
+      ]
+    },
+    "element-body": {
+      "patterns": [
+        { "include": "#rem-element" },
+        { "include": "#element" },
+        { "include": "#unknown-element" },
+        { "include": "#string" },
+        { "include": "#key-field" },
+        { "include": "#rel-field" },
+        { "include": "#type-field" },
+        { "include": "#reference" },
+        { "include": "#path-reference" },
+        { "include": "#bytes" },
+        { "include": "#float" },
+        { "include": "#int" },
+        { "include": "#boolean" },
+        { "include": "#separator" },
+        { "include": "#identifier" }
+      ]
+    },
+    "string": {
+      "name": "string.quoted.double.gdx",
+      "begin": "\"",
+      "beginCaptures": {
+        "0": { "name": "punctuation.definition.string.begin.gdx" }
+      },
+      "end": "\"",
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.string.end.gdx" }
+      },
+      "patterns": [
+        {
+          "comment": "Closed escape set (GDX-Grammar.md §5.1)",
+          "match": "\\\\(?:[\"\\\\ntr]|u\\{[0-9A-Fa-f]+\\})",
+          "name": "constant.character.escape.gdx"
+        },
+        {
+          "comment": "Any other backslash sequence is malformed",
+          "match": "\\\\.",
+          "name": "invalid.illegal.escape.gdx"
+        }
+      ]
+    },
+    "key-field": {
+      "comment": "Key field and key-mode reference: &1 or &namedSlot (§4.1, §5.6)",
+      "match": "(&)([0-9]+|[A-Za-z_][A-Za-z0-9_\\-./:]*(?<!:))",
+      "captures": {
+        "1": { "name": "keyword.operator.sigil.key.gdx" },
+        "2": { "name": "constant.other.key.gdx" }
+      }
+    },
+    "rel-field": {
+      "comment": "Rel field: #curie or #scheme://uri (§4.2)",
+      "match": "(#)((?:[A-Za-z][A-Za-z0-9+\\-.]*://[A-Za-z0-9_\\-./:?#\\[\\]@!$&'()*+,;=%~]+)|[A-Za-z_][A-Za-z0-9_\\-./:]*(?<!:))",
+      "captures": {
+        "1": { "name": "keyword.operator.sigil.rel.gdx" },
+        "2": { "name": "entity.other.attribute-name.rel.gdx" }
+      }
+    },
+    "type-field": {
+      "comment": "Type field: --TypeId (§4.3)",
+      "match": "(--)([A-Za-z_][A-Za-z0-9_\\-./:]*(?<!:))",
+      "captures": {
+        "1": { "name": "keyword.operator.sigil.type.gdx" },
+        "2": { "name": "entity.name.type.gdx" }
+      }
+    },
+    "reference": {
+      "comment": "Identifier-mode and composed reference literals: @Anchor, @Role:Anchor, @Anchor$/path, @Anchor&key (§5.6)",
+      "match": "(@)(?:((?i:DEFOBJ|DEFREC|DEFSTR|DEFINT|DEFFLOAT|DEFBOOL|DEFBYTE|OBJ|REL|PKG|GRP))(:))?([A-Za-z_][A-Za-z0-9_\\-./:]*(?<!:))(?:(\\$)(/[^\\s>]*)|(&)([0-9]+|[A-Za-z_][A-Za-z0-9_\\-./:]*(?<!:)))?",
+      "captures": {
+        "1": { "name": "keyword.operator.reference.gdx" },
+        "2": { "name": "keyword.other.anchor-role.gdx" },
+        "3": { "name": "punctuation.separator.anchor-role.gdx" },
+        "4": { "name": "variable.other.reference.gdx" },
+        "5": { "name": "keyword.operator.path.gdx" },
+        "6": { "name": "variable.other.path.gdx" },
+        "7": { "name": "keyword.operator.sigil.key.gdx" },
+        "8": { "name": "constant.other.key.gdx" }
+      }
+    },
+    "path-reference": {
+      "comment": "Path-mode reference literal: $/segment/segment (§5.6, GDX-Path.md)",
+      "match": "(\\$)(/[^\\s>]*)",
+      "captures": {
+        "1": { "name": "keyword.operator.path.gdx" },
+        "2": { "name": "variable.other.path.gdx" }
+      }
+    },
+    "bytes": {
+      "comment": "Bytes literals: 0x hex, 0z base64 (§5.5)",
+      "patterns": [
+        {
+          "match": "(?<![\\w.])0x[0-9A-Fa-f]+\\b",
+          "name": "constant.numeric.bytes.hex.gdx"
+        },
+        {
+          "match": "(?<![\\w.])0z[A-Za-z0-9+/]+={0,2}",
+          "name": "constant.numeric.bytes.base64.gdx"
+        }
+      ]
+    },
+    "float": {
+      "comment": "Float literals incl. exponents, closed suffix set, and keywords nan/inf/-inf (§5.3). Bare integers in float positions are indistinguishable lexically and are scoped as integers.",
+      "match": "(?<![\\w.])(?:[+-]?(?:\\d+\\.\\d+(?:[eE][+-]?\\d+)?|\\.\\d+(?:[eE][+-]?\\d+)?|\\d+[eE][+-]?\\d+)(?:f32|f64|d128|d64|d32|d)?|[+-]?\\d+(?:f32|f64|d128|d64|d32|d)|nan|-?inf)(?![\\w.])",
+      "name": "constant.numeric.float.gdx"
+    },
+    "int": {
+      "comment": "Integer literals: decimal, 0b binary, 0o octal, closed suffix set (§5.2)",
+      "match": "(?<![\\w.])[+-]?(?:0b[01]+|0o[0-7]+|\\d+)(?:i8|i16|i32|i64|u8|u16|u32|u64|bigint)?(?![\\w.])",
+      "name": "constant.numeric.integer.gdx"
+    },
+    "boolean": {
+      "comment": "Boolean literals incl. single-letter forms (§5.4). Known over-approximation: a single-letter identifier t/f in identity position also matches.",
+      "match": "(?<=[\\s:<])(?:true|TRUE|True|false|FALSE|False|[tTfF])(?=[\\s>])",
+      "name": "constant.language.boolean.gdx"
+    },
+    "separator": {
+      "match": ":",
+      "name": "punctuation.separator.resource.gdx"
+    },
+    "identifier": {
+      "comment": "Id grammar (§6): starts with letter or underscore; may contain letters, digits, _ - . / :  (a trailing colon is left for the resource separator)",
+      "match": "[A-Za-z_][A-Za-z0-9_\\-./:]*(?<!:)",
+      "name": "variable.other.identifier.gdx"
+    }
+  }
+}
