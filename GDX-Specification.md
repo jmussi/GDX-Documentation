@@ -1,7 +1,7 @@
 # GDX — Graph Data eXchange Specification
 
-- **Status:** Draft v0.21.0 (working draft, pre-1.0)
-- **Date:** 2026-06-09
+- **Status:** Draft v0.22.0 (working draft, pre-1.0)
+- **Date:** 2026-07-07
 - **Editors:** 
 - **Authors:** Julian Mussi
 
@@ -18,6 +18,7 @@ This is a pre-1.0 working draft. The specification is under active refinement; r
 
 | Version | Date       |
 |---------|------------|
+| v0.22.0 | 2026-07-07 |
 | v0.21.0 | 2026-06-09 |
 | v0.20.0 | 2026-06-09 |
 | v0.19.0 | 2026-06-09 |
@@ -179,14 +180,14 @@ The data model defined here is the single authoritative content that every concr
 A GDX element is the tuple
 
 ```
-(Prefix, Key?, Rel?, Id?, Resource?, Type?, Children*)
+(Prefix, Key?, Rel?, Id?, Resource?, Type?, Children*, Metadata?)
 ```
 
-All fields except Prefix are optional at the data-model level. Whether a given role requires a particular field is governed by §6 (Element Roles) and §7 (Composition Axioms).
+All fields except Prefix are optional at the data-model level. Whether a given role requires a particular field is governed by §6 (Element Roles) and §7 (Composition Axioms). `Metadata` is set apart from the other fields: it is realization-layer carriage annotation, explicitly **not** part of the model content, and is defined in §4.8.
 
 ### 3.1 Element Fields
 
-An element has six defined fields. The Prefix is required; the others are optional at the data-model level. Whether a particular field is required for an element depends on the element's role (§5) and its position relative to its parent (§3.2).
+An element has six model fields plus an out-of-model metadata channel. The Prefix is required; the other model fields are optional at the data-model level. The metadata channel (§4.8) is not a model field — it carries realization-layer annotation and does not participate in model content, equality, or conformance. Whether a particular field is required for an element depends on the element's role (§5) and its position relative to its parent (§3.2).
 
 | Field      | Purpose |
 |------------|---------|
@@ -196,6 +197,7 @@ An element has six defined fields. The Prefix is required; the others are option
 | `Id`       | A local or resource identifier — the element's name in the document. |
 | `Resource` | The element's typed scalar value. |
 | `Type`     | A reference to a Template the element claims to satisfy. |
+| `Metadata` | *(Out-of-model.)* Realization-layer carriage annotation — flat key/value pairs about how the element is stored or transmitted, not about what it means. Not model content; see §4.8. |
 
 All identity fields (`Id`, `Key`, `Rel`) use case-sensitive ordinal comparison.
 
@@ -310,12 +312,12 @@ Other text forms (compact, binary, alternative tab-indented) MAY be defined else
 An element is written as a bracketed token sequence between `<` and `>`. The general form is:
 
 ```
-<Prefix [&Key] [#Rel] [Id] [: Resource] [--Type]>
+<Prefix [&Key] [#Rel] [Id] [: Resource] [--Type] [{Metadata}]>
     [child elements ...]
 >
 ```
 
-Field write order is **Prefix · Key · Rel · Id · Resource · Type**. The Prefix is required; all other fields are optional.
+Field write order is **Prefix · Key · Rel · Id · Resource · Type · Metadata**. The Prefix is required; all other fields are optional. The metadata block, when present, is written last — after the Type — so that a reader (or a stripping tool) consumes the element's entire model content before reaching the out-of-model annotation; see §4.8.
 
 A leaf element MAY be written on a single line:
 
@@ -341,6 +343,7 @@ A *sigil* is a single non-alphabetic character (or short character sequence) tha
 | `&`   | Introduces the Key field |
 | `#`   | Introduces the Rel field |
 | `--`  | Introduces the Type field |
+| `{ }` | Delimit the metadata block (§4.8) — out-of-model carriage annotation |
 | `@`   | Introduces an identifier-mode reference literal (§4.2.6) |
 | `$`   | Introduces a path-mode reference literal (§4.2.6); grammar specified in `GDX-Path.md` |
 
@@ -560,7 +563,7 @@ AnchorRole        ::= "OBJ"  | "REL"  | "PKG"  | "GRP"
 
 The `Anchor` production carries an optional role marker — a closed-vocabulary keyword drawn from §5.2 followed by `:` — that disambiguates the role of the resolved element. The marker is most useful in composed references where the anchor's role differs from the terminal target's role; in plain `@id` references and in composed references with Object anchors, the marker is optional. When omitted in a composed reference, the anchor defaults to an Object (the most common case).
 
-The `PathExpression` and `KeyToken` grammars and the resolution algorithms are specified in the companion GDX Path Expressions Specification (`GDX-Path.md`). Implementations MUST conform to that specification for the contents of any `$`- or `&`-introduced literal and for the resolution semantics of role markers.
+The `PathExpression` grammar and the resolution algorithms are specified in the companion GDX Path Expressions Specification (`GDX-Path.md`); the `KeyToken` grammar is defined in §4.4.3 of this document. Implementations MUST conform to `GDX-Path.md` for the contents of any `$`-introduced literal and for the resolution semantics of role markers.
 
 **Identifier-mode** (`IdRef`) is an `@` sigil followed by an identifier:
 
@@ -650,7 +653,7 @@ A Type reference asserts that the element's contents satisfy the named Template.
 
 ### 4.4 Identifier Lexical Rules
 
-A single identifier grammar applies to all identifier-bearing positions: the `Id` field, the contents of the `Key` field (when not numeric), the contents of the `Rel` field, and the contents of the `Type` field.
+A single identifier grammar applies to all identifier-bearing positions: the `Id` field, the contents of the `Key` field (which additionally permits a leading digit — §4.4.3), the contents of the `Rel` field, and the contents of the `Type` field.
 
 #### 4.4.1 Identifier Grammar
 
@@ -701,7 +704,14 @@ When an IRI appears in `Rel` position, the lexer recognizes it by the `://` sche
 
 #### 4.4.3 Key Field Values
 
-The `Key` field, when introduced by `&`, MAY take a purely numeric form in addition to the standard identifier form. Both forms are valid anchor values:
+The `Key` field carries a **Key token**: an identifier token whose grammar additionally permits a leading digit.
+
+```ebnf
+KeyToken     ::= KeyStartChar IdContChar*
+KeyStartChar ::= ALPHA | DIGIT | "_"
+```
+
+All of the following are valid anchor values:
 
 ```
 <STR &1 : "Broadway">
@@ -711,9 +721,9 @@ The `Key` field, when introduced by `&`, MAY take a purely numeric form in addit
 <REC &7f3a2b9c-4e21-4f88-91d5-abcdef012345 #log:event ...>
 ```
 
-A numeric Key is one or more decimal digits. It is distinguished from an identifier by being all-digits; an identifier may not begin with a digit, so the two forms are unambiguous.
+The leading-digit relaxation is unambiguous because a Key token never appears in an open lexical position: it is always introduced by the `&` sigil, whether in field position (§4.1) or in a `KeyRef`/`IdKeyRef` reference literal (§4.2.6), so the digit-start ambiguity with numeric literals that motivates the `IdStartChar` restriction (§4.4.1) cannot arise. Key tokens are opaque: they carry NO numeric interpretation and are compared by case-sensitive ordinal equality like every other identity field (§3.2). An all-digit Key is a token, not a number — `&01` and `&1` are distinct Keys.
 
-The Key field provides a location-stable anchor for references (§4.2.6, §4.4.5). The choice between numeric and named Keys is the author's; numeric Keys are convenient for sequential identifiers (log entries, append-only records) while named Keys are convenient for semantic anchors (named addresses, designated child records). Keys are NOT slot positions for Template-instance alignment; that alignment uses the `Id` field (§8.2).
+The digit-permissive start admits the two anchor idioms that plain identifiers exclude: sequential tokens (`&1`, `&2`, … for log entries and append-only records) and digit-leading GUID/UUID tokens (`&7f3a2b9c-…`). Named Keys remain the idiom for semantic anchors (named addresses, designated child records). The Key field provides a location-stable anchor for references (§4.2.6, §4.4.5). Keys are NOT slot positions for Template-instance alignment, and the `Key` field is excluded from the universal claim rule (§8.2.3): alignment uses the `Id` field, and Keys are never Template-declared.
 
 #### 4.4.4 Identifier Length and Collisions
 
@@ -739,11 +749,15 @@ Key scope is determined by the element's position in the document:
 
 The enclosing-Object rule means that two different Objects MAY each contain an element with the same Key (`&entry-12345` in two different log Objects is permitted), because Key resolution within each Object is independent. The composed `IdKeyRef` form (`@anchor-id&key`) pins the scope explicitly when addressing across Object boundaries.
 
+**Embedded Objects open a fresh Key scope.** An Object occupying a VAL slot (§6.11) is an Object for the purposes of the nearest-enclosing-container rule: elements inside it are Key-scoped to the embedded Object, not to the host Object. The embedded Object's own Key, if it carries one, belongs to the host's scope, exactly as any other child of the host.
+
+**Lookup consults exactly one scope.** A `KeyRef` is resolved against the single scope determined by the rules above — the scope of the *referencing* element. Resolution MUST NOT fall back to an enclosing scope when the Key is not found; there is no scope chain and no shadowing. A bare `&key` inside an embedded Object cannot see the host Object's Keys; addressing across the boundary uses the composed `IdKeyRef` form.
+
 **Default anchor role in composed references.** In a composed reference (`IdPathRef`, `IdKeyRef`), if the `@Anchor` portion carries no role marker, the resolved element MUST be of role Object. This default reflects the common case for cross-document addressing. To anchor a composed reference at a non-Object element (a REL, a Template, a Package, or a Group), the author MUST use an explicit role marker (§4.2.6).
 
 Key collisions within the same scope make the document malformed; conforming parsers SHOULD emit a diagnostic, and conforming resolvers MUST NOT silently pick one matching element over another.
 
-The numeric Key form (§4.4.3) participates in the same scope rules as the named Key form. Numeric Keys are compared as strings (ordinal equality); `&01` and `&1` are distinct Keys.
+All Key tokens — named, all-digit, and GUID-form alike (§4.4.3) — participate in the same scope rules and compare by ordinal equality; `&01` and `&1` are distinct Keys.
 
 Keys are OPTIONAL. An element MAY omit the Key field entirely; in that case the element is addressable only by `Id` (if present) or by structural path. The decision to carry a Key is the author's, based on whether the element needs to be a stable reference target.
 
@@ -762,6 +776,58 @@ GDX has no comment syntax in the canonical text form. Documentation that should 
 ### 4.7 Use-Case Adaptability
 
 The same text form scales from typed key-value data to full graph-and-schema use without changing format or parser: applications engage only the features they need. This is a property of the form, not a maturity progression. The worked simple-to-rich progression that illustrates it is introductory rather than normative and is presented in the introductory material and the GDX Cookbook (companion specification) rather than here.
+
+### 4.8 Metadata
+
+An element MAY carry a **metadata block** — a brace-delimited sequence of flat key/value pairs written last in the element, after the Type. The block records *realization-layer* information about how the element is stored or carried — a persistence identifier, a stream instance identifier, delta-handling state, and the like — as distinct from the element's model content, which is what the element *means*.
+
+```
+<STR name : "Bob" {sid = 455, pid = 6, porthol:rev = "12:34.54"}>
+```
+
+#### 4.8.1 Out-of-Model Status
+
+The metadata block is **not model content**. This is the defining property of the channel, and it is a Layer 1 structural fact — decidable by the parser, requiring no vocabulary knowledge (contrast Extensions, §6.10, which are model content). Concretely:
+
+- Metadata MUST NOT participate in model equality or canonical comparison (§A.5). Two documents that differ only in their metadata blocks carry the **same model** and are model-equal.
+- A processor MAY add, modify, or strip metadata pairs at any point without affecting any conformance verdict (§A.1) the document earns. Stripping every metadata block yields a document with identical model content.
+- Metadata is realization-layer annotation in the sense of §1.1: it belongs to a particular carriage of the element (a database row, a stream frame), not to the abstract element that survives across realizations. The database field table of §10.2 is the same information at rest; the metadata block is its serialization when the element travels.
+
+This out-of-model status is *why* the channel is deliberately impoverished (§4.8.3): anything rich enough to need structure, references, or semantic typing is model content and belongs in an Extension (§6.10), a Record, or — for carriage of the whole package — transport-layer metadata on a Package or Group (§7.1).
+
+#### 4.8.2 Grammar
+
+```ebnf
+Metadata     ::= "{" ( MetaPair ( "," MetaPair )* )? "}"
+MetaPair     ::= MetaKey "=" MetaLiteral
+MetaKey      ::= Identifier
+MetaLiteral  ::= StringLiteral | IntLiteral | FloatLiteral
+               | BoolLiteral   | BytesLiteral
+```
+
+- **Keys** are identifiers (§4.4.1); the CURIE form (`porthol:sid`) is admitted for namespacing and lexes by the same rule that admits `gdx:name` in element positions (`:` is an `IdContChar`; the pair separator `=` is not, so the key/value boundary is unambiguous even without surrounding whitespace).
+- **Values** are Resource literals (§4.2) of the five value-kinds — string, integer, float, boolean, bytes. Reference literals are NOT admitted (metadata addresses nothing). A value MUST be a literal: a bare unquoted token that is not a recognized literal keyword is malformed, not an implicit string. Strings are quoted or they do not appear — this is what keeps the channel free of implicit-typing ambiguity.
+- **Separators.** `=` separates a key from its value; `,` separates pairs. Whitespace MAY appear around either. The `=`/`,` pairing (rather than `:`/whitespace) is deliberate: it visually marks the block as annotation rather than element structure, and avoids adjacency between the CURIE `:` and a separator `:`.
+- **Value-kind** is carried by the literal form exactly as in Resource position (§4.2): quoted → string, bare digits → integer, decimal-point/exponent/suffix/keyword → float, `true`/`false` → boolean, `0x`/`0z` → bytes. No prefix token is written; the pair is not an element and takes no role.
+
+An empty block `{}` is permitted and is equivalent to no block. Duplicate keys within one block are malformed; conforming parsers SHOULD emit a diagnostic. Key comparison is case-sensitive ordinal, as for all identifiers (§3.2).
+
+#### 4.8.3 What Metadata Is Not
+
+The channel carries **representational** typing (the literal form) and explicitly no **semantic** typing. A metadata value has no `--type`, satisfies no Template, and participates in no vocabulary: `porthol:rev = "12:34.54"` travels as a string, and the consumer that owns the `rev` key supplies its interpretation — exactly the contract of an HTTP header value. The block admits no nesting, no elements, no references, and no Sets. These are not omissions to be filled by a later revision; they are the boundary that makes “this is not data” credible. A need for any of them is the signal that the information is model content and belongs in the model.
+
+#### 4.8.4 Positions and Persistence
+
+A metadata block MAY appear on any element in any position, including leaf Properties, Records, Objects, @-edges, and REFs. It is written after the Type field and, on a non-leaf element, before the opening of the child list.
+
+```
+<REC address {sid = 9021}
+    <STR street : "Main St">
+    <INT number : 100 {pid = 6}>
+>
+```
+
+Because metadata is out-of-model, a realization is not required to carry it in order to be model-faithful (§1.1): a conversion that drops the block still preserves the model. Realizations SHOULD carry the channel and conversions SHOULD preserve it, but neither is required for model conformance. A pipeline that depends on metadata surviving — delta streaming, for instance — selects realizations that carry it; it does not rely on the model-conformance contract to guarantee preservation. The signing consequence follows directly: the canonical form (§A.5) excludes metadata, so a signature over canonical content covers model content only. An application that must sign carriage information signs the realization octets (the stored row, the stream frame), not the canonical form.
 
 ---
 
@@ -2081,7 +2147,7 @@ The `--type` reference is a Layer 2 (schema) assertion (§2.2). Resolving the re
 
 An instance child satisfies a Template slot by matching the slot's `Id` field, using case-sensitive ordinal comparison (§3.2). When a Template slot declares a `Rel`, an instance child carrying the same `Rel` MAY align to the slot even if its local `Id` differs; in that case the `Rel` is the alignment key, supporting cross-vocabulary instances whose local names differ from the Template's slot names.
 
-The `Key` field plays no role in Template-instance alignment. Keys are an independent named-anchor mechanism (§4.4.5) used by `KeyRef` and `IdKeyRef` reference literals; they are not consulted during schema validation.
+The `Key` field plays no role in Template-instance alignment. Keys are an independent named-anchor mechanism (§4.4.5) used by `KeyRef` and `IdKeyRef` reference literals; they are not consulted during schema validation and are excluded from the universal claim rule (§8.2.3).
 
 #### 8.2.2 Cross-Role and Transport Restrictions
 
@@ -2101,7 +2167,7 @@ Transport-layer roles (Package, Group) are not subjects of Templates in the core
 
 #### 8.2.3 The Universal Claim Rule
 
-A Template MAY declare values for fields that the instance can also carry: the `Rel` field, the `Key` field, the `--type` field (in nested slots), and a default `Resource` value. When both the Template and the instance carry a value for the same field on the same aligned slot, the values are reconciled by a uniform rule that applies independently to each claim-bearing field.
+A Template MAY declare values for fields that the instance can also carry: the `Rel` field, the `--type` field (in nested slots), and a default `Resource` value. When both the Template and the instance carry a value for the same field on the same aligned slot, the values are reconciled by a uniform rule that applies independently to each claim-bearing field.
 
 | Template state | Instance state | Effective value | Disposition |
 |---|---|---|---|
@@ -2111,7 +2177,9 @@ A Template MAY declare values for fields that the instance can also carry: the `
 | claimed | claimed (matching) | confirmed | Both sides agree. The claim is affirmed. |
 | claimed | claimed (differing) | — | **Conflict.** The instance is Layer 2a non-conforming. |
 
-The rule applies independently to each field. An instance MAY satisfy the rule for `Rel` (case 3 — Template-supplied) while supplying its own value for `Key` (case 2 — free instance claim), with both outcomes being valid.
+The rule applies independently to each field. An instance MAY satisfy the rule for `Rel` (case 3 — Template-supplied) while freely supplying its own `Resource` value where the Template declares no default (case 2 — free instance claim), with both outcomes being valid.
+
+**The `Key` field is excluded from the claim rule.** A Key is an instance-level addressing decision, never a Template claim. The exclusion is structural, not stylistic: Keys are scope-unique (§4.4.5) while a Template is a reusable shape, so a Template-declared Key would stamp a scope-unique value onto every instance of the shape — two instances of the same Template within one Object scope would materialize (§8.2.4) colliding Keys, producing a malformed document from conforming inputs. Templates MUST NOT declare a `Key` on a slot; instances freely carry Keys, which are invisible to schema validation (§8.2.1).
 
 The differing-claims case (the conflict row) MUST be reported as a Layer 2a non-conformance. Implementations MUST NOT silently prefer one side over the other.
 
@@ -2147,7 +2215,7 @@ This creates a real difference between the instance's logical content and its pe
 >
 ```
 
-Materialization applies to the claim-bearing fields named in §8.2.3: `Rel`, `Key`, `Resource` defaults, and nested `--type` claims. It does NOT extrapolate beyond what the Template explicitly declares; missing slots are not added — including slots for which the Template declares a default Resource — and Constraint Extensions (§8.4) are not copied from Template to instance (constraints are vocabulary-defined and remain Template-scoped). The absent-slot rule is deliberate: the instance is the reality, and a slot's absence may itself be meaningful (the slot may have been deliberately removed); materialization refines what is present, it never resurrects what is not. A default Resource therefore materializes only into a *present-but-null* slot. Imparting Template defaults into a brand-new instance — filling in every defaulted slot at creation time — is an *instantiation* operation performed by authoring tooling, not part of materialization; once instantiated, the materialized representation is authoritative.
+Materialization applies to the claim-bearing fields named in §8.2.3: `Rel`, `Resource` defaults, and nested `--type` claims. It does NOT extrapolate beyond what the Template explicitly declares; missing slots are not added — including slots for which the Template declares a default Resource — and Constraint Extensions (§8.4) are not copied from Template to instance (constraints are vocabulary-defined and remain Template-scoped). The absent-slot rule is deliberate: the instance is the reality, and a slot's absence may itself be meaningful (the slot may have been deliberately removed); materialization refines what is present, it never resurrects what is not. A default Resource therefore materializes only into a *present-but-null* slot. Imparting Template defaults into a brand-new instance — filling in every defaulted slot at creation time — is an *instantiation* operation performed by authoring tooling, not part of materialization; once instantiated, the materialized representation is authoritative.
 
 **Materialization is RECOMMENDED for persistence and exchange.** Documents that will be persisted, transmitted, archived, or signed SHOULD be materialized before they are written. This preserves the search and self-description properties of the data when the Template is not accessible at read time. Materialization is OPTIONAL for in-memory processing; tools MAY apply the §8.2.3 claim rule on-the-fly during processing without rewriting the document.
 
@@ -2453,6 +2521,8 @@ A single table can store an arbitrary GDX document with the following column str
 
 This single-schema approach allows GDX storage without per-document schema migration. Adding a new Object role, Property, or Template requires no schema changes — just additional rows.
 
+Store-native columns beyond those above (a persistence identifier, a row version, delta-handling state) are the at-rest form of an element's metadata channel (§4.8): they annotate how the element is stored, not what it means, and they are the natural source and sink for the `{...}` block when the element is serialized out or parsed in. Because metadata is out-of-model, these columns are outside the round-trip contract (§A.2) — a backend MAY carry, add, or drop them without affecting model-conforming round-trip.
+
 @-Edge and Reference targets stored as `ResourceValue` strings can be resolved at query time by joining against the `Id` column. For systems where the reference target is known at write time, the reference can be denormalized to a `TargetRowId` column for direct lookup. The resolution strategy is implementation choice; both approaches are conforming. Per §6.4 axiom E2′, @-edges are owned by their source element and SHOULD be modeled with `ON DELETE CASCADE` on the source foreign key so that deleting a source removes its edges.
 
 Other persistence strategies (document store, graph database, key-value store) follow analogous principles: preserve the data model, preserve element ordering, and preserve the round-trip contract (§10.4).
@@ -2554,6 +2624,7 @@ A serialization MAY normalize:
 - Null Property forms (canonical form is the bare `<STR name>`; serializers normalize the empty-value form `<STR name : >` to the bare form).
 - Indentation in Standard or Compact forms.
 - The choice of Standard, Compact, or Binary form (so long as the chosen form is itself conforming).
+- The metadata channel (§4.8). Metadata is out-of-model: a serialization MAY add, alter, or drop metadata blocks without affecting representation-conformance. A serialization that preserves metadata is not thereby *more* conforming, and one that drops it is not *less* conforming — the round-trip contract above ranges over model content only. (Preserving metadata is nonetheless RECOMMENDED where downstream carriage depends on it; §4.8.4.)
 
 A serialization MUST NOT alter:
 
@@ -2684,6 +2755,32 @@ The test suite is exhaustive in concept and bounded in practice. Each category a
 ## Appendix B — Detailed Revision History
 
 This appendix records the per-revision change descriptions accumulated during the pre-1.0 working-draft phase. The Revision History table at the top of this document gives the version + date summary; this appendix carries the prose detail. Once the specification reaches v1.0, this appendix will be archived and subsequent revisions will use a leaner change-log format.
+
+### v0.23.0 — Realization metadata channel (`{...}`)
+
+(53) **A per-element metadata channel is added: a brace-delimited block of flat key/value pairs, written last, carrying out-of-model carriage annotation** (persistence identifiers, stream/instance identifiers, delta-handling state). The channel fills a real gap — previously the only homes for such information were Extensions (model content, wrong: they travel with equality, signing, and round-trip) or a reserved-name hack in the data namespace (the CouchDB `_id`/`_rev`, Mongo `_id`, OData `@odata.etag` pattern, with its documented leakage and collision costs). The design mirrors USD's metadata dicts and the HTTP header/body split: a lexically distinct, structurally ignorable channel.
+
+- **New §4.8 (Metadata).** Defines the channel: out-of-model status as a Layer 1 structural fact (§4.8.1), grammar (§4.8.2), the representational-not-semantic typing boundary (§4.8.3), and positions/persistence/signing consequences (§4.8.4). Syntax: `{ key = literal, key = literal }` — keys are identifiers (CURIEs admitted for namespacing), values are the five Resource-literal value-kinds (no references), `=` separates key from value and `,` separates pairs. The channel is deliberately impoverished (flat, no nesting, no elements, no references, no semantic typing); the poverty is what makes the not-data claim credible and routes richer needs to Extensions or Records.
+
+- **Element tuple and field model updated (§3, §3.1).** The element tuple gains a trailing `Metadata?`; the §3.1 field table gains a `Metadata` row explicitly marked out-of-model. The six model fields are unchanged; metadata is set apart as a channel, not a seventh model field.
+
+- **Field order and lexis (§4.1, §4.1.1).** Write order becomes `Prefix · Key · Rel · Id · Resource · Type · Metadata`; the general form and the sigil/separator table are updated (`{ }` delimit the block). Trailing position lets a reader or stripping tool consume all model content before the annotation.
+
+- **Persistence and conformance (§10.2, §A.2).** §10.2 notes that store-native columns (persistence id, row version, delta state) are the at-rest form of the metadata channel and sit outside the round-trip contract. §A.2 adds metadata to the MAY-normalize set with an explicit out-of-model note: adding, altering, or dropping metadata does not affect representation-conformance, which ranges over model content only. The canonical form (§A.5) excludes metadata, so signatures over canonical content cover model content only.
+
+Migration: purely additive. No existing document changes; documents with no `{...}` block are unaffected. Implementations that round-trip model content remain conforming; those that wish to carry metadata gain a defined channel. The Compact and Binary Form companions SHOULD define a flat key/value metadata block aligned to §4.8; a realization MAY omit the channel and remain model-faithful.
+
+### v0.22.0 — Key field: claim-rule exclusion, unified token grammar, embedded-Object scope
+
+(52) **Three corrections to the Key mechanism, closing a materialization defect and two underspecifications.** Findings from a red-team review of the Key field against prior art (JSON Schema `$id`/`$anchor`, YAML anchors, `xml:id`, protobuf field numbering).
+
+- **`Key` removed from the universal claim rule (§8.2.3, §8.2.4, §8.2.1).** Templates could previously declare a `Key` value on a slot, reconciled by the claim rule and written into instances by materialization. This was incoherent: Keys are scope-unique (§4.4.5) while Templates are reusable shapes, so a Template-declared Key materialized into two same-typed instances within one Object scope produced a Key collision — a malformed document generated from conforming inputs by a RECOMMENDED operation. The claim-bearing field list is now `Rel`, nested `--type`, and default `Resource`; a normative exclusion paragraph in §8.2.3 records the rationale (Templates MUST NOT declare a `Key` on a slot). This removes the last residue of the pre-v0.11 Template-slot-alignment role of Keys (entry 7).
+
+- **Key token grammar unified; the “numeric form” framing removed (§4.4.3, §4.2.6, §4.4).** The Key field previously admitted two forms — standard identifiers and all-digit “numeric Keys” — which left digit-leading mixed tokens (GUIDs such as `7f3a2b9c-…`, already used as examples in §4.2.6 and §4.4.3) formally admitted by neither form. The Key token is now a single grammar: an identifier token whose start set additionally admits digits (`KeyToken ::= (ALPHA | DIGIT | "_") IdContChar*`). The relaxation is lexically safe because Key tokens are always `&`-introduced, so the digit-start/numeric-literal ambiguity behind the `IdStartChar` restriction cannot arise. Key tokens carry no numeric interpretation; comparison remains ordinal (`&01` ≠ `&1`). Authority for `KeyToken` moves from `GDX-Path.md` into §4.4.3 (the field's home); `GDX-Path.md` retains `PathExpression` and the resolution algorithms and MUST be aligned to the §4.4.3 grammar in its next revision.
+
+- **Key scope pinned for embedded Objects; single-scope lookup made explicit (§4.4.5).** An Object occupying a VAL slot opens a fresh Key scope: its interior Keys are scoped to it, while its own Key belongs to the host's scope. `KeyRef` resolution consults exactly one scope — no outward walk, no shadowing, no fallback — and cross-boundary addressing uses `IdKeyRef`. Previously the nearest-enclosing-container rule left the VAL-occupant case implicit and the single-scope discipline unstated, inviting divergent lexical-scoping implementations.
+
+Migration: Templates that declare `Key` on slots MUST remove the declaration (instances carry their own Keys). Documents using digit-leading GUID Keys — previously present in the specification's own examples but admitted by neither lexical form — become formally valid. No other document changes.
 
 ### v0.21.0 — Matrix/prose consistency pass; Template placement pinned; `%PKG`/`%GRP` confirmed
 
