@@ -154,7 +154,7 @@ Instance children align to Template slots by `Name` matching. When local names d
 
 Here the instance children have local `Name`s `prenom` and `nom`, which do not match the Template's slot `Name`s. The shared `#Rel` values (`schema:givenName`, `schema:familyName`) align them to the corresponding slots.
 
-The `&Anchor` field is NOT used for Template-instance alignment; Anchors are a separate location-stable anchor mechanism for references (see Pattern 22).
+The `&Anchor` field is NOT used for Template-instance alignment; the Anchor is an element's durable machine identity and location-stable reference target, a separate concern from the `Name`-based (and `Rel`-bridged) alignment shown here (see Pattern 22).
 
 ## 7. Edge Between Entities
 
@@ -204,7 +204,7 @@ An @-edge asserts a graph statement and admits attribute children. When you want
 >
 ```
 
-"sensor-hub stands in some relationship to device-7 — nature pending." Give the edge a `Anchor` (or `Name`) so it stays addressable; when the relationship is classified, refine the *same* edge by filling the field:
+"sensor-hub stands in some relationship to device-7 — nature pending." Give the edge an `Anchor` — its durable identity, the substance that endures while the predicate is still pending — so it stays addressable; when the relationship is classified, refine the *same* edge by filling the field:
 
 ```
 <OBJ sensor-hub
@@ -635,11 +635,11 @@ Path segments select by different fields depending on the segment's first charac
 
 A path used as a reference Resource MUST resolve to exactly one element of the matching role; zero matches, multiple matches, and matches of the wrong role all yield an unresolved reference. The GDX Path Expressions Specification (`GDX-Path.md`) gives the full grammar and resolution rules.
 
-Anchor-based addressing — for elements that carry a `Anchor` field — is covered in Pattern 22; it provides location-stable references that survive document restructuring.
+Anchor-based addressing — for elements that carry an `Anchor` field (their durable machine identity) — is covered in Pattern 22; it provides location-stable references that survive document restructuring.
 
 ## 24. Reference to an Anchored Element via Base
 
-When an element carries a `Anchor` field, it becomes a location-stable anchor — addressable independent of where it sits in the document tree. This is the recommended pattern for references that must survive document restructuring: long-lived archival references, cross-document audit links, and references into Sets of similar elements (log entries, transactions, events).
+When an element carries an `Anchor` field, that Anchor is its **durable machine identity** — a fixed handle independent of the element's Name and of where it sits in the document tree, and the thing persistence and durable graph links bind to. Because it is location-stable, it is the recommended target for references that must survive document restructuring: long-lived archival references, cross-document audit links, and references into Sets of similar elements (log entries, transactions, events). (An element's `Name`, by contrast, is a *descriptive* handle used for alignment and by-name resolution; renaming an element does not change its identity, but changing its Anchor does.) When the anchored element is a **root-level entity** (a top-level Object, REL, or HEAD), its Anchor is a *root anchor* and may also be the target of an `@`-edge — `<@OBJ #knows : &bob-anchor>` — not only of a `%`-reference; an Anchor on an interior element is REF-addressable only (Core Specification §4.4.5, §6.4).
 
 ```
 <OBJ system/audit-log
@@ -666,7 +666,7 @@ The reference `@system/audit-log&entry-12345` is an `NameAnchorRef`. The `@syste
 
 If the audit log is later restructured — entries archived into nested categories, reorganized by severity, etc. — the reference continues to resolve as long as the Anchor is preserved. A path-based equivalent like `$/system/audit-log/entries/[1]` would break under any such change.
 
-When the referencing element shares a document with the Anchored target, the `@Identifier` portion may be omitted; bare `&entry-12345` is a `AnchorRef` that looks up within the document scope.
+When the referencing element shares a document with the Anchored target, the `@Identifier` portion may be omitted; bare `&entry-12345` is an `AnchorRef` that looks up within the document scope.
 
 ```
 <OBJ compliance/internal-incident
