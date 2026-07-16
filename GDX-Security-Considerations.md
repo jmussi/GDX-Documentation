@@ -1,6 +1,6 @@
 # GDX — Security Considerations
 
-- **Status:** Draft v0.14.0 (companion to GDX Core Specification v0.20.0, working draft, pre-1.0)
+- **Status:** Draft v0.16.0 (companion to GDX Core Specification v0.24.0, working draft, pre-1.0)
 - **Date:** 2026-06-09
 - **Editors:** 
 - **Authors:** Julian Mussi
@@ -13,7 +13,7 @@ This document is a non-normative companion to the GDX Core Specification. It dis
 
 ## Status of This Document
 
-This is the v0.11.0 working draft of the Security Considerations, companion to the GDX Core Specification v0.11.0. It was previously published as Appendix C of the Core Specification through v0.10.0; it is now a separate companion document for clearer separation of normative and non-normative content.
+This is the v0.15.0 working draft of the Security Considerations, companion to the GDX Core Specification v0.23.0. It was previously published as Appendix C of the Core Specification through v0.10.0; it is now a separate companion document for clearer separation of normative and non-normative content.
 
 v0.11.0 introduces path-mode reference resolution (`$path` and `@id$path`). The threat surface for path-mode references is anticipated to be similar to that of identifier-mode references — cycles, unresolved targets, scope confusion — with one additional consideration: path expressions traverse the document tree by direct child match, and a maliciously-constructed document may exploit ordinal segments (`[N]`) to address arbitrary sub-elements. The mitigations enumerated in §2 (Reference Resolution) extend to path-mode references. A future revision SHOULD examine path-specific threats once implementations accumulate experience.
 
@@ -107,6 +107,7 @@ Considerations:
 - Content addresses are valid only over the strict canonical form. Any non-canonical input must be normalized before hashing; non-canonical forms produce different hashes for equivalent data.
 - The choice of hash function is application-defined. SHA-256 is conventional and currently considered secure; applications using GDX for long-lived signed content should be prepared to migrate to stronger hash functions as cryptographic guidance evolves.
 - Signatures cover the canonical bytes, not the data model. Two implementations that disagree about the canonical form will produce different signatures even for equivalent data. Conformance to the canonical-form rules (Appendix A.5) is therefore security-critical, not just stylistic.
+- The metadata channel (Core Spec §4.8) is **excluded from the strict canonical form** and is therefore **not covered by a signature over content**. Carriage annotation (persistence ids, stream ids, delta state) rides outside the signed bytes: a signature validates whether or not the metadata is present, altered, or stripped. Applications that must bind carriage information cryptographically MUST sign the realization octets (the stored row, the transmitted frame), not the canonical form. Treating a present-and-well-formed metadata pair as authenticated because the document is signed is an error.
 - Templates and Common Vocabulary references in signed documents create a dependency on the referenced definitions: if those definitions change, the signature still validates (the bytes are unchanged) but validation against the (now-different) Templates may produce different results. Long-lived signed documents should pin vocabulary versions to avoid this.
 
 ## 7. Transport Wrapper Trust
@@ -119,7 +120,25 @@ Considerations:
 - A Package carrying claims about its contents (counts, content type) does not bind those claims; a receiver should validate the actual contents independently rather than relying on the wrapper's metadata.
 - Discarding transport wrappers after unpacking (Core Spec §9.3) means Package-level metadata is lost unless explicitly preserved as provenance. Applications that care about the chain of custody should establish provenance preservation conventions explicitly.
 
-## 8. Document-Level Considerations
+## 8. Metadata Channel Trust
+
+The per-element metadata channel (Core Spec §4.8) carries out-of-model carriage annotation — persistence identifiers, stream/instance identifiers, delta-handling state — as flat `key = literal` pairs. Like transport-wrapper metadata (§7), this is *data*: any party that authored or relayed the document may have written it, and it carries no inherent authority. Unlike the model content, it is not reachable by Templates or constraint vocabularies, so schema validation never inspects it.
+
+Considerations:
+
+- **Unvalidated by construction.** Metadata is out-of-model, so Layer 2 validation (Templates, constraint Extensions) does not apply to it. A metadata pair that is well-formed lexically has been subject to no semantic check whatsoever. Consumers that read metadata keys (`sid`, `pid`, a revision token) MUST validate and bound those values themselves before use; a schema-conforming document says nothing about them.
+
+- **Injection into downstream sinks.** Because metadata values commonly flow into other systems — a `sid` used to build a database lookup, a `pid` written to a log line, a revision string echoed into an HTTP header — they are an injection vector exactly as any untrusted string is. A value like `sid = "455; DROP TABLE …"` is a well-formed GDX string literal; the risk is entirely in the sink. Consumers MUST treat metadata values as untrusted input and apply the escaping/parameterization appropriate to each sink.
+
+- **Dereference and SSRF.** The channel admits no reference literals (Core Spec §4.8.2), so GDX itself never resolves a metadata value. But an application that *interprets* a metadata value as a URL, file path, or record locator and dereferences it reintroduces the network-resolution risks of §4 (SSRF, information disclosure, resource exhaustion) at the application layer. Such interpretation is out of scope for GDX; applications that do it MUST apply the §4 mitigations (allowlisting, timeouts, size limits, disable-by-default for untrusted input).
+
+- **Not authenticated by document signatures.** Metadata is excluded from the strict canonical form (§6). A signature over canonical content does not cover metadata; a receiver MUST NOT treat a metadata pair as authenticated merely because the enclosing document is signed. Bind carriage information at the realization layer (signed row, signed frame) if it must be trusted.
+
+- **Amplification is bounded like any field.** Metadata is a flat, non-nested, non-recursive block (Core Spec §4.8.2, §4.8.3); it admits no elements, no nesting, and no references, so it introduces no traversal-amplification vector of its own. The §1 element-count and literal-length limits bound it as they bound any field. A pathologically large single metadata literal is covered by the §1 numeric/string literal-length mitigations.
+
+- **Stripping is safe.** Because metadata is out-of-model, a defensive consumer processing untrusted input MAY strip every metadata block on ingress without affecting the data model it recovers. Stripping is the most conservative posture for consumers that have no need of the carriage annotation.
+
+## 9. Document-Level Considerations
 
 A few practices apply across the categories above:
 

@@ -1,8 +1,8 @@
 # GDX Compact Form — Grammar Specification
 
-- **Status:** Draft v0.8 (companion to GDX Core Specification v0.20.0, working draft)
+- **Status:** Draft v0.10 (companion to GDX Core Specification v0.24.0, working draft)
 - **Date:** 2026-06-09
-- **Companion to:** GDX Core Specification v0.20.0, GDX Standard Grammar v0.11, GDX Path Expressions v0.4
+- **Companion to:** GDX Core Specification v0.24.0, GDX Standard Grammar v0.13, GDX Path Expressions v0.7
 - **Authors:** Julian Mussi
 
 
@@ -22,6 +22,8 @@ This is the v0.3 working draft. The grammar, indentation model, and Standard For
 Changes from v0.1 to v0.2: conformance with Core Specification v0.9.10. Cross-references updated to current section numbering: §8.2 rule 1 (root rule) → §7.2 rule 1; §5.10 (REM Annotation) → §6.3.6; §4.2 (Resource Literals) → §5.2; §3.3.4 (Null Forms) → §5.1.3; §3.1, §4.1 (field order/sigils) → §5.1 and §5.1.1; "§4" in the intro (Standard Form definition) → §5. Example fixes: the §1.1 opening example, the §6.2 standard-to-compact example, and the §7.1 Simple Configuration example were updated to use an Object root (`O config`) rather than a bare Record (`R config`), which is non-conformant per §7.2 rule 1. The §7.4 example was updated from the legacy `TDR Customer` Template form to the current `DEFOBJ Customer`. The §7.6 Transport Wrappers example was updated from `PACKAGE`/`BLOCK` (legacy names) to `PKG`/`GRP` (current names); Block is a data-layer construct, while Group is the transport-layer partition. Companion-version line updated to GDX Core Specification v0.9.10 and GDX Standard Grammar v0.5.
 
 Changes from v0.2 to v0.3: conformance with Core Specification v0.10.0 and Standard Grammar v0.6. (1) The Set marker `*` migrated from prefix to suffix throughout examples: `*S tags` becomes `S* tags`; `*R contacts` becomes `R* contacts`. (2) The `@` reference operator and `@KIND` reference elements are introduced; §4.1 adds an example showing `@OBJ employer : @com.acme` in Compact Form. (3) The `$` reference-literal sigil is reserved for future path-mode references; identifier-mode `@id` is normatively specified. (4) The Appendix A grammar reframes the Prefix production around the composition pattern `[@?][refinement-modifier?][base][*?]`, inheriting the sub-prefix vocabulary from the Standard Grammar. Cross-reference to REM Annotation updated to §6.5.6 (its new location in Core v0.10.0). Companion-version line updated to GDX Core Specification v0.10.0 and GDX Standard Grammar v0.6.
+
+Changes from v0.8 to v0.9: conformance with Core Specification v0.23.0. Core v0.23.0 adds a per-element metadata channel (Core Spec §4.8): a brace-delimited block of flat `key = literal` pairs, written last on an element line (after the Type, before any children), carrying out-of-model carriage annotation. The Compact Form line grammar carries the block verbatim — the `{...}` sits at the tail of the element line exactly as in Standard Form; §3.3 gains a field-order bullet and §3.5 defines the block. Because metadata is out-of-model, it does not participate in the data-model round-trip contract (§6.3); both forms carry it, and a conversion that drops it remains model-faithful. There is no collision with the Compact-Form `#` line-comment feature: metadata is inline and brace-delimited, comments are whole-line. Companion-version lines updated (Core v0.23.0, Standard Grammar v0.12, Path v0.6).
 
 Changes from v0.7 to v0.8: conformance with Core Specification v0.20.0. No grammar change. Core v0.20.0 makes the `#rel` field semantically optional on @-Edge elements: an edge line with no `#rel` is well-formed and denotes a relationship that exists but is undefined as to nature (Core Spec §6.4.2); the Rel field was already optional in this document's line grammar ("if present", §4). A bare `#` remains malformed; the empty Rel is expressed by omitting the field. An empty-rel example is added to §4.1. Core v0.19.0 (REF reframed as value-resolution) changes no syntax. Companion-version line updated to Core v0.20.0 and Standard Grammar v0.11.
 
@@ -191,7 +193,7 @@ L active : true
 
 The line content uses the same lexical rules as the corresponding Standard Form element body, with the `<` and `>` brackets implicit at the line boundaries.
 
-Field write order on a line is the same as in Standard Form: **Prefix · Key · Rel · Id · Resource · Type**.
+Field write order on a line is the same as in Standard Form: **Prefix · Anchor · Rel · Id · Resource · Type**.
 
 ```
 S &1 #schema:givenName firstName : "Alice" --gdx:string
@@ -250,11 +252,12 @@ Each indent level represents one step deeper in the tree. An element's children 
 The field order, sigils, and lexical rules are identical to Standard Form (Core Spec §4.1 and §5.1.1):
 
 - The prefix is first.
-- The Key field, if present, follows the prefix and uses the `&` sigil.
-- The Rel field, if present, follows the Key (or prefix) and uses the `#` sigil.
+- The Anchor field, if present, follows the prefix and uses the `&` sigil.
+- The Rel field, if present, follows the Anchor (or prefix) and uses the `#` sigil.
 - The Id field, if present, follows the Rel (or prior fields) with no sigil.
 - The Resource section, if present, follows the Id and uses `:` as separator.
 - The Type field, if present, follows the Resource (or Id) and uses the `--` sigil.
+- The metadata block, if present, is written last on the line — after the Type — as a brace-delimited `{...}` sequence (Core Spec §4.8; §3.5 below). It is out-of-model carriage annotation, not a model field.
 
 All sigil tightness rules from the Standard Grammar (§8) apply: `&`, `#`, `--`, `@` MUST be immediately followed by their content with no intervening whitespace.
 
@@ -312,6 +315,22 @@ Here, `S sibling` at depth 0 closes `R innermost`, `R inner`, and `R outer` simu
 
 End of file closes all remaining open elements.
 
+### 3.5 Metadata Block
+
+An element line MAY end with a metadata block: a brace-delimited sequence of flat key/value pairs carrying out-of-model carriage annotation (Core Spec §4.8). It is written after the Type and before the newline; on an element with children, it stays on the parent's line (children follow on subsequent indented lines, as usual).
+
+```
+S name : "Bob" {sid = 455, pid = 6}
+R address {sid = 9021}
+  S street : "Main St"
+  I number : 100 {pid = 6}
+```
+
+Anchors are identifiers (CURIEs admitted for namespacing); values are Resource literals of the five value-kinds (no references); `=` separates a key from its value and `,` separates pairs. The grammar is identical to Standard Form (Core Spec §4.8.2); the Compact Form carries the block verbatim. An empty block `{}` is permitted and equivalent to no block.
+
+Because the block is brace-delimited and inline, it does not collide with the whole-line `#` comment feature (§5.4). Metadata is out-of-model: a converter MAY carry, add, or drop it without affecting the data model (§6.3).
+
+
 ---
 
 ## 4. Resource Literals
@@ -341,7 +360,7 @@ The lexical productions for each literal type are inherited from the Standard Gr
 
 - Identifier-mode: `@anchor` (Core Spec §4.2.6).
 - Path-mode: `$/path/segments` (specified in `GDX-Path.md`).
-- Key-mode: `&target-key` (specified in `GDX-Path.md`; Key uniqueness rules in Core Spec §4.4.5).
+- Anchor-mode: `&target-key` (specified in `GDX-Path.md`; Anchor uniqueness rules in Core Spec §4.4.5).
 - Composed name + path: `@anchor$/path/segments` for cross-document path addressing.
 - Composed name + key: `@anchor&target-key` for cross-document key addressing.
 
@@ -619,11 +638,13 @@ The conversion is deterministic: a given data-model state produces a single cano
 A document that round-trips Compact → Standard → Compact (or Standard → Compact → Standard) preserves the data model exactly. The properties preserved are the same as the Core Spec's round-trip contract (§A.2):
 
 - Element prefixes
-- Identity fields (Id, Key, Rel, Type)
+- Identity fields (Id, Anchor, Rel, Type)
 - Resource value-kinds and values, including representation tags
 - Child element order
 - Annotations (REM elements)
 - Null state (bare or empty-value form normalizes to bare)
+
+The metadata channel (Core Spec §4.8) is carried verbatim by both forms, but it is out-of-model: it is not part of the data-model round-trip contract above, and a converter MAY add, alter, or drop it without affecting model-faithfulness. Carrying it is RECOMMENDED where downstream carriage depends on it.
 
 What is NOT preserved through round-trip:
 
@@ -961,7 +982,7 @@ ChildBlock      ::= (Element | MultiLineContinuation)+
                   // children at indent depth greater than parent
 
 ElementBody     ::= Prefix
-                    (SPACE Key)?
+                    (SPACE Anchor)?
                     (SPACE Rel)?
                     (SPACE Id)?
                     (ResourceSection)?
@@ -1002,12 +1023,12 @@ SetSuffix       ::= "*"
 // The composition pattern is the same in Compact Form as in Standard Form;
 // only the surrounding delimiters and indentation rules differ.
 
-Key             ::= "&" KeyContent
+Anchor             ::= "&" AnchorContent
 Rel             ::= "#" RelContent
 Id              ::= IdStartChar IdContChar*
 Type            ::= "--" TypeContent
 
-// KeyContent, RelContent, TypeContent, IdStartChar, IdContChar
+// AnchorContent, RelContent, TypeContent, IdStartChar, IdContChar
 // are inherited from the Standard Grammar.
 
 

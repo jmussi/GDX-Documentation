@@ -154,7 +154,7 @@ Instance children align to Template slots by `Id` matching. When local names dif
 
 Here the instance children have local `Id`s `prenom` and `nom`, which do not match the Template's slot `Id`s. The shared `#Rel` values (`schema:givenName`, `schema:familyName`) align them to the corresponding slots.
 
-The `&Key` field is NOT used for Template-instance alignment; Keys are a separate location-stable anchor mechanism for references (see Pattern 22).
+The `&Anchor` field is NOT used for Template-instance alignment; Anchors are a separate location-stable anchor mechanism for references (see Pattern 22).
 
 ## 7. Edge Between Entities
 
@@ -204,7 +204,7 @@ An @-edge asserts a graph statement and admits attribute children. When you want
 >
 ```
 
-"sensor-hub stands in some relationship to device-7 — nature pending." Give the edge a `Key` (or `Id`) so it stays addressable; when the relationship is classified, refine the *same* edge by filling the field:
+"sensor-hub stands in some relationship to device-7 — nature pending." Give the edge a `Anchor` (or `Id`) so it stays addressable; when the relationship is classified, refine the *same* edge by filling the field:
 
 ```
 <OBJ sensor-hub
@@ -635,11 +635,11 @@ Path segments select by different fields depending on the segment's first charac
 
 A path used as a reference Resource MUST resolve to exactly one element of the matching role; zero matches, multiple matches, and matches of the wrong role all yield an unresolved reference. The GDX Path Expressions Specification (`GDX-Path.md`) gives the full grammar and resolution rules.
 
-Key-based addressing — for elements that carry a `Key` field — is covered in Pattern 22; it provides location-stable references that survive document restructuring.
+Anchor-based addressing — for elements that carry a `Anchor` field — is covered in Pattern 22; it provides location-stable references that survive document restructuring.
 
-## 24. Reference to a Keyed Element via Anchor
+## 24. Reference to an Anchored Element via Base
 
-When an element carries a `Key` field, it becomes a location-stable anchor — addressable independent of where it sits in the document tree. This is the recommended pattern for references that must survive document restructuring: long-lived archival references, cross-document audit links, and references into Sets of similar elements (log entries, transactions, events).
+When an element carries a `Anchor` field, it becomes a location-stable anchor — addressable independent of where it sits in the document tree. This is the recommended pattern for references that must survive document restructuring: long-lived archival references, cross-document audit links, and references into Sets of similar elements (log entries, transactions, events).
 
 ```
 <OBJ system/audit-log
@@ -662,11 +662,11 @@ When an element carries a `Key` field, it becomes a location-stable anchor — a
 >
 ```
 
-The reference `@system/audit-log&entry-12345` is an `IdKeyRef`. The `@system/audit-log` portion resolves the audit-log Object by name; the `&entry-12345` portion then looks up the Keyed element within that Object's scope. The reference resolves to the Record with that Key.
+The reference `@system/audit-log&entry-12345` is an `IdAnchorRef`. The `@system/audit-log` portion resolves the audit-log Object by name; the `&entry-12345` portion then looks up the Anchored element within that Object's scope. The reference resolves to the Record with that Anchor.
 
-If the audit log is later restructured — entries archived into nested categories, reorganized by severity, etc. — the reference continues to resolve as long as the Key is preserved. A path-based equivalent like `$/system/audit-log/entries/[1]` would break under any such change.
+If the audit log is later restructured — entries archived into nested categories, reorganized by severity, etc. — the reference continues to resolve as long as the Anchor is preserved. A path-based equivalent like `$/system/audit-log/entries/[1]` would break under any such change.
 
-When the referencing element shares a document with the Keyed target, the `@Identifier` portion may be omitted; bare `&entry-12345` is a `KeyRef` that looks up within the document scope.
+When the referencing element shares a document with the Anchored target, the `@Identifier` portion may be omitted; bare `&entry-12345` is a `AnchorRef` that looks up within the document scope.
 
 ```
 <OBJ compliance/internal-incident
@@ -674,9 +674,9 @@ When the referencing element shares a document with the Keyed target, the `@Iden
 >
 ```
 
-Key uniqueness is scoped to the enclosing Object (or to the document for transport-layer elements); see Core Specification §4.4.5. Two different audit-log Objects MAY each have their own `&entry-12345` without collision, because Key resolution is scoped to one Object at a time.
+Anchor uniqueness is scoped to the enclosing Object (or to the document for transport-layer elements); see Core Specification §4.4.5. Two different audit-log Objects MAY each have their own `&entry-12345` without collision, because Anchor resolution is scoped to one Object at a time.
 
-When the anchor is not an Object — for example, a Keyed annotation on a REL declaration or a Keyed slot-documentation inside a Template — use an explicit anchor role marker. The marker is one of the closed prefix-vocabulary keywords (`OBJ`, `REL`, `DEFOBJ`, `PKG`, `GRP`, etc.) followed by `:`:
+When the anchor is not an Object — for example, an Anchored annotation on a REL declaration or an Anchored slot-documentation inside a Template — use an explicit anchor role marker. The marker is one of the closed prefix-vocabulary keywords (`OBJ`, `REL`, `DEFOBJ`, `PKG`, `GRP`, etc.) followed by `:`:
 
 ```
 <REL gdx:knows
@@ -690,7 +690,7 @@ When the anchor is not an Object — for example, a Keyed annotation on a REL de
 
 The `@REL:gdx:knows` anchor explicitly resolves as a REL rather than an Object. The default anchor role in composed references is `OBJ`, so the marker is only needed when the target lives inside something else.
 
-XML practitioners may recognize this pattern as the equivalent of `xml:id`. Convention: when converting GDX ↔ XML, GDX's `Key` corresponds to XML's `xml:id` attribute.
+XML practitioners may recognize this pattern as the equivalent of `xml:id`. Convention: when converting GDX ↔ XML, GDX's `Anchor` corresponds to XML's `xml:id` attribute.
 
 ## 25. Vocabulary Metadata Link
 

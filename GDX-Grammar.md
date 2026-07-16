@@ -1,8 +1,8 @@
 # GDX Standard Form — Grammar Specification
 
-- **Status:** Draft v0.11 (companion to GDX Core Specification v0.20.0, working draft)
+- **Status:** Draft v0.13 (companion to GDX Core Specification v0.24.0, working draft)
 - **Date:** 2026-06-09
-- **Companion to:** GDX Core Specification v0.20.0
+- **Companion to:** GDX Core Specification v0.24.0
 - **Authors:** Julian Mussi
 
 
@@ -20,10 +20,14 @@ Changes from v0.4 (this revision, v0.5): conformance with Core Specification v0.
 
 Changes from v0.5 (revision v0.6): conformance with Core Specification v0.10.0. The prefix vocabulary is reframed around the composition pattern `[@?][refinement-modifier?][base][*?]`. (1) The Set marker `*` is now a suffix rather than a prefix; the EBNF `SetPrefix` production is replaced by `SetSuffix`, which composes after a base or refinement-modifier-base. (2) A new `ReferencePrefix` (`@`) is added as the reference operator; the `@KIND` family composes with any `ModifierBase`, optionally followed by `SetSuffix`. The composition pattern is described rather than enumerated; valid `@KIND` prefixes are derived from the pattern. (3) The Reference operator MUST NOT compose with itself (`@@`-prefixed compositions are malformed). (4) The reference literal grammar (§5.6) is extended: identifier-mode `@Id` is normatively specified; path-mode `$PathExpression` is syntactically reserved with grammar deferred to a future revision (Core Specification §11.4). (5) The §3.1 element-variations table is reorganized by role category (instance, refinement, declaration, transport) and includes `ReferenceElement` and `SetElement` as derived forms. Cross-references to the Core Specification updated for §6.5.x renumbering (REM Annotation §6.3.6 → §6.5.6). No changes to literal grammars (strings, numerics, booleans, bytes), identifier grammar, field grammars, or whitespace rules.
 
-Changes from v0.6 (this revision, v0.7): conformance with Core Specification v0.11.0. (1) **§5.6 reference literal grammar normatively specifies path-mode and key-mode.** The placeholder `PathExpression ::= (* reserved; grammar deferred *)` is replaced by a forward reference to the companion GDX Path Expressions Specification (`GDX-Path.md`). Five `ReferenceLiteral` productions are recognized: `IdentifierReference` (`@Anchor`), `PathReference` (`$PathExpression`), `KeyReference` (`&KeyToken`), `IdPathReference` (`@Anchor$PathExpression`), and `IdKeyReference` (`@Anchor&KeyToken`). The `KeyReference` and `IdKeyReference` forms address an element by its location-stable `Key` anchor, scoped per Core Specification §4.4.5. The `Anchor` production extends the identifier portion of `@`-references with an optional `AnchorRole` keyword drawn from the closed prefix vocabulary (`OBJ`, `REL`, `DEFOBJ`, `PKG`, etc.) followed by `:`, disambiguating the role of the resolved element. Default anchor role in composed references is `OBJ`. (2) **§6 identifier grammar narrows.** `IdStartChar` no longer admits `/`. Identifiers may continue to contain `/` (`IdContChar` unchanged); only the leading-`/` form is removed. This change is a breaking change for documents conforming to v0.6 or earlier; the migration is mechanical (drop the leading `/` or move to a path-mode reference). (3) Appendix A updated to reflect the new reference-literal productions, the `Anchor` production, and the narrowed identifier grammar. (4) Cross-references to Core Specification updated to v0.11.0.
+Changes from v0.6 (this revision, v0.7): conformance with Core Specification v0.11.0. (1) **§5.6 reference literal grammar normatively specifies path-mode and key-mode.** The placeholder `PathExpression ::= (* reserved; grammar deferred *)` is replaced by a forward reference to the companion GDX Path Expressions Specification (`GDX-Path.md`). Five `ReferenceLiteral` productions are recognized: `IdentifierReference` (`@Base`), `PathReference` (`$PathExpression`), `AnchorReference` (`&AnchorToken`), `IdPathReference` (`@Base$PathExpression`), and `IdAnchorReference` (`@Base&AnchorToken`). The `AnchorReference` and `IdAnchorReference` forms address an element by its location-stable `Anchor` anchor, scoped per Core Specification §4.4.5. The `Base` production extends the identifier portion of `@`-references with an optional `BaseRole` keyword drawn from the closed prefix vocabulary (`OBJ`, `REL`, `DEFOBJ`, `PKG`, etc.) followed by `:`, disambiguating the role of the resolved element. Default anchor role in composed references is `OBJ`. (2) **§6 identifier grammar narrows.** `IdStartChar` no longer admits `/`. Identifiers may continue to contain `/` (`IdContChar` unchanged); only the leading-`/` form is removed. This change is a breaking change for documents conforming to v0.6 or earlier; the migration is mechanical (drop the leading `/` or move to a path-mode reference). (3) Appendix A updated to reflect the new reference-literal productions, the `Base` production, and the narrowed identifier grammar. (4) Cross-references to Core Specification updated to v0.11.0.
 
 
-Changes from v0.10 (this revision, v0.11): conformance with Core Specification v0.20.0. **No production changes.** Core v0.20.0 makes the `#rel` field semantically optional on @-Edge elements (an edge with no Rel field is well-formed; the empty rel denotes a relationship undefined as to nature — Core Spec §6.4.2). The grammar already expresses this: `IdentitySection` carries `(WS Rel)?` as optional on every element, and the former mandatory-predicate rule was a semantic rule (Core Spec axiom E4) validated outside this grammar. The `Rel ::= "#" RelContent` production is unchanged and continues to require content after the sigil — a bare `#` remains malformed everywhere; an empty Rel field is expressed by omitting the field entirely. A clarifying note is added to §4.2. Core v0.19.0 (REF reframed as value-resolution, §-allocation ADR, role-explicit endpoints note) changes no syntax and requires no grammar change.
+Changes from v0.12 (this revision, v0.13): conformance with Core Specification v0.24.0. **Terminology rename; no semantic or structural change.** The `Key` field is renamed `Anchor` (Core Spec v0.24.0, entry 54): productions `Key`→`Anchor`, `KeyToken`→`AnchorToken`, `KeyStartChar`→`AnchorStartChar`, `KeyReference`→`AnchorReference`, `IdKeyReference`→`IdAnchorReference`. Separately, the reference-literal `Anchor` production — the `@`-resolved starting element of a composed reference — is renamed `Base` (and `AnchorRole`→`BaseRole`) to free the name for the field. The `&` sigil is unchanged; the grammar shape is unchanged; no document changes. The metadata `MetaKey` production is NOT renamed (a KVP key is not an anchor).
+
+Changes from v0.11 (v0.12): conformance with Core Specification v0.23.0. Two production changes. (1) **Metadata section added to `ElementBody`.** Core v0.23.0 adds a per-element metadata channel (Core Spec §4.8): a brace-delimited block of flat key/value pairs, written after the Resource/Type and before any child list, carrying out-of-model carriage annotation. `ElementBody` gains an optional `MetadataSection` between `ResourceSection` and `Children`; the productions `MetadataSection`, `MetaPair`, `MetaKey`, and `MetaLiteral` are defined in §4.5. Because metadata is out-of-model, its presence or absence does not change the data-model content a document carries. (2) **`AnchorContent` unified to a single Anchor-token grammar (`AnchorToken`).** Core v0.23.0 (via the v0.22.0 Anchor-token unification) replaces the former two-form `NumericAnchor | Id` split with one grammar that permits a leading digit; authority for `AnchorToken` now lives in Core Spec §4.4.3 (moved out of `GDX-Path.md`). §4.1 and Appendix A are updated: `AnchorContent`/`NumericAnchor` are removed in favour of `AnchorToken`, and the `AnchorReference`/`IdAnchorReference` productions reference the same token. A digit-leading GUID Anchor (`&7f3a2b9c-…`), previously admitted by neither form, is now well-formed.
+
+Changes from v0.10 (v0.11): conformance with Core Specification v0.20.0. **No production changes.** Core v0.20.0 makes the `#rel` field semantically optional on @-Edge elements (an edge with no Rel field is well-formed; the empty rel denotes a relationship undefined as to nature — Core Spec §6.4.2). The grammar already expresses this: `IdentitySection` carries `(WS Rel)?` as optional on every element, and the former mandatory-predicate rule was a semantic rule (Core Spec axiom E4) validated outside this grammar. The `Rel ::= "#" RelContent` production is unchanged and continues to require content after the sigil — a bare `#` remains malformed everywhere; an empty Rel field is expressed by omitting the field entirely. A clarifying note is added to §4.2. Core v0.19.0 (REF reframed as value-resolution, §-allocation ADR, role-explicit endpoints note) changes no syntax and requires no grammar change.
 
 ## Table of Contents
 
@@ -83,10 +87,10 @@ Per Core Specification §7.2 rule 1, the root of a GDX document MUST be one of: 
 An empty document (no top-level elements) is malformed.
 
 ```ebnf
-Object          ::= ObjectElement
-Template        ::= TemplateElement
-RelDeclaration  ::= RelElement
-Package         ::= PackageElement
+Object         ::= ObjectElement
+Template       ::= TemplateElement
+RelDeclaration ::= RelElement
+Package        ::= PackageElement
 ```
 
 The detailed structure of these elements is defined in §3. Package and Group elements (transport-layer constructs introduced in Core Specification §9) follow the same general element grammar as data-layer elements; they are distinguished by their prefix tokens.
@@ -101,9 +105,9 @@ Every GDX element has the same general structure: an opening bracket, a prefix d
 ```ebnf
 Element         ::= "<" WS? Prefix ElementBody WS? ">"
 
-ElementBody     ::= IdentitySection? ResourceSection? Children?
+ElementBody     ::= IdentitySection? ResourceSection? MetadataSection? Children?
 
-IdentitySection ::= (WS Key)? (WS Rel)? (WS Id)?
+IdentitySection ::= (WS Anchor)? (WS Rel)? (WS Id)?
 
 ResourceSection ::= WS? ":" WS? Resource? (WS "--" Type)?
                   | WS "--" Type
@@ -117,6 +121,8 @@ ResourceSection ::= WS? ":" WS? Resource? (WS "--" Type)?
 Children        ::= (WS Element)+
 ```
 
+`MetadataSection` (§4.5) carries out-of-model annotation and sits after the Resource/Type and before any children. It is not model content (Core Spec §4.8); a parser that discards it still recovers the full data model.
+
 ### 3.1 Element Variations by Kind
 
 The general Element production above accepts any well-formed element. Additional structural rules are imposed by the role (declared via the Prefix) and the composition matrix of Core Specification §7.1. Those rules are semantic and are validated separately from grammar parsing.
@@ -125,35 +131,35 @@ The element forms recognized at the grammar level, organized by role category:
 
 ```ebnf
 (* Instance roles *)
-ObjectElement       ::= "<" WS? ObjectPrefix ElementBody WS? ">"
-RecordElement       ::= "<" WS? RecordPrefix ElementBody WS? ">"
-PropertyElement     ::= "<" WS? PropertyPrefix ElementBody WS? ">"
-BlockElement        ::= "<" WS? BlockPrefix ElementBody WS? ">"
-AnnotationElement   ::= "<" WS? AnnotationPrefix ElementBody WS? ">"
+ObjectElement     ::= "<" WS? ObjectPrefix ElementBody WS? ">"
+RecordElement     ::= "<" WS? RecordPrefix ElementBody WS? ">"
+PropertyElement   ::= "<" WS? PropertyPrefix ElementBody WS? ">"
+BlockElement      ::= "<" WS? BlockPrefix ElementBody WS? ">"
+AnnotationElement ::= "<" WS? AnnotationPrefix ElementBody WS? ">"
 
 (* @-Edge elements (@OBJ, @REL) are produced by the Reference operator
    composing with ObjectPrefix or RelPrefix and follow §6.4 of the Core
    Specification. They do not have a separate EdgeElement production. *)
 
 (* Refinement-modifier compositions *)
-QualifierElement    ::= "<" WS? QualifierComposition ElementBody WS? ">"
-ExtensionElement    ::= "<" WS? ExtensionComposition ElementBody WS? ">"
-EmbeddedElement     ::= "<" WS? EmbeddedComposition ElementBody WS? ">"
-NodeElement         ::= "<" WS? NodeComposition ElementBody WS? ">"
+QualifierElement  ::= "<" WS? QualifierComposition ElementBody WS? ">"
+ExtensionElement  ::= "<" WS? ExtensionComposition ElementBody WS? ">"
+EmbeddedElement   ::= "<" WS? EmbeddedComposition ElementBody WS? ">"
+NodeElement       ::= "<" WS? NodeComposition ElementBody WS? ">"
 
 (* Declaration roles *)
-TemplateElement     ::= "<" WS? TemplatePrefix ElementBody WS? ">"
-RelElement          ::= "<" WS? RelPrefix ElementBody WS? ">"
+TemplateElement   ::= "<" WS? TemplatePrefix ElementBody WS? ">"
+RelElement        ::= "<" WS? RelPrefix ElementBody WS? ">"
 
 (* Reference operator — composes with any of the above except itself *)
-ReferenceElement    ::= "<" WS? "@" ModifierBase SetSuffix? ElementBody WS? ">"
+ReferenceElement  ::= "<" WS? "@" ModifierBase SetSuffix? ElementBody WS? ">"
 
 (* Set suffix — composes with most bases and refinement modifiers *)
-SetElement          ::= "<" WS? ModifierBase "*" ElementBody WS? ">"
+SetElement        ::= "<" WS? ModifierBase "*" ElementBody WS? ">"
 
 (* Transport roles *)
-PackageElement      ::= "<" WS? PackagePrefix ElementBody WS? ">"
-GroupElement        ::= "<" WS? GroupPrefix ElementBody WS? ">"
+PackageElement    ::= "<" WS? PackagePrefix ElementBody WS? ">"
+GroupElement      ::= "<" WS? GroupPrefix ElementBody WS? ">"
 ```
 
 These are aliases of the general Element production for documentation purposes. A parser may match the general Element form and then determine the role from the prefix; the role-specific aliases are not required at the lexical level.
@@ -167,41 +173,39 @@ These are aliases of the general Element production for documentation purposes. 
 
 Each identity field has its own production that includes its sigil and content.
 
-### 4.1 Key Field
+### 4.1 Anchor Field
 
 ```ebnf
-Key             ::= "&" KeyContent
+Anchor          ::= "&" AnchorToken
 
-KeyContent      ::= NumericKey
-                  | Id
-
-NumericKey      ::= DIGIT+
+AnchorToken     ::= AnchorStartChar IdContChar*
+AnchorStartChar ::= ALPHA | DIGIT | "_"
 ```
 
-The `&` sigil MUST be immediately followed by the key content with no intervening whitespace. A Key may be a sequence of decimal digits (numeric slot reference) or an identifier (named slot reference).
+The `&` sigil MUST be immediately followed by the Anchor token with no intervening whitespace. An Anchor token is an identifier token whose start set additionally admits a leading digit (Core Spec §4.4.3); this admits sequential tokens (`&1`, `&2`) and digit-leading GUID/UUID anchors (`&7f3a2b9c-…`) alongside named anchors. The relaxation is unambiguous because an Anchor token is always `&`-introduced. Anchor tokens carry no numeric interpretation and compare by ordinal equality (`&01` ≠ `&1`). This grammar is identical to the `AnchorToken` used in the reference-literal forms (§5.6); authority is Core Spec §4.4.3.
 
 ### 4.2 Rel Field
 
 ```ebnf
-Rel             ::= "#" RelContent
+Rel        ::= "#" RelContent
 
-RelContent      ::= UriReference
-                  | Id
+RelContent ::= UriReference
+             | Id
 ```
 
 The `#` sigil MUST be immediately followed by the rel content with no intervening whitespace. A Rel content is either a full URI reference (recognized by the `://` sequence) or an identifier (typically a CURIE). A bare `#` — the sigil with no following content — is malformed; an empty Rel field is expressed by omitting the field entirely. The Rel field is lexically optional on every element (`IdentitySection`, §3); on @-Edge elements an omitted `#rel` is semantically well-formed and denotes a relationship undefined as to nature (Core Spec §6.4.2, added in Core v0.20.0).
 
 ```ebnf
-UriReference    ::= UriScheme "://" UriChars
+UriReference ::= UriScheme "://" UriChars
 
-UriScheme       ::= ALPHA (ALPHA | DIGIT | "+" | "-" | ".")*
+UriScheme    ::= ALPHA (ALPHA | DIGIT | "+" | "-" | ".")*
 
-UriChars        ::= UriChar+
+UriChars     ::= UriChar+
 
-UriChar         ::= ALPHA | DIGIT | "_" | "-" | "." | "/" | ":"
-                  | "?" | "#" | "[" | "]" | "@" | "!" | "$"
-                  | "&" | "'" | "(" | ")" | "*" | "+" | ","
-                  | ";" | "=" | "%" | "~"
+UriChar      ::= ALPHA | DIGIT | "_" | "-" | "." | "/" | ":"
+               | "?" | "#" | "[" | "]" | "@" | "!" | "$"
+               | "&" | "'" | "(" | ")" | "*" | "+" | ","
+               | ";" | "=" | "%" | "~"
 ```
 
 The UriChar set follows RFC 3986. URI references are permitted in Rel position. URI references are also permitted in any other identifier position; they fall under the general Id grammar (§6) when they begin with an alphabetic character followed by `://`.
@@ -209,9 +213,9 @@ The UriChar set follows RFC 3986. URI references are permitted in Rel position. 
 ### 4.3 Type Field
 
 ```ebnf
-Type            ::= "--" TypeContent
+Type        ::= "--" TypeContent
 
-TypeContent     ::= Id
+TypeContent ::= Id
 ```
 
 The `--` sigil MUST be immediately followed by the type content with no intervening whitespace. Whitespace MUST appear before the `--` sigil to separate it from the previous token. The type content uses the standard identifier grammar (§6).
@@ -221,15 +225,38 @@ The `--` sigil MUST be immediately followed by the type content with no interven
 The Resource production matches one of six value-kinds:
 
 ```ebnf
-Resource        ::= StringLiteral
+Resource ::= StringLiteral
+           | IntLiteral
+           | FloatLiteral
+           | BoolLiteral
+           | BytesLiteral
+           | ReferenceLiteral
+```
+
+Each literal form is defined in §5.
+
+
+### 4.5 Metadata Section
+
+The metadata section is a brace-delimited block of flat key/value pairs carrying out-of-model carriage annotation (Core Spec §4.8). It is written after the Resource/Type and before any child list.
+
+```ebnf
+MetadataSection ::= WS? "{" WS? ( MetaPair ( WS? "," WS? MetaPair )* )? WS? "}"
+
+MetaPair        ::= MetaKey WS? "=" WS? MetaLiteral
+
+MetaKey         ::= Id
+
+MetaLiteral     ::= StringLiteral
                   | IntLiteral
                   | FloatLiteral
                   | BoolLiteral
                   | BytesLiteral
-                  | ReferenceLiteral
 ```
 
-Each literal form is defined in §5.
+A `MetaKey` is an identifier (§6), admitting the CURIE form for namespacing; the `=` and `,` separators are outside `IdContChar`, so key/value and pair boundaries are lexically unambiguous. A `MetaLiteral` is a Resource literal of one of the five value-kinds — `ReferenceLiteral` is NOT admitted (metadata addresses nothing). An empty block `{}` is permitted and equivalent to no block. Duplicate `MetaKey` values within one block are malformed. Value-kind is carried by the literal form exactly as in Resource position (§5); no prefix token is written.
+
+Metadata is out-of-model (Core Spec §4.8.1): a conforming parser MAY discard the section without affecting the data model it recovers, and a serializer MAY add, alter, or drop it without affecting representation-conformance (Core Spec §A.2).
 
 
 ---
@@ -239,17 +266,17 @@ Each literal form is defined in §5.
 ### 5.1 String Literals
 
 ```ebnf
-StringLiteral   ::= '"' StringChar* '"'
+StringLiteral  ::= '"' StringChar* '"'
 
-StringChar      ::= EscapeSequence
-                  | ~('"' | '\')
+StringChar     ::= EscapeSequence
+                 | ~('"' | '\')
 
-EscapeSequence  ::= "\\" '"'           // literal "
-                  | "\\" "\\"          // literal \
-                  | "\\" "n"           // newline
-                  | "\\" "t"           // tab
-                  | "\\" "r"           // carriage return
-                  | "\\" "u" "{" HexDigit+ "}"  // Unicode codepoint
+EscapeSequence ::= "\\" '"'           // literal "
+                 | "\\" "\\"          // literal \
+                 | "\\" "n"           // newline
+                 | "\\" "t"           // tab
+                 | "\\" "r"           // carriage return
+                 | "\\" "u" "{" HexDigit+ "}"  // Unicode codepoint
 ```
 
 Any backslash sequence not in the escape set is malformed.
@@ -259,23 +286,23 @@ A StringChar matches any character (including whitespace and newlines) except an
 ### 5.2 Integer Literals
 
 ```ebnf
-IntLiteral      ::= IntNumeric IntSuffix?
+IntLiteral ::= IntNumeric IntSuffix?
 
-IntNumeric      ::= DecimalInt
-                  | BinaryInt
-                  | OctalInt
+IntNumeric ::= DecimalInt
+             | BinaryInt
+             | OctalInt
 
-DecimalInt      ::= Sign? DIGIT+
+DecimalInt ::= Sign? DIGIT+
 
-BinaryInt       ::= Sign? "0b" BinaryDigit+
+BinaryInt  ::= Sign? "0b" BinaryDigit+
 
-OctalInt        ::= Sign? "0o" OctalDigit+
+OctalInt   ::= Sign? "0o" OctalDigit+
 
-Sign            ::= "+" | "-"
+Sign       ::= "+" | "-"
 
-IntSuffix       ::= "i8" | "i16" | "i32" | "i64"
-                  | "u8" | "u16" | "u32" | "u64"
-                  | "bigint"
+IntSuffix  ::= "i8" | "i16" | "i32" | "i64"
+             | "u8" | "u16" | "u32" | "u64"
+             | "bigint"
 ```
 
 The integer suffix vocabulary is closed. A parser encountering an alphabetic suffix not in this set MUST reject the literal as malformed.
@@ -285,26 +312,26 @@ A signed unsigned-suffix combination (e.g., `-25u8`) is grammatically valid but 
 ### 5.3 Float Literals
 
 ```ebnf
-FloatLiteral    ::= FloatStandard FloatSuffix?
-                  | IntNumeric FloatSuffix      // integer-form, suffix required
-                  | IntNumeric                  // integer-form, no suffix
+FloatLiteral  ::= FloatStandard FloatSuffix?
+                | IntNumeric FloatSuffix      // integer-form, suffix required
+                | IntNumeric                  // integer-form, no suffix
                                                 //   (only valid in float-prefix
                                                 //    positions; lexically
                                                 //    indistinguishable from
                                                 //    IntLiteral — context
                                                 //    discriminates)
-                  | FloatKeyword
+                | FloatKeyword
 
-FloatStandard   ::= Sign? DIGIT+ "." DIGIT+ Exponent?
-                  | Sign? "." DIGIT+ Exponent?
-                  | Sign? DIGIT+ Exponent
+FloatStandard ::= Sign? DIGIT+ "." DIGIT+ Exponent?
+                | Sign? "." DIGIT+ Exponent?
+                | Sign? DIGIT+ Exponent
 
-Exponent        ::= ("e" | "E") Sign? DIGIT+
+Exponent      ::= ("e" | "E") Sign? DIGIT+
 
-FloatSuffix     ::= "f32" | "f64"
-                  | "d" | "d32" | "d64" | "d128"
+FloatSuffix   ::= "f32" | "f64"
+                | "d" | "d32" | "d64" | "d128"
 
-FloatKeyword    ::= "nan" | "inf" | "-inf"
+FloatKeyword  ::= "nan" | "inf" | "-inf"
 ```
 
 The float suffix vocabulary is closed. A parser encountering an alphabetic suffix not in this set MUST reject the literal as malformed.
@@ -323,13 +350,13 @@ The lexical form `5f32` is unambiguously a FloatLiteral (the `f32` suffix is a F
 ### 5.4 Boolean Literals
 
 ```ebnf
-BoolLiteral     ::= BoolTrue | BoolFalse
+BoolLiteral ::= BoolTrue | BoolFalse
 
-BoolTrue        ::= "true" | "TRUE" | "True"
-                  | "t" | "T"
+BoolTrue    ::= "true" | "TRUE" | "True"
+              | "t" | "T"
 
-BoolFalse       ::= "false" | "FALSE" | "False"
-                  | "f" | "F"
+BoolFalse   ::= "false" | "FALSE" | "False"
+              | "f" | "F"
 ```
 
 Boolean literals are case-insensitive on read. Both spelled-out (`true`, `false`) and single-letter (`t`, `f`) forms are accepted. The single-letter forms exist to support input from systems that use abbreviated boolean conventions (PostgreSQL `t`/`f`, certain command-line tools) and to accommodate compact human entry.
@@ -341,12 +368,12 @@ Conforming serializers MUST write boolean values in the lowercase spelled-out fo
 ### 5.5 Bytes Literals
 
 ```ebnf
-BytesLiteral    ::= HexBytes
-                  | Base64Bytes
+BytesLiteral ::= HexBytes
+               | Base64Bytes
 
-HexBytes        ::= "0x" HexDigit+
+HexBytes     ::= "0x" HexDigit+
 
-Base64Bytes     ::= "0z" Base64Char+ "="*
+Base64Bytes  ::= "0z" Base64Char+ "="*
 ```
 
 A bytes literal MUST contain at least one digit/character following the prefix; bare `0x` or `0z` is malformed.
@@ -356,7 +383,7 @@ A HexBytes literal MUST contain an even number of hex digits. An odd count is ma
 A Base64Bytes literal MUST conform to standard Base64 encoding (RFC 4648), including correct padding (`=` characters) to align the encoded length to a multiple of four characters.
 
 ```ebnf
-Base64Char      ::= ALPHA | DIGIT | "+" | "/"
+Base64Char ::= ALPHA | DIGIT | "+" | "/"
 ```
 
 ### 5.6 Reference Literals
@@ -366,38 +393,38 @@ Reference literals designate addressable elements. Five forms are recognized, co
 ```ebnf
 ReferenceLiteral    ::= IdentifierReference
                       | PathReference
-                      | KeyReference
+                      | AnchorReference
                       | IdPathReference
-                      | IdKeyReference
+                      | IdAnchorReference
 
-IdentifierReference ::= "@" Anchor
+IdentifierReference ::= "@" Base
 PathReference       ::= "$" PathExpression
-KeyReference        ::= "&" KeyToken
-IdPathReference     ::= "@" Anchor "$" PathExpression
-IdKeyReference      ::= "@" Anchor "&" KeyToken
+AnchorReference     ::= "&" AnchorToken
+IdPathReference     ::= "@" Base "$" PathExpression
+IdAnchorReference   ::= "@" Base "&" AnchorToken
 
-Anchor              ::= (AnchorRole ":")? Id
-AnchorRole          ::= "OBJ"  | "REL"  | "PKG"  | "GRP"
+Base                ::= (BaseRole ":")? Id
+BaseRole            ::= "OBJ"  | "REL"  | "PKG"  | "GRP"
                       | "DEFOBJ" | "DEFREC" | "DEFSTR"
                       | "DEFINT" | "DEFFLOAT" | "DEFBOOL" | "DEFBYTE"
 
 PathExpression      ::= (* specified in GDX-Path.md §3-§4 *)
-KeyToken            ::= (* specified in GDX-Path.md §5 *)
+AnchorToken         ::= AnchorStartChar IdContChar*   (* Core Spec §4.4.3; = §4.1 *)
 ```
 
-**Identifier-mode** (`@Anchor`) is normatively defined. The `@` sigil MUST be immediately followed by the anchor with no intervening whitespace. The identifier portion may be in any of the forms permitted by §6 (CURIEs, GUIDs, IRIs, local names, or hierarchical local names). The optional `AnchorRole` prefix carries a role-disambiguation keyword from the closed Core Specification §5.2 vocabulary.
+**Identifier-mode** (`@Base`) is normatively defined. The `@` sigil MUST be immediately followed by the anchor with no intervening whitespace. The identifier portion may be in any of the forms permitted by §6 (CURIEs, GUIDs, IRIs, local names, or hierarchical local names). The optional `BaseRole` prefix carries a role-disambiguation keyword from the closed Core Specification §5.2 vocabulary.
 
 **Path-mode** (`$PathExpression`) is normatively defined by the companion GDX Path Expressions Specification (`GDX-Path.md`). The `$` sigil introduces a path expression addressing an element by its structural location in the document tree. The `$` sigil MUST be immediately followed by the `/` of the path with no intervening whitespace.
 
-**Key-mode** (`&KeyToken`) is normatively defined by `GDX-Path.md`. The `&` sigil introduces a key lookup; the Key is resolved within the scope of the reference (the enclosing Object, or the document at transport-layer position; see Core Specification §4.4.5). The `&` sigil MUST be immediately followed by the Key token with no intervening whitespace.
+**Anchor-mode** (`&AnchorToken`) uses the `AnchorToken` grammar defined in §4.1 (authority: Core Spec §4.4.3); its resolution semantics are defined by `GDX-Path.md`. The `&` sigil introduces a key lookup; the Anchor is resolved within the scope of the reference (the enclosing Object, or the document at transport-layer position; see Core Specification §4.4.5). The `&` sigil MUST be immediately followed by the Anchor token with no intervening whitespace.
 
-**Composed name + path** (`@Anchor$PathExpression`) expresses cross-document addressing by structural traversal. The `@Anchor` portion resolves to a starting element by scope walk (per Core Specification §6.16), and the `$PathExpression` portion is then evaluated rooted at that starting element. No whitespace is permitted between `@`, the anchor, `$`, and the path. When the anchor carries no role marker, the starting element defaults to an Object.
+**Composed name + path** (`@Base$PathExpression`) expresses cross-document addressing by structural traversal. The `@Base` portion resolves to a starting element by scope walk (per Core Specification §6.16), and the `$PathExpression` portion is then evaluated rooted at that starting element. No whitespace is permitted between `@`, the anchor, `$`, and the path. When the anchor carries no role marker, the starting element defaults to an Object.
 
-**Composed name + key** (`@Anchor&KeyToken`) expresses cross-document addressing by key anchor. The `@Anchor` portion resolves to a starting element, and the `&KeyToken` portion is then looked up within that element's scope. No whitespace is permitted. When the anchor carries no role marker, the starting element defaults to an Object.
+**Composed name + key** (`@Base&AnchorToken`) expresses cross-document addressing by key anchor. The `@Base` portion resolves to a starting element, and the `&AnchorToken` portion is then looked up within that element's scope. No whitespace is permitted. When the anchor carries no role marker, the starting element defaults to an Object.
 
-**Anchor role markers.** The optional `AnchorRole` prefix is distinguished from a CURIE prefix by lookup against the closed `AnchorRole` set defined above. The parser MUST reject an unknown role keyword. At resolution time, the resolver MUST verify that the named element actually has the claimed role; mismatch yields an unresolved reference. Role markers are most useful in composed references where the anchor's role differs from the terminal target's role (for example, a `@STR` reference targeting an annotation child of a REL: `<@STR x : @REL:my-rel&annotation>`); in plain references and Object-anchored composed references, the marker is optional.
+**Base role markers.** The optional `BaseRole` prefix is distinguished from a CURIE prefix by lookup against the closed `BaseRole` set defined above. The parser MUST reject an unknown role keyword. At resolution time, the resolver MUST verify that the named element actually has the claimed role; mismatch yields an unresolved reference. Role markers are most useful in composed references where the anchor's role differs from the terminal target's role (for example, a `@STR` reference targeting an annotation child of a REL: `<@STR x : @REL:my-rel&annotation>`); in plain references and Object-anchored composed references, the marker is optional.
 
-The `$` and `&` operators do not combine within a single reference literal. The form `@Anchor$PathExpression&KeyToken` is malformed; an author chooses one of `IdPathReference` or `IdKeyReference` for the composed reference.
+The `$` and `&` operators do not combine within a single reference literal. The form `@Base$PathExpression&AnchorToken` is malformed; an author chooses one of `IdPathReference` or `IdAnchorReference` for the composed reference.
 
 When a reference literal appears as the Resource of a `@KIND` reference element (Core Specification §6.16), it MUST resolve to exactly one element of the matching role. See `GDX-Path.md` §7 for the normative address-mode singularity rule.
 
@@ -409,11 +436,11 @@ When a reference literal appears as the Resource of a `@KIND` reference element 
 A single identifier grammar applies to all identifier-bearing positions: the `Id` field, the contents of named keys (§4.1), the contents of Rel field when not a URI (§4.2), the contents of Type field (§4.3), and the target of reference literals (§5.6).
 
 ```ebnf
-Id              ::= IdStartChar IdContChar*
+Id          ::= IdStartChar IdContChar*
 
-IdStartChar     ::= ALPHA | "_"
+IdStartChar ::= ALPHA | "_"
 
-IdContChar      ::= ALPHA | DIGIT | "_" | "-" | "." | "/" | ":"
+IdContChar  ::= ALPHA | DIGIT | "_" | "-" | "." | "/" | ":"
 ```
 
 An identifier MUST begin with a letter or an underscore. It MAY continue with any combination of letters, digits, underscores, hyphens, periods, forward slashes, and colons.
@@ -474,33 +501,33 @@ Where (layer 2):
 
 Three composition prohibitions: `@@KIND` (no @-edge to @-edge), `@OBJ*`/`@REL*` (no Set of @-edges, per E5), `%%KIND` (no REF to REF, per R6), `@%KIND` (no @-edge to REF, per E5).
 
-Prefix recognition is case-insensitive. The grammar productions below show prefixes in their uppercase canonical case for clarity; conforming parsers MUST accept the same tokens in any combination of upper and lower case (`STR`, `Str`, `str`, `sTR` are all valid). Identifiers (Id, Key, Rel) remain case-sensitive (§6).
+Prefix recognition is case-insensitive. The grammar productions below show prefixes in their uppercase canonical case for clarity; conforming parsers MUST accept the same tokens in any combination of upper and lower case (`STR`, `Str`, `str`, `sTR` are all valid). Identifiers (Id, Anchor, Rel) remain case-sensitive (§6).
 
 ```ebnf
-Prefix              ::= RefSigil? RolePrefix
-                      | RolePrefix
+Prefix               ::= RefSigil? RolePrefix
+                       | RolePrefix
 
-RefSigil            ::= "%"
+RefSigil             ::= "%"
 
-RolePrefix          ::= EdgeSigil? ModifierBase SetSuffix?
+RolePrefix           ::= EdgeSigil? ModifierBase SetSuffix?
 
-EdgeSigil           ::= "@"
+EdgeSigil            ::= "@"
                         (* Restricted: EdgeSigil MUST compose only with
                            ObjectPrefix or RelPrefix, per Core Spec §6.4 E5.
                            Other compositions (e.g., @REC, @DEFOBJ) are
                            malformed when carrying EdgeSigil; those targets
                            are reached via RefSigil. *)
 
-ModifierBase        ::= RefinementBase
-                      | TemplatePrefix
-                      | RelPrefix
-                      | AnnotationPrefix
-                      | TransportPrefix
-                      | BlockPrefix
-                      | ValPrefix
-                      | BasePrefix
+ModifierBase         ::= RefinementBase
+                       | TemplatePrefix
+                       | RelPrefix
+                       | AnnotationPrefix
+                       | TransportPrefix
+                       | BlockPrefix
+                       | ValPrefix
+                       | BasePrefix
 
-SetSuffix           ::= "*"
+SetSuffix            ::= "*"
                         (* Restricted: does not combine with EdgeSigil
                            (no @OBJ* / @REL* per E5) or with ValPrefix
                            (no VAL* per §7.11 axiom 6). *)
@@ -508,9 +535,9 @@ SetSuffix           ::= "*"
 (* Refinement-modifier composition with bases. At most one refinement
    modifier may appear; refinement modifiers do not stack with each other. *)
 
-RefinementBase      ::= QualifierComposition
-                      | ExtensionComposition
-                      | NodeComposition
+RefinementBase       ::= QualifierComposition
+                       | ExtensionComposition
+                       | NodeComposition
 
 QualifierComposition ::= "." PropertyPrefix
 
@@ -524,30 +551,30 @@ NodeComposition      ::= "N" PropertyBase
    single child element (see Core Spec §6.11) and is not part of the
    prefix grammar. The `*` suffix does not compose with VAL. *)
 
-ValPrefix           ::= "VAL"  | "V"
+ValPrefix            ::= "VAL"  | "V"
 
 (* Bare base prefixes — canonical | minified *)
 
-BasePrefix          ::= ObjectPrefix
-                      | RecordPrefix
-                      | PropertyPrefix
+BasePrefix           ::= ObjectPrefix
+                       | RecordPrefix
+                       | PropertyPrefix
 
-ObjectPrefix        ::= "OBJ"  | "O"
-RecordPrefix        ::= "REC"  | "R"
+ObjectPrefix         ::= "OBJ"  | "O"
+RecordPrefix         ::= "REC"  | "R"
 
-PropertyPrefix      ::= "STR"   | "S"
-                      | "INT"   | "I"
-                      | "FLOAT" | "F"
-                      | "BOOL"  | "L"
-                      | "BYTE"  | "B"
+PropertyPrefix       ::= "STR"   | "S"
+                       | "INT"   | "I"
+                       | "FLOAT" | "F"
+                       | "BOOL"  | "L"
+                       | "BYTE"  | "B"
 
-PropertyBase        ::= "STR"   | "S"
-                      | "INT"   | "I"
-                      | "FLOAT" | "F"
-                      | "BOOL"  | "L"
-                      | "BYTE"  | "B"
+PropertyBase         ::= "STR"   | "S"
+                       | "INT"   | "I"
+                       | "FLOAT" | "F"
+                       | "BOOL"  | "L"
+                       | "BYTE"  | "B"
 
-RecordBase          ::= "REC"   | "R"
+RecordBase           ::= "REC"   | "R"
 
 (* The EDGE/E prefix used through Core Spec v0.11.0 is removed in v0.12.0;
    the @-Edge family (@OBJ, @REL — see Core Spec §6.4) replaces it. The
@@ -557,32 +584,32 @@ RecordBase          ::= "REC"   | "R"
 
 (* Template prefixes — canonical only, no minified form *)
 
-TemplatePrefix      ::= "DEFOBJ"
-                      | "DEFREC"
-                      | "DEFSTR"
-                      | "DEFINT"
-                      | "DEFFLOAT"
-                      | "DEFBOOL"
-                      | "DEFBYTE"
+TemplatePrefix       ::= "DEFOBJ"
+                       | "DEFREC"
+                       | "DEFSTR"
+                       | "DEFINT"
+                       | "DEFFLOAT"
+                       | "DEFBOOL"
+                       | "DEFBYTE"
 
 (* Standalone declaration prefixes — canonical only, no minified form *)
 
-RelPrefix           ::= "REL"
+RelPrefix            ::= "REL"
 
-AnnotationPrefix    ::= "REM"
+AnnotationPrefix     ::= "REM"
 
 (* Organizational prefix — canonical only, no minified form *)
 
-BlockPrefix         ::= "BLK"
+BlockPrefix          ::= "BLK"
 
 (* Transport-layer prefixes — canonical only, no minified form *)
 
-TransportPrefix     ::= PackagePrefix
-                      | GroupPrefix
+TransportPrefix      ::= PackagePrefix
+                       | GroupPrefix
 
-PackagePrefix       ::= "PKG"
+PackagePrefix        ::= "PKG"
 
-GroupPrefix         ::= "GRP"
+GroupPrefix          ::= "GRP"
 ```
 
 **The @-Edge sigil** `@` composes only with `ObjectPrefix` or `RelPrefix`, producing the two members of the @-Edge family. Examples:
@@ -613,23 +640,23 @@ A token in prefix position not matching the above is malformed.
 ### 7.2 Character Classes
 
 ```ebnf
-ALPHA           ::= [A-Z] | [a-z]
+ALPHA       ::= [A-Z] | [a-z]
 
-DIGIT           ::= [0-9]
+DIGIT       ::= [0-9]
 
-HexDigit        ::= DIGIT | [a-f] | [A-F]
+HexDigit    ::= DIGIT | [a-f] | [A-F]
 
-BinaryDigit     ::= "0" | "1"
+BinaryDigit ::= "0" | "1"
 
-OctalDigit      ::= [0-7]
+OctalDigit  ::= [0-7]
 ```
 
 ### 7.3 Whitespace
 
 ```ebnf
-WS              ::= WhitespaceChar+
+WS             ::= WhitespaceChar+
 
-WhitespaceChar  ::= " " | "\t" | "\n" | "\r"
+WhitespaceChar ::= " " | "\t" | "\n" | "\r"
 ```
 
 Whitespace is a sequence of one or more space, tab, newline, or carriage-return characters. Other Unicode whitespace characters (non-breaking space, em space, etc.) are NOT recognized as whitespace by this grammar.
@@ -745,36 +772,36 @@ This appendix consolidates all productions defined above into a single normative
 ```ebnf
 // ===== Lexical Primitives =====
 
-ALPHA           ::= [A-Z] | [a-z]
-DIGIT           ::= [0-9]
-HexDigit        ::= DIGIT | [a-f] | [A-F]
-BinaryDigit     ::= "0" | "1"
-OctalDigit      ::= [0-7]
+ALPHA                ::= [A-Z] | [a-z]
+DIGIT                ::= [0-9]
+HexDigit             ::= DIGIT | [a-f] | [A-F]
+BinaryDigit          ::= "0" | "1"
+OctalDigit           ::= [0-7]
 
-WhitespaceChar  ::= " " | "\t" | "\n" | "\r"
-WS              ::= WhitespaceChar+
+WhitespaceChar       ::= " " | "\t" | "\n" | "\r"
+WS                   ::= WhitespaceChar+
 
-Sign            ::= "+" | "-"
+Sign                 ::= "+" | "-"
 
-Base64Char      ::= ALPHA | DIGIT | "+" | "/"
+Base64Char           ::= ALPHA | DIGIT | "+" | "/"
 
 
 // ===== Identifiers =====
 
-IdStartChar     ::= ALPHA | "_"
-IdContChar      ::= ALPHA | DIGIT | "_" | "-" | "." | "/" | ":"
-Id              ::= IdStartChar IdContChar*
+IdStartChar          ::= ALPHA | "_"
+IdContChar           ::= ALPHA | DIGIT | "_" | "-" | "." | "/" | ":"
+Id                   ::= IdStartChar IdContChar*
 
 
 // ===== URI References =====
 
-UriScheme       ::= ALPHA (ALPHA | DIGIT | "+" | "-" | ".")*
-UriChar         ::= ALPHA | DIGIT | "_" | "-" | "." | "/" | ":"
-                  | "?" | "#" | "[" | "]" | "@" | "!" | "$"
-                  | "&" | "'" | "(" | ")" | "*" | "+" | ","
-                  | ";" | "=" | "%" | "~"
-UriChars        ::= UriChar+
-UriReference    ::= UriScheme "://" UriChars
+UriScheme            ::= ALPHA (ALPHA | DIGIT | "+" | "-" | ".")*
+UriChar              ::= ALPHA | DIGIT | "_" | "-" | "." | "/" | ":"
+                       | "?" | "#" | "[" | "]" | "@" | "!" | "$"
+                       | "&" | "'" | "(" | ")" | "*" | "+" | ","
+                       | ";" | "=" | "%" | "~"
+UriChars             ::= UriChar+
+UriReference         ::= UriScheme "://" UriChars
 
 
 // ===== Prefix Vocabulary =====
@@ -788,26 +815,26 @@ UriReference    ::= UriScheme "://" UriChars
 // the @-Edge family (@OBJ, @REL — see Core Spec §6.4) replaces it. The
 // `E` minified slot is currently unassigned.
 
-ObjectPrefix     ::= "OBJ"  | "O"
-RecordPrefix     ::= "REC"  | "R"
+ObjectPrefix         ::= "OBJ"  | "O"
+RecordPrefix         ::= "REC"  | "R"
 
-PropertyPrefix   ::= "STR"   | "S"
-                   | "INT"   | "I"
-                   | "FLOAT" | "F"
-                   | "BOOL"  | "L"
-                   | "BYTE"  | "B"
+PropertyPrefix       ::= "STR"   | "S"
+                       | "INT"   | "I"
+                       | "FLOAT" | "F"
+                       | "BOOL"  | "L"
+                       | "BYTE"  | "B"
 
-PropertyBase     ::= "STR"   | "S"
-                   | "INT"   | "I"
-                   | "FLOAT" | "F"
-                   | "BOOL"  | "L"
-                   | "BYTE"  | "B"
+PropertyBase         ::= "STR"   | "S"
+                       | "INT"   | "I"
+                       | "FLOAT" | "F"
+                       | "BOOL"  | "L"
+                       | "BYTE"  | "B"
 
-RecordBase       ::= "REC"   | "R"
+RecordBase           ::= "REC"   | "R"
 
-BasePrefix       ::= ObjectPrefix
-                   | RecordPrefix
-                   | PropertyPrefix
+BasePrefix           ::= ObjectPrefix
+                       | RecordPrefix
+                       | PropertyPrefix
 
 // --- Refinement-modifier compositions ---
 
@@ -816,55 +843,55 @@ ExtensionComposition ::= "_" PropertyPrefix
 NodeComposition      ::= "N" PropertyBase
                        | "N" RecordBase
 
-RefinementBase   ::= QualifierComposition
-                   | ExtensionComposition
-                   | NodeComposition
+RefinementBase       ::= QualifierComposition
+                       | ExtensionComposition
+                       | NodeComposition
 
 // --- VAL (element-as-value slot) — canonical | minified ---
 // VAL is a base prefix; its occupant is a child element, not part of
 // the prefix grammar. The `*` Set suffix does not compose with VAL.
 
-ValPrefix        ::= "VAL"  | "V"
+ValPrefix            ::= "VAL"  | "V"
 
 // --- Template prefixes (canonical only) ---
 
-TemplatePrefix   ::= "DEFOBJ"
-                   | "DEFREC"
-                   | "DEFSTR"
-                   | "DEFINT"
-                   | "DEFFLOAT"
-                   | "DEFBOOL"
-                   | "DEFBYTE"
+TemplatePrefix       ::= "DEFOBJ"
+                       | "DEFREC"
+                       | "DEFSTR"
+                       | "DEFINT"
+                       | "DEFFLOAT"
+                       | "DEFBOOL"
+                       | "DEFBYTE"
 
 // --- Standalone declaration and organizational prefixes (canonical only) ---
 
-RelPrefix        ::= "REL"
-AnnotationPrefix ::= "REM"
-BlockPrefix      ::= "BLK"
+RelPrefix            ::= "REL"
+AnnotationPrefix     ::= "REM"
+BlockPrefix          ::= "BLK"
 
 // --- Transport-layer prefixes (canonical only) ---
 
-PackagePrefix    ::= "PKG"
-GroupPrefix      ::= "GRP"
+PackagePrefix        ::= "PKG"
+GroupPrefix          ::= "GRP"
 
-TransportPrefix  ::= PackagePrefix | GroupPrefix
+TransportPrefix      ::= PackagePrefix | GroupPrefix
 
 // --- ModifierBase ---
 
-ModifierBase     ::= RefinementBase
-                   | TemplatePrefix
-                   | RelPrefix
-                   | AnnotationPrefix
-                   | TransportPrefix
-                   | BlockPrefix
-                   | ValPrefix
-                   | BasePrefix
+ModifierBase         ::= RefinementBase
+                       | TemplatePrefix
+                       | RelPrefix
+                       | AnnotationPrefix
+                       | TransportPrefix
+                       | BlockPrefix
+                       | ValPrefix
+                       | BasePrefix
 
 // --- Special operators (two sigils + Set suffix) ---
 
-SetSuffix        ::= "*"
-EdgeSigil        ::= "@"        // composes only with ObjectPrefix | RelPrefix
-RefSigil         ::= "%"        // wraps any layer-1 role-prefix
+SetSuffix            ::= "*"
+EdgeSigil            ::= "@"        // composes only with ObjectPrefix | RelPrefix
+RefSigil             ::= "%"        // wraps any layer-1 role-prefix
 
 // --- Layer 1 role-prefix (the "what role does this name?" surface) ---
 // EdgeSigil composes only with ObjectPrefix | RelPrefix; other combinations
@@ -873,124 +900,129 @@ RefSigil         ::= "%"        // wraps any layer-1 role-prefix
 // SetSuffix does not combine with EdgeSigil (no @OBJ*/@REL*) or with VAL
 // (no VAL*).
 
-RolePrefix       ::= EdgeSigil? ModifierBase SetSuffix?
+RolePrefix           ::= EdgeSigil? ModifierBase SetSuffix?
 
 // --- Layer 2 prefix composition (the full Prefix surface) ---
 // RefSigil cannot apply to itself (no %%KIND) and EdgeSigil cannot
 // apply to a RefSigil-wrapped form (no @%KIND).
 
-Prefix           ::= RefSigil? RolePrefix
+Prefix               ::= RefSigil? RolePrefix
 
 
 // ===== Suffix Vocabularies =====
 
-IntSuffix       ::= "i8" | "i16" | "i32" | "i64"
-                  | "u8" | "u16" | "u32" | "u64"
-                  | "bigint"
+IntSuffix            ::= "i8" | "i16" | "i32" | "i64"
+                       | "u8" | "u16" | "u32" | "u64"
+                       | "bigint"
 
-FloatSuffix     ::= "f32" | "f64"
-                  | "d" | "d32" | "d64" | "d128"
+FloatSuffix          ::= "f32" | "f64"
+                       | "d" | "d32" | "d64" | "d128"
 
 
 // ===== Resource Literals =====
 
-EscapeSequence  ::= "\\" '"'
-                  | "\\" "\\"
-                  | "\\" "n"
-                  | "\\" "t"
-                  | "\\" "r"
-                  | "\\" "u" "{" HexDigit+ "}"
+EscapeSequence       ::= "\\" '"'
+                       | "\\" "\\"
+                       | "\\" "n"
+                       | "\\" "t"
+                       | "\\" "r"
+                       | "\\" "u" "{" HexDigit+ "}"
 
-StringChar      ::= EscapeSequence
-                  | ~('"' | '\')
+StringChar           ::= EscapeSequence
+                       | ~('"' | '\')
 
-StringLiteral   ::= '"' StringChar* '"'
+StringLiteral        ::= '"' StringChar* '"'
 
-DecimalInt      ::= Sign? DIGIT+
-BinaryInt       ::= Sign? "0b" BinaryDigit+
-OctalInt        ::= Sign? "0o" OctalDigit+
-IntNumeric      ::= DecimalInt | BinaryInt | OctalInt
-IntLiteral      ::= IntNumeric IntSuffix?
+DecimalInt           ::= Sign? DIGIT+
+BinaryInt            ::= Sign? "0b" BinaryDigit+
+OctalInt             ::= Sign? "0o" OctalDigit+
+IntNumeric           ::= DecimalInt | BinaryInt | OctalInt
+IntLiteral           ::= IntNumeric IntSuffix?
 
-Exponent        ::= ("e" | "E") Sign? DIGIT+
-FloatStandard   ::= Sign? DIGIT+ "." DIGIT+ Exponent?
-                  | Sign? "." DIGIT+ Exponent?
-                  | Sign? DIGIT+ Exponent
-FloatKeyword    ::= "nan" | "inf" | "-inf"
-FloatLiteral    ::= FloatStandard FloatSuffix?
-                  | IntNumeric FloatSuffix
-                  | IntNumeric              // valid only in float-prefix
+Exponent             ::= ("e" | "E") Sign? DIGIT+
+FloatStandard        ::= Sign? DIGIT+ "." DIGIT+ Exponent?
+                       | Sign? "." DIGIT+ Exponent?
+                       | Sign? DIGIT+ Exponent
+FloatKeyword         ::= "nan" | "inf" | "-inf"
+FloatLiteral         ::= FloatStandard FloatSuffix?
+                       | IntNumeric FloatSuffix
+                       | IntNumeric              // valid only in float-prefix
                                             //   contexts (lexically same as
                                             //   IntLiteral; prefix discriminates)
-                  | FloatKeyword
+                       | FloatKeyword
 
-BoolLiteral     ::= BoolTrue | BoolFalse
-BoolTrue        ::= "true" | "TRUE" | "True" | "t" | "T"
-BoolFalse       ::= "false" | "FALSE" | "False" | "f" | "F"
+BoolLiteral          ::= BoolTrue | BoolFalse
+BoolTrue             ::= "true" | "TRUE" | "True" | "t" | "T"
+BoolFalse            ::= "false" | "FALSE" | "False" | "f" | "F"
 
-HexBytes        ::= "0x" HexDigit+
-Base64Bytes     ::= "0z" Base64Char+ "="*
-BytesLiteral    ::= HexBytes | Base64Bytes
+HexBytes             ::= "0x" HexDigit+
+Base64Bytes          ::= "0z" Base64Char+ "="*
+BytesLiteral         ::= HexBytes | Base64Bytes
 
-ReferenceLiteral    ::= IdentifierReference
-                      | PathReference
-                      | KeyReference
-                      | IdPathReference
-                      | IdKeyReference
-IdentifierReference ::= "@" Anchor
-PathReference       ::= "$" PathExpression
-KeyReference        ::= "&" KeyToken
-IdPathReference     ::= "@" Anchor "$" PathExpression
-IdKeyReference      ::= "@" Anchor "&" KeyToken
-Anchor              ::= (AnchorRole ":")? Id
-AnchorRole          ::= "OBJ"  | "REL"  | "PKG"  | "GRP"
-                      | "DEFOBJ" | "DEFREC" | "DEFSTR"
-                      | "DEFINT" | "DEFFLOAT" | "DEFBOOL" | "DEFBYTE"
-PathExpression      ::= /* specified in GDX-Path.md §3-§4 */
-KeyToken            ::= /* specified in GDX-Path.md §5 */
+ReferenceLiteral     ::= IdentifierReference
+                       | PathReference
+                       | AnchorReference
+                       | IdPathReference
+                       | IdAnchorReference
+IdentifierReference  ::= "@" Base
+PathReference        ::= "$" PathExpression
+AnchorReference      ::= "&" AnchorToken
+IdPathReference      ::= "@" Base "$" PathExpression
+IdAnchorReference    ::= "@" Base "&" AnchorToken
+Base                 ::= (BaseRole ":")? Id
+BaseRole             ::= "OBJ"  | "REL"  | "PKG"  | "GRP"
+                       | "DEFOBJ" | "DEFREC" | "DEFSTR"
+                       | "DEFINT" | "DEFFLOAT" | "DEFBOOL" | "DEFBYTE"
+PathExpression       ::= /* specified in GDX-Path.md §3-§4 */
+AnchorToken          ::= AnchorStartChar IdContChar*   /* Core Spec §4.4.3; = §4.1 */
 
-Resource        ::= StringLiteral
-                  | IntLiteral
-                  | FloatLiteral
-                  | BoolLiteral
-                  | BytesLiteral
-                  | ReferenceLiteral
+Resource             ::= StringLiteral
+                       | IntLiteral
+                       | FloatLiteral
+                       | BoolLiteral
+                       | BytesLiteral
+                       | ReferenceLiteral
 
 
 // ===== Fields =====
 
-NumericKey      ::= DIGIT+
-KeyContent      ::= NumericKey | Id
-Key             ::= "&" KeyContent
+AnchorToken          ::= AnchorStartChar IdContChar*
+AnchorStartChar      ::= ALPHA | DIGIT | "_"
+Anchor               ::= "&" AnchorToken
 
-RelContent      ::= UriReference | Id
-Rel             ::= "#" RelContent
+RelContent           ::= UriReference | Id
+Rel                  ::= "#" RelContent
 
-TypeContent     ::= Id
-Type            ::= "--" TypeContent
+TypeContent          ::= Id
+Type                 ::= "--" TypeContent
 
 
 // ===== Element Structure =====
 
-IdentitySection ::= (WS Key)? (WS Rel)? (WS Id)?
+IdentitySection      ::= (WS Anchor)? (WS Rel)? (WS Id)?
 
-ResourceSection ::= WS? ":" WS? Resource? (WS "--" TypeContent)?
-                  | WS "--" TypeContent
+ResourceSection      ::= WS? ":" WS? Resource? (WS "--" TypeContent)?
+                       | WS "--" TypeContent
 
-Children        ::= (WS Element)+
+MetadataSection      ::= WS? "{" WS? ( MetaPair ( WS? "," WS? MetaPair )* )? WS? "}"
+MetaPair             ::= MetaKey WS? "=" WS? MetaLiteral
+MetaKey              ::= Id
+MetaLiteral          ::= StringLiteral | IntLiteral | FloatLiteral | BoolLiteral | BytesLiteral
 
-ElementBody     ::= IdentitySection? ResourceSection? Children?
+Children             ::= (WS Element)+
 
-Element         ::= "<" WS? Prefix ElementBody WS? ">"
+ElementBody          ::= IdentitySection? ResourceSection? MetadataSection? Children?
+
+Element              ::= "<" WS? Prefix ElementBody WS? ">"
 
 
 // ===== Document =====
 
-TopLevelElement ::= Element       // Restricted by Core Spec §7.2 rule 1 to:
+TopLevelElement      ::= Element       // Restricted by Core Spec §7.2 rule 1 to:
                                   //   ObjectElement | TemplateElement
                                   //   | RelElement | PackageElement
 
-Document        ::= WS? TopLevelElement (WS+ TopLevelElement)* WS?
+Document             ::= WS? TopLevelElement (WS+ TopLevelElement)* WS?
 ```
 
 End of grammar.
