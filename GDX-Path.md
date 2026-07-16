@@ -12,7 +12,7 @@ This document defines the GDX Path Expression — a syntax and resolution model 
 
 The path grammar is uniform across all consuming contexts. This specification defines the syntax and per-segment selection semantics; the cardinality and failure semantics for any given consumer (references, delta operations, queries) are specified by the consuming layer. This document normatively defines address-mode behavior — the cardinality contract used by `@KIND` reference elements (Core Specification §6.16). Query-mode and delta-mode behaviors are reserved for future companion specifications.
 
-This specification resolves the `$PathExpression` reservation in Core Specification §11.4 (Path-Mode Reference Resolution). It defines the five reference-literal forms recognized in `%KIND` REF resources and `@OBJ`/`@REL` @-Edge resources: `NameRef` (`@Base`), `PathRef` (`$PathExpression`), `AnchorRef` (`&Anchor`), `NamePathRef` (`@Base$PathExpression`), and `NameAnchorRef` (`@Base&Anchor`). The composed forms `NamePathRef` and `NameAnchorRef` express cross-document addressing by structural path or by Anchor-based anchor respectively. The `Base` production carries an optional role marker (`@OBJ:id`, `@REL:id`, `@DEFOBJ:id`, etc.) drawn from the closed prefix vocabulary; when omitted, composed references default to an Object anchor.
+This specification resolves the `$PathExpression` reservation in Core Specification §11.4 (Path-Mode Reference Resolution). It defines the five reference-literal forms recognized in `%KIND` REF resources and `@OBJ`/`@REL`/`@HEAD` @-Edge resources: `NameRef` (`@Base`), `PathRef` (`$PathExpression`), `AnchorRef` (`&Anchor`), `NamePathRef` (`@Base$PathExpression`), and `NameAnchorRef` (`@Base&Anchor`). The composed forms `NamePathRef` and `NameAnchorRef` express cross-document addressing by structural path or by Anchor-based anchor respectively. The `Base` production carries an optional role marker (`@OBJ:id`, `@REL:id`, `@DEFOBJ:id`, etc.) drawn from the closed prefix vocabulary; when omitted, composed references default to an Object anchor.
 
 This document does not address query-mode semantics (wildcards, filters, descendant axis, projections), delta/patch operations, or filter expression languages. The syntactic territory those features require is enumerated as reserved (§9) so that v1 path expressions remain forward-compatible.
 
@@ -229,9 +229,9 @@ NamePathRef        ::= "@" Base "$" PathExpression
 NameAnchorRef      ::= "@" Base "&" AnchorToken
 
 Base             ::= (BaseRole ":")? Identifier
-BaseRole         ::= "OBJ"  | "REL"  | "PKG"  | "GRP"
+BaseRole         ::= "OBJ"  | "REL"  | "PKG"  | "GRP"  | "HEAD"
                    | "DEFOBJ" | "DEFREC" | "DEFSTR"
-                   | "DEFINT" | "DEFFLOAT" | "DEFBOOL" | "DEFBYTE"
+                   | "DEFINT" | "DEFFLOAT" | "DEFBOOL" | "DEFBYTE" | "DEFHEAD"
 
 AnchorToken      ::= AnchorStartChar NameContChar*   (* Core Spec §4.4.3 — authoritative *)
 AnchorStartChar  ::= ALPHA | DIGIT | "_"
@@ -457,9 +457,9 @@ NamePathRef        ::= "@" Base "$" PathExpression
 NameAnchorRef      ::= "@" Base "&" AnchorToken
 
 Base             ::= (BaseRole ":")? Identifier
-BaseRole         ::= "OBJ"  | "REL"  | "PKG"  | "GRP"
+BaseRole         ::= "OBJ"  | "REL"  | "PKG"  | "GRP"  | "HEAD"
                    | "DEFOBJ" | "DEFREC" | "DEFSTR"
-                   | "DEFINT" | "DEFFLOAT" | "DEFBOOL" | "DEFBYTE"
+                   | "DEFINT" | "DEFFLOAT" | "DEFBOOL" | "DEFBYTE" | "DEFHEAD"
 ```
 
 The address-mode singularity requirement (§7 of this specification) is added as a normative paragraph following the production. The "reserved, grammar deferred" language for `$PathExpression` is removed.
@@ -568,9 +568,9 @@ NamePathRef        ::= "@" Base "$" PathExpression
 NameAnchorRef      ::= "@" Base "&" AnchorToken
 
 Base             ::= (BaseRole ":")? Identifier
-BaseRole         ::= "OBJ"  | "REL"  | "PKG"  | "GRP"
+BaseRole         ::= "OBJ"  | "REL"  | "PKG"  | "GRP"  | "HEAD"
                    | "DEFOBJ" | "DEFREC" | "DEFSTR"
-                   | "DEFINT" | "DEFFLOAT" | "DEFBOOL" | "DEFBYTE"
+                   | "DEFINT" | "DEFFLOAT" | "DEFBOOL" | "DEFBYTE" | "DEFHEAD"
 
 
 // Path expression (§3, §4)

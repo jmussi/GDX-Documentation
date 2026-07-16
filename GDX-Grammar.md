@@ -77,17 +77,19 @@ A GDX document consists of one or more top-level elements separated by optional 
 Document        ::= WS? TopLevelElement (WS+ TopLevelElement)* WS?
 
 TopLevelElement ::= Object
+                  | Head
                   | Template
                   | RelDeclaration
                   | Package
 ```
 
-Per Core Specification §7.2 rule 1, the root of a GDX document MUST be one of: an Object, a Template, a REL declaration, or a Package. A document MAY contain multiple top-level elements; each top-level element MUST independently be a root-eligible type. This supports vocabulary documents that declare multiple Templates or REL elements at the root, files containing several independent Objects, and similar multi-root use cases.
+Per Core Specification §7.2 rule 1, the root of a GDX document MUST be one of: an Object, a HEAD, a Template, a REL declaration, or a Package. A document MAY contain multiple top-level elements; each top-level element MUST independently be a root-eligible type. This supports vocabulary documents that declare multiple Templates or REL elements at the root, files containing several independent Objects or HEAD aggregates, and similar multi-root use cases.
 
 An empty document (no top-level elements) is malformed.
 
 ```ebnf
 Object         ::= ObjectElement
+Head           ::= HeadElement
 Template       ::= TemplateElement
 RelDeclaration ::= RelElement
 Package        ::= PackageElement
@@ -132,14 +134,20 @@ The element forms recognized at the grammar level, organized by role category:
 ```ebnf
 (* Instance roles *)
 ObjectElement     ::= "<" WS? ObjectPrefix ElementBody WS? ">"
+HeadElement       ::= "<" WS? HeadPrefix ElementBody WS? ">"
 RecordElement     ::= "<" WS? RecordPrefix ElementBody WS? ">"
 PropertyElement   ::= "<" WS? PropertyPrefix ElementBody WS? ">"
 BlockElement      ::= "<" WS? BlockPrefix ElementBody WS? ">"
 AnnotationElement ::= "<" WS? AnnotationPrefix ElementBody WS? ">"
 
-(* @-Edge elements (@OBJ, @REL) are produced by the Reference operator
-   composing with ObjectPrefix or RelPrefix and follow §6.4 of the Core
-   Specification. They do not have a separate EdgeElement production. *)
+(* A HeadElement carries exactly one Body (an Object or REL) plus metadata
+   slots and adjuncts; the single-Body constraint and Body-detection rule are
+   composition-level, defined in Core Specification §6.17 (H1, H3), not in the
+   surface grammar. *)
+
+(* @-Edge elements (@OBJ, @REL, @HEAD) are produced by the Edge sigil
+   composing with ObjectPrefix, RelPrefix, or HeadPrefix and follow §6.4 of the
+   Core Specification. They do not have a separate EdgeElement production. *)
 
 (* Refinement-modifier compositions *)
 QualifierElement  ::= "<" WS? QualifierComposition ElementBody WS? ">"
@@ -404,9 +412,9 @@ NamePathReference     ::= "@" Base "$" PathExpression
 NameAnchorReference   ::= "@" Base "&" AnchorToken
 
 Base                ::= (BaseRole ":")? Name
-BaseRole            ::= "OBJ"  | "REL"  | "PKG"  | "GRP"
+BaseRole            ::= "OBJ"  | "REL"  | "PKG"  | "GRP"  | "HEAD"
                       | "DEFOBJ" | "DEFREC" | "DEFSTR"
-                      | "DEFINT" | "DEFFLOAT" | "DEFBOOL" | "DEFBYTE"
+                      | "DEFINT" | "DEFFLOAT" | "DEFBOOL" | "DEFBYTE" | "DEFHEAD"
 
 PathExpression      ::= (* specified in GDX-Path.md §3-§4 *)
 AnchorToken         ::= AnchorStartChar NameContChar*   (* Core Spec §4.4.3; = §4.1 *)
@@ -491,7 +499,7 @@ Layer 2 (REF wrapper):  "%" + [layer-1 role-prefix]
 ```
 
 Where (layer 1):
-- `@` is the optional @-Edge sigil; restricted to `@OBJ` and `@REL` (Core Spec §6.4 axiom E5)
+- `@` is the optional @-Edge sigil; restricted to `@OBJ`, `@REL`, and `@HEAD` (Core Spec §6.4 axiom E5)
 - `refinement-modifier` is one of `.`, `_`, `N`, `DEF` (at most one); VAL is a base prefix, not a modifier
 - `base` is a core role name
 - `*` is the optional Set suffix
@@ -499,7 +507,7 @@ Where (layer 1):
 Where (layer 2):
 - `%` is the REF sigil; wraps any layer-1 role-prefix to produce a `%KIND` REF (Core Spec §6.16)
 
-Three composition prohibitions: `@@KIND` (no @-edge to @-edge), `@OBJ*`/`@REL*` (no Set of @-edges, per E5), `%%KIND` (no REF to REF, per R6), `@%KIND` (no @-edge to REF, per E5).
+Three composition prohibitions: `@@KIND` (no @-edge to @-edge), `@OBJ*`/`@REL*`/`@HEAD*` (no Set of @-edges, per E5), `%%KIND` (no REF to REF, per R6), `@%KIND` (no @-edge to REF, per E5).
 
 Prefix recognition is case-insensitive. The grammar productions below show prefixes in their uppercase canonical case for clarity; conforming parsers MUST accept the same tokens in any combination of upper and lower case (`STR`, `Str`, `str`, `sTR` are all valid). Identifiers (Name, Anchor, Rel) remain case-sensitive (§6).
 
@@ -513,10 +521,10 @@ RolePrefix           ::= EdgeSigil? ModifierBase SetSuffix?
 
 EdgeSigil            ::= "@"
                         (* Restricted: EdgeSigil MUST compose only with
-                           ObjectPrefix or RelPrefix, per Core Spec §6.4 E5.
-                           Other compositions (e.g., @REC, @DEFOBJ) are
-                           malformed when carrying EdgeSigil; those targets
-                           are reached via RefSigil. *)
+                           ObjectPrefix, RelPrefix, or HeadPrefix, per Core
+                           Spec §6.4 E5. Other compositions (e.g., @REC,
+                           @DEFOBJ) are malformed when carrying EdgeSigil;
+                           those targets are reached via RefSigil. *)
 
 ModifierBase         ::= RefinementBase
                        | TemplatePrefix
@@ -525,6 +533,7 @@ ModifierBase         ::= RefinementBase
                        | TransportPrefix
                        | BlockPrefix
                        | ValPrefix
+                       | HeadPrefix
                        | BasePrefix
 
 SetSuffix            ::= "*"
@@ -552,6 +561,8 @@ NodeComposition      ::= "N" PropertyBase
    prefix grammar. The `*` suffix does not compose with VAL. *)
 
 ValPrefix            ::= "VAL"  | "V"
+
+HeadPrefix           ::= "HEAD"
 
 (* Bare base prefixes — canonical | minified *)
 
@@ -591,6 +602,7 @@ TemplatePrefix       ::= "DEFOBJ"
                        | "DEFFLOAT"
                        | "DEFBOOL"
                        | "DEFBYTE"
+                       | "DEFHEAD"
 
 (* Standalone declaration prefixes — canonical only, no minified form *)
 
@@ -612,12 +624,13 @@ PackagePrefix        ::= "PKG"
 GroupPrefix          ::= "GRP"
 ```
 
-**The @-Edge sigil** `@` composes only with `ObjectPrefix` or `RelPrefix`, producing the two members of the @-Edge family. Examples:
+**The @-Edge sigil** `@` composes only with `ObjectPrefix`, `RelPrefix`, or `HeadPrefix`, producing the three members of the @-Edge family. Examples:
 
 - `@OBJ` — @-edge to an Object
 - `@REL` — @-edge to a REL declaration
+- `@HEAD` — @-edge to a HEAD (Core Spec §6.17)
 
-Compositions of `@` with other ModifierBase forms (e.g., `@REC`, `@DEFOBJ`, `@.STR`) are malformed under v0.13.0; those targets are reached via the REF sigil instead. The `@` sigil also does not compose with `SetSuffix` (no `@OBJ*`/`@REL*`) or with itself (no `@@KIND`).
+Compositions of `@` with other ModifierBase forms (e.g., `@REC`, `@DEFOBJ`, `@.STR`) are malformed; those targets are reached via the REF sigil instead. The `@` sigil also does not compose with `SetSuffix` (no `@OBJ*`/`@REL*`/`@HEAD*`) or with itself (no `@@KIND`).
 
 **The REF sigil** `%` wraps any layer-1 role-prefix to produce a `%KIND` REF. Examples:
 
@@ -853,6 +866,8 @@ RefinementBase       ::= QualifierComposition
 
 ValPrefix            ::= "VAL"  | "V"
 
+HeadPrefix           ::= "HEAD"
+
 // --- Template prefixes (canonical only) ---
 
 TemplatePrefix       ::= "DEFOBJ"
@@ -862,6 +877,7 @@ TemplatePrefix       ::= "DEFOBJ"
                        | "DEFFLOAT"
                        | "DEFBOOL"
                        | "DEFBYTE"
+                       | "DEFHEAD"
 
 // --- Standalone declaration and organizational prefixes (canonical only) ---
 
@@ -885,17 +901,18 @@ ModifierBase         ::= RefinementBase
                        | TransportPrefix
                        | BlockPrefix
                        | ValPrefix
+                       | HeadPrefix
                        | BasePrefix
 
 // --- Special operators (two sigils + Set suffix) ---
 
 SetSuffix            ::= "*"
-EdgeSigil            ::= "@"        // composes only with ObjectPrefix | RelPrefix
+EdgeSigil            ::= "@"        // composes only with ObjectPrefix | RelPrefix | HeadPrefix
 RefSigil             ::= "%"        // wraps any layer-1 role-prefix
 
 // --- Layer 1 role-prefix (the "what role does this name?" surface) ---
-// EdgeSigil composes only with ObjectPrefix | RelPrefix; other combinations
-// (@REC, @DEFOBJ, @.STR, etc.) are malformed under v0.13.0 — those targets
+// EdgeSigil composes only with ObjectPrefix | RelPrefix | HeadPrefix; other
+// combinations (@REC, @DEFOBJ, @.STR, etc.) are malformed — those targets
 // are reached via RefSigil instead.
 // SetSuffix does not combine with EdgeSigil (no @OBJ*/@REL*) or with VAL
 // (no VAL*).

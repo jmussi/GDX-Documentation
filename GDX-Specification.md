@@ -1,7 +1,7 @@
 # GDX — Graph Data eXchange Specification
 
-- **Status:** Draft v0.24.0 (working draft, pre-1.0)
-- **Date:** 2026-07-07
+- **Status:** Draft v0.25.0 (working draft, pre-1.0)
+- **Date:** 2026-07-16
 - **Editors:** 
 - **Authors:** Julian Mussi
 
@@ -18,6 +18,7 @@ This is a pre-1.0 working draft. The specification is under active refinement; r
 
 | Version | Date       |
 |---------|------------|
+| v0.25.0 | 2026-07-16 |
 | v0.24.0 | 2026-07-11 |
 | v0.23.0 | 2026-07-07 |
 | v0.22.0 | 2026-07-07 |
@@ -117,7 +118,7 @@ This section defines the terms used throughout the specification. The key words 
 
 - **Prefix** — the leading token that declares an element's role. Belongs to the closed vocabulary defined in §5.
 
-- **Role** — the structural position an element occupies in the data model *and* the conceptual interpretation that position carries. A role names both the structural shape (what fields and children are admitted) and the meaning (how the element is to be interpreted in relation to its parent and the wider document). The closed enumeration of roles — Object, Record, Block, Property, Set, Node, VAL, @-Edge family (`@OBJ`, `@REL`), Reference family, Qualifier, Extension, Template, Relation Declaration, Annotation, Package, Group — covers both axes; each role's detail is in §6. Obtained from a prefix by stripping any modifier.
+- **Role** — the structural position an element occupies in the data model *and* the conceptual interpretation that position carries. A role names both the structural shape (what fields and children are admitted) and the meaning (how the element is to be interpreted in relation to its parent and the wider document). The closed enumeration of roles — Object, Record, Block, Property, Set, Node, VAL, HEAD, @-Edge family (`@OBJ`, `@REL`, `@HEAD`), Reference family, Qualifier, Extension, Template, Relation Declaration, Annotation, Package, Group — covers both axes; each role's detail is in §6. Obtained from a prefix by stripping any modifier.
 
 - **Modifier** — a sigil or letter prefix-fragment that adapts a base role without changing its composition rules: `*`(Set), `.`(Qualifier), `_`(Extension), `N`(Node), `DEF`(Template).
 
@@ -127,9 +128,9 @@ This section defines the terms used throughout the specification. The key words 
 
 - **Identifier** — any of the three identity fields (`Name`, `Anchor`, `Rel`) that name or link an element. Some roles require at least one (§3.2).
 
-- **Document** — a single rooted GDX tree, or a sequence of root-eligible elements treated as a unit of serialization. Which roles may root a document is fixed normatively by the root rule (§7.2); informally, the root(s) are Objects, Templates, REL declarations, or Packages.
+- **Document** — a single rooted GDX tree, or a sequence of root-eligible elements treated as a unit of serialization. Which roles may root a document is fixed normatively by the root rule (§7.2); informally, the root(s) are Objects, HEADs, Templates, REL declarations, or Packages.
 
-- **Data layer** — the set of GDX roles representing persistent, addressable, schema-validatable content: Objects, Records, Blocks, Properties, Sets, Nodes, Edges, Qualifiers, Extensions, Templates, Relation Declarations, and Annotations.
+- **Data layer** — the set of GDX roles representing persistent, addressable, schema-validatable content: Objects, HEADs, Records, Blocks, Properties, Sets, Nodes, Edges, Qualifiers, Extensions, Templates, Relation Declarations, and Annotations.
 
 - **Transport layer** — the set of GDX roles representing transient organizational and exchange constructs: Package and Group (§9). Transport-layer constructs are unpacked by receivers and are not persisted as such.
 
@@ -558,9 +559,9 @@ NamePathRef        ::= "@" Base "$" PathExpression
 NameAnchorRef      ::= "@" Base "&" AnchorToken
 
 Base             ::= (BaseRole ":")? Identifier
-BaseRole         ::= "OBJ"  | "REL"  | "PKG"  | "GRP"
+BaseRole         ::= "OBJ"  | "REL"  | "PKG"  | "GRP"  | "HEAD"
                    | "DEFOBJ" | "DEFREC" | "DEFSTR"
-                   | "DEFINT" | "DEFFLOAT" | "DEFBOOL" | "DEFBYTE"
+                   | "DEFINT" | "DEFFLOAT" | "DEFBOOL" | "DEFBYTE" | "DEFHEAD"
 ```
 
 The `Base` production carries an optional role marker — a closed-vocabulary keyword drawn from §5.2 followed by `:` — that disambiguates the role of the resolved element. The marker is most useful in composed references where the anchor's role differs from the terminal target's role; in plain `@id` references and in composed references with Object anchors, the marker is optional. When omitted in a composed reference, the anchor defaults to an Object (the most common case).
@@ -615,7 +616,7 @@ The `&` sigil MUST be immediately followed by the Anchor token with no interveni
 
 The two composed forms are the canonical mechanisms for cross-document addressing. The `$` and `&` operators do not combine within a single reference literal; pick `NamePathRef` for structural traversal or `NameAnchorRef` for anchor-based addressing.
 
-Because `$` and `&` are not members of `NameContChar`, the boundary between the identifier portion and the path or anchor portion is lexically unambiguous. The optional `BaseRole` keyword before `:` is distinguished from a CURIE prefix (`gdx:`, `schema:`) by lookup against the closed `BaseRole` set: only `OBJ`, `REL`, `PKG`, `GRP`, `DEFOBJ`, `DEFREC`, `DEFSTR`, `DEFINT`, `DEFFLOAT`, `DEFBOOL`, `DEFBYTE` are recognized as role markers.
+Because `$` and `&` are not members of `NameContChar`, the boundary between the identifier portion and the path or anchor portion is lexically unambiguous. The optional `BaseRole` keyword before `:` is distinguished from a CURIE prefix (`gdx:`, `schema:`) by lookup against the closed `BaseRole` set: only `OBJ`, `REL`, `PKG`, `GRP`, `HEAD`, `DEFOBJ`, `DEFREC`, `DEFSTR`, `DEFINT`, `DEFFLOAT`, `DEFBOOL`, `DEFBYTE`, `DEFHEAD` are recognized as role markers.
 
 **Parse-time vs. resolution-time validation of role markers.** The parser MUST reject an unknown role keyword (one not in the closed set). At resolution time, the resolver MUST verify that the named element actually has the claimed role; mismatch yields an unresolved reference.
 
@@ -843,6 +844,8 @@ An element's **role** is its position and interpretation in the data model. The 
 
 The prefix vocabulary is **closed** and committed against future change. Implementations MUST NOT introduce new prefixes; extensibility is provided through Templates (§8), Extensions, and the predicate vocabulary mechanism. New primitive types, new structural roles, or new domain concerns are expressed by composing existing prefixes with Templates, Extensions, and vocabulary identifiers — never by adding a new prefix.
 
+The "closed" guarantee binds implementations, not the specification: while GDX is pre-1.0 (see Status of This Document), a revision of this specification MAY add a prefix when a genuinely new structural role is warranted, re-committing the enlarged set. The `HEAD` role and its `@HEAD` edge (§6.17, §6.4) were added this way. Such additions are deliberate, recorded in the revision history, and expected to cease at 1.0, after which the set is fixed. Between revisions the set is closed exactly as stated: a consumer structurally validates against the prefix set of the specification version it implements.
+
 **Decision: the prefix vocabulary is closed.** The set of prefixes is fixed by this specification; extensibility is pushed out to Templates, Extensions, and vocabulary identifiers. *Alternative considered:* an open or extensible prefix set, letting applications or vocabularies mint new prefixes for new roles or types. *Rejected because:* a closed prefix set is what lets any conforming consumer parse and structurally validate any GDX document without first loading a vocabulary — the structural schema is fully known from the specification alone (§1.2, structural-schema-with-pluggable-constraints). An open prefix set would make structural validity vocabulary-dependent: a parser could not know whether an unrecognized prefix was malformed or merely from a vocabulary it had not loaded, collapsing the clean Layer 1 / Layer 2b boundary (Appendix A.1). Domain extension is real and necessary, but it belongs in the extension layer (Templates and vocabulary identifiers GDX records but does not interpret), not in the structural core that every consumer must agree on.
 
 A prefix in GDX is composed according to a two-layer pattern:
@@ -855,13 +858,13 @@ A prefix in GDX is composed according to a two-layer pattern:
 Where (layer 1, the role-prefix):
 - **base** is one of the core role prefixes (§5.2)
 - **`*` suffix** marks the element as a Set (§5.3.1)
-- **`@` prefix** marks the element as a member of the @-Edge family (§5.3.2); restricted to two members (`@OBJ`, `@REL`)
+- **`@` prefix** marks the element as a member of the @-Edge family (§5.3.2); restricted to three members (`@OBJ`, `@REL`, `@HEAD`)
 - **refinement-modifier** is one of `.`, `_`, `N` (§5.4) or the `DEF` declaration-construct (§6.14)
 
 And (layer 2, the REF wrapper):
 - **`%` prefix** wraps any layer-1 role-prefix to produce a `%KIND` REF — a slot-filler whose Resource is a typed handle to a KIND-element (§5.3.3, §6.16).
 
-The layer-1 slots are independent. The base is required; the others are optional. Day-to-day GDX use involves the base prefixes plus the `*` suffix when a collection is needed. The `@` sigil constructs @-edges; the `%` sigil constructs REFs; the refinement modifiers construct Qualifiers, Extensions, Node-zone elements, and Templates. Three compositions are malformed: `@@KIND` and `@OBJ*`/`@REL*` (Edge-side; §5.3.2), `%%KIND` and `@%KIND` (REF/Edge-side; §5.3.3).
+The layer-1 slots are independent. The base is required; the others are optional. Day-to-day GDX use involves the base prefixes plus the `*` suffix when a collection is needed. The `@` sigil constructs @-edges; the `%` sigil constructs REFs; the refinement modifiers construct Qualifiers, Extensions, Node-zone elements, and Templates. Three compositions are malformed: `@@KIND` and `@OBJ*`/`@REL*`/`@HEAD*` (Edge-side; §5.3.2), `%%KIND` and `@%KIND` (REF/Edge-side; §5.3.3).
 
 ### 5.1 Canonical and Minified Forms
 
@@ -907,6 +910,7 @@ The base prefixes are the core role vocabulary. They group into four categories:
 | `REC`     | `R`      | Record | —                   | §6.2   |
 | `BLK`     | —        | Block  | —                   | §6.5   |
 | `VAL`     | `V`      | VAL (element-as-value slot) | — (occupant is a child) | §6.11 |
+| `HEAD`    | —        | HEAD (persistent aggregate head) | — (one Body child + slots) | §6.17 |
 
 **Graph-statement roles** — first-class directed relationships (the `@` sigil):
 
@@ -914,8 +918,9 @@ The base prefixes are the core role vocabulary. They group into four categories:
 |-----------|----------|-----------------|---------------------|--------|
 | `@OBJ`    | —        | @-Edge (Object-targeted)  | `reference` (Object) | §6.4 |
 | `@REL`    | —        | @-Edge (REL-targeted)     | `reference` (REL)    | §6.4 |
+| `@HEAD`   | —        | @-Edge (HEAD-targeted)    | `reference` (HEAD)   | §6.4 |
 
-The @-Edge family has exactly two members (§6.4 axiom E5). The `EDGE` and `E` prefixes used through v0.11.0 were removed in v0.12.0; the `E` minified slot is currently unassigned. The `@OBJ*` and `@REL*` Set forms are malformed — each @-edge is a single graph statement; multiple edges from one source are expressed as siblings.
+The @-Edge family has exactly three members (§6.4 axiom E5): `@OBJ`, `@REL`, and `@HEAD`. Each targets an independent graph-entity — an Object, a REL declaration, or a HEAD aggregate — which is the principle that fixes the family (E5). `@HEAD` was added when the HEAD role (§6.17) was introduced; the addition is a deliberate reopening of the prefix vocabulary, admissible while the specification is pre-1.0 (see §5, and the revision history). The `EDGE` and `E` prefixes used through v0.11.0 were removed in v0.12.0; the `E` minified slot is currently unassigned. The `@OBJ*`, `@REL*`, and `@HEAD*` Set forms are malformed — each @-edge is a single graph statement; multiple edges from one source are expressed as siblings.
 
 **Slot-filling reference role** — typed handles to independently-existing elements (the `%` sigil):
 
@@ -970,10 +975,11 @@ Detailed treatment of Sets, including empty-vs-absent semantics, is in §6.13.
 
 #### 5.3.2 The Sigil `@` — @-Edge Family
 
-The `@` prefix marks an element as a member of the **@-Edge family** (§6.4) — a first-class graph-statement element whose Resource is a reference to an independent graph-entity and whose `#rel` predicate asserts a relationship the parent has to that target. The family has exactly two members:
+The `@` prefix marks an element as a member of the **@-Edge family** (§6.4) — a first-class graph-statement element whose Resource is a reference to an independent graph-entity and whose `#rel` predicate asserts a relationship the parent has to that target. The family has exactly three members:
 
 - `@OBJ` — @-edge to an Object (data-Objects, including concept-Objects per §6.15)
 - `@REL` — @-edge to a REL declaration (predicate-to-predicate or REL-to-concept-Object)
+- `@HEAD` — @-edge to a HEAD (a persistent aggregate head, §6.17)
 
 @-edges carry an associative `#rel` specifying the relationship's nature — the field MAY be empty, leaving the relationship undefined pending refinement (§6.4 axiom E4, §6.4.2) — and MAY carry attribute children, identity (`Name`/`Anchor`), Qualifiers, Extensions, and Annotations.
 
@@ -1082,7 +1088,7 @@ The closed enumeration of roles is: Object, Record, Property, Block, Annotation,
 
 An Object is a **thing with identity** — an independently-identified entity that stands on its own and may be referenced from other elements. Conceptually, an Object is the kind of element that *other* elements refer to: a Person, an Order, a Server, a Document. It is the unit of persistence and exchange, and its identifier (a path, CURIE, GUID, IRI, or other globally meaningful identifier) is what makes that referenceability possible. The specification places no constraint on the identifier scheme.
 
-Structurally, an Object is a container of named children. The root of a GDX document MUST be one or more Objects, Templates, REL declarations, or Packages. Objects may not contain other Objects except as the occupant of a VAL slot (§6.11) or as transport-layer payload (§6.7, §9).
+Structurally, an Object is a container of named children. The root of a GDX document MUST be one or more Objects, HEADs, Templates, REL declarations, or Packages. Objects may not contain other Objects except as the occupant of a VAL slot (§6.11), as the Body of a HEAD (§6.17), or as transport-layer payload (§6.7, §9).
 
 ```
 <OBJ people/alice
@@ -1134,18 +1140,19 @@ Properties require an identifier when in named-attribute position and may carry 
 <BYTE contentHash : 0xe3b0c44298fc1c14>
 ```
 
-### 6.4 The @-Edge Family — `@OBJ`, `@REL`
+### 6.4 The @-Edge Family — `@OBJ`, `@REL`, `@HEAD`
 
 | Canonical | Minified | Resource value-kind | Identifier |
 |-----------|----------|---------------------|------------|
 | `@OBJ`    | —        | `reference` (target: Object) | `#rel` OPTIONAL (empty = undefined nature, §6.4.2); `Name`/`Anchor` OPTIONAL |
 | `@REL`    | —        | `reference` (target: REL)    | `#rel` OPTIONAL (empty = undefined nature, §6.4.2); `Name`/`Anchor` OPTIONAL |
+| `@HEAD`   | —        | `reference` (target: HEAD)   | `#rel` OPTIONAL (empty = undefined nature, §6.4.2); `Name`/`Anchor` OPTIONAL |
 
 An **@-edge** is a **first-class but dependent relationship** — a persistent entity owned by and serialized within its source element, asserting a directed link to an independent graph-entity that exists elsewhere. The prefix asserts the *target's role*; the Resource asserts the *target's identity*; the `#rel` predicate, when specified, asserts what the relationship currently means (an empty rel leaves the relationship undefined as to nature — §6.4.2); an optional `Name` or `Anchor` makes the relationship itself a trackable, reference-able substance; optional attribute children describe that substance.
 
 @-edges are GDX's labeled-property-graph mechanism. They are how a document carries the assertion that one graph-entity stands in some named relation to another, optionally with attributes refining the relation.
 
-**Family enumeration.** The @-Edge family has exactly two members: `@OBJ` (target is a data-Object, including concept-Objects) and `@REL` (target is a predicate, i.e., a REL declaration). The membership is restricted to *independent graph-entities*. Targets that are not independent graph-entities — Templates (vocabulary-layer artifacts), value Properties (interior to their parent), Qualifiers/Extensions/Annotations (refinement-only), VAL slots (a container, not an entity), Records/Blocks (composite parts of an Object), or any element addressed by path or key into another element's interior — are not @-edges; pointing at such targets is the job of the Reference family (§6.16).
+**Family enumeration.** The @-Edge family has exactly three members: `@OBJ` (target is a data-Object, including concept-Objects), `@REL` (target is a predicate, i.e., a REL declaration), and `@HEAD` (target is a persistent aggregate head, §6.17). The membership is restricted to *independent graph-entities* — Objects, REL declarations, and HEADs are the roles that stand as independent entities. Targets that are not independent graph-entities — Templates (vocabulary-layer artifacts), value Properties (interior to their parent), Qualifiers/Extensions/Annotations (refinement-only), VAL slots (a container, not an entity), Records/Blocks (composite parts of an Object), or any element addressed by path or key into another element's interior — are not @-edges; pointing at such targets is the job of the Reference family (§6.16).
 
 **Both endpoints are role-explicit.** The *source* endpoint of an @-edge is its containing element, whose role is self-declared by its own prefix; the *target* endpoint's role is declared by the @-edge prefix and verified at resolution (E1). No endpoint's role is ever discovered by resolution — the declared-not-discovered discipline holds at both ends, and any source/target role combination admitted by the composition matrix (§7.1) is expressible (Object-to-Object data graphs, REL-to-REL predicate axioms, REL-to-concept-Object domain/range statements, and so on). This is also why @-edges connect whole, self-declaring elements only: a `$path`- or `&key`-addressed interior has no role-declaring definition of its own for the endpoint claim to verify against, so interior addressing is value-resolution territory (REF, §6.16), never edge territory.
 
@@ -1175,7 +1182,7 @@ An **@-edge** is a **first-class but dependent relationship** — a persistent e
 
 **E4 — The role asserts existence; the `#rel` field specifies nature and MAY be empty.** An @-edge is, by its role, the assertion that a relationship *exists* between its source and its target. The `#rel` field specifies *what* that relationship is; when present, it is associative (it asserts the parent-to-target meaning), and it MAY be empty. An edge with no `#rel` parses to a null Rel, is well-formed, and denotes a relationship **undefined as to nature** — to be refined later by filling the field on the same edge (§6.4.2). An empty rel is therefore never ambiguous about whether a relationship exists; the role settled that. Since the v0.13 sigil partition, the construct discrimination this field once carried lives in the sigil itself: `@`-prefixed elements are @-edges and `%`-prefixed elements are REFs, with or without a `#rel`. The empty rel is not an idiom for *permanent* type-free adjacency — empty means "not yet specified," and a relationship whose intended meaning is bare adjacency is expressed with a designated predicate value (e.g., `<@OBJ #gdx:adjacent : @target>`).
 
-**E5 — Family is enumerated by target role and restricted to independent graph-entities.** The family consists of exactly `@OBJ` and `@REL`. The restriction is principled: only Objects (including concept-Objects, since GDX uses concept-as-Object for ontology layering — see §6.15) and REL declarations are independent graph-entities. An @-edge resolves only to such an entity at **root-level position** (a document-root element, or an element promoted to root — §7.2); it never resolves to an interior element. A target may be addressed by its `Name` (`@identifier`) or, when it carries a root anchor, by its durable identity (`&anchor`); interior anchors and structural paths are Reference territory, never edge targets (see Resolution, below). Source role is orthogonal to membership: any role admitted as a parent of an @-edge by the composition matrix (§7.1) may carry @-edges; the family enumeration is over targets only. The Set forms `@OBJ*` and `@REL*` are **malformed** — each @-edge is a single graph statement (per E2′); multiple edges from one source are expressed as siblings, not as Set members. To address multiple edges as a collection (e.g., for iteration or query), the parent Object's children are filtered by prefix — the structure is implicit in the document, not collected into a Set.
+**E5 — Family is enumerated by target role and restricted to independent graph-entities.** The family consists of exactly `@OBJ`, `@REL`, and `@HEAD`. The restriction is principled: only Objects (including concept-Objects, since GDX uses concept-as-Object for ontology layering — see §6.15), REL declarations, and HEAD aggregates (§6.17) are independent graph-entities. An @-edge resolves only to such an entity at **root-level position** (a document-root element, or an element promoted to root — §7.2); it never resolves to an interior element. A target may be addressed by its `Name` (`@identifier`) or, when it carries a root anchor, by its durable identity (`&anchor`); interior anchors and structural paths are Reference territory, never edge targets (see Resolution, below). Source role is orthogonal to membership: any role admitted as a parent of an @-edge by the composition matrix (§7.1) may carry @-edges; the family enumeration is over targets only. The Set forms `@OBJ*`, `@REL*`, and `@HEAD*` are **malformed** — each @-edge is a single graph statement (per E2′); multiple edges from one source are expressed as siblings, not as Set members. To address multiple edges as a collection (e.g., for iteration or query), the parent Object's children are filtered by prefix — the structure is implicit in the document, not collected into a Set.
 
 **E6 — Identity is optional and orthogonal to predicate; the Anchor is the substance, the Name names it.** An @-edge MAY carry an `Anchor` (its durable machine identity) and/or a `Name` (a descriptive name). The **Anchor** is the edge's *substance* — the persistent entity (per E2′) that endures across changes to predicate, attributes, target, or Name, and that disambiguates multiple edges between the same endpoints. The substance/predication distinction is the spine of the model: the `Anchor` is what the edge *is* (the enduring thing); the `#rel` is what it currently *asserts*; the `Name` is a descriptive label for alignment or symbolic reference; attribute children ride on the substance. Changing an edge's predicate, target, or Name does not change its identity; changing its Anchor does. An anchored edge with an empty rel is well-formed and is the canonical capture-first pattern (§6.4.2 — the substance exists, the predication is pending); predicate-without-identity is the common case (most edges are content with anonymous substance). Two @-edges that share the same source, predicate, and target ARE distinct edges if they carry different Anchors; uniqueness is by identity, not by the (source, predicate, target) triple.
 
@@ -1301,7 +1308,7 @@ Annotations survive round-trip serialization and are part of the document, but c
 |-----------|----------|-----------|------------|
 | `PKG`     | —        | —         | optional   |
 
-A Package is a **transport wrapper** — an envelope around a payload of Objects, Templates, and REL declarations along with metadata describing the transmission itself. Conceptually, a Package is what travels between systems: it groups the things being exchanged with the information needed to interpret that exchange (source, timestamp, version, correlation identifiers). A Package is a first-class document root (§7.2) and is the idiomatic root for material *in transit*. "Not persisted as such" (below, and §10.4) describes a *receiver's* behavior — a receiver unpacks the wrapper and stores the contained data items individually, discarding the envelope — and is not a discouragement from authoring Packages; authoring a Package to carry a payload between stages or systems is exactly its purpose. A useful rule of thumb: root in Object(s) for data *at rest* (data that lives somewhere and is referenced), and root in a Package for data *in motion* (a payload being handed from one party or stage to another, with provenance about the handoff). Structurally, a Package is a transport-layer construct (§9) admitting Objects, Templates, REL declarations, Properties, Records, Sets, Annotations, and Groups as children. PKG has no minified form.
+A Package is a **transport wrapper** — an envelope around a payload of Objects, Templates, and REL declarations along with metadata describing the transmission itself. Conceptually, a Package is what travels between systems: it groups the things being exchanged with the information needed to interpret that exchange (source, timestamp, version, correlation identifiers). A Package is a first-class document root (§7.2) and is the idiomatic root for material *in transit*. "Not persisted as such" (below, and §10.4) describes a *receiver's* behavior — a receiver unpacks the wrapper and stores the contained data items individually, discarding the envelope — and is not a discouragement from authoring Packages; authoring a Package to carry a payload between stages or systems is exactly its purpose. A useful rule of thumb: root in Object(s) for data *at rest* (data that lives somewhere and is referenced), and root in a Package for data *in motion* (a payload being handed from one party or stage to another, with provenance about the handoff). Structurally, a Package is a transport-layer construct (§9) admitting Objects, HEADs, Templates, REL declarations, Properties, Records, Sets, Annotations, and Groups as children. PKG has no minified form.
 
 ```
 <PKG color-export-2026-04-29
@@ -1635,8 +1642,11 @@ Structurally, the `DEF` prefix-fragment marks an element as a Template definitio
 | `DEFFLOAT` | Property  |
 | `DEFBOOL`  | Property  |
 | `DEFBYTE`  | Property  |
+| `DEFHEAD`  | HEAD      |
 
 Property Templates (`DEFSTR`, `DEFINT`, `DEFFLOAT`, `DEFBOOL`, `DEFBYTE`) typically declare semantic types or representation refinements on top of a base value-kind. A Template does not change the underlying value-kind; it adds interpretation or validation rules that consumers may apply.
+
+A `DEFHEAD` Template (§6.17) declares the shape of a persistent aggregate: its named typed slots, validated by `Name`-alignment against instances (§8.2), and its Body declaration, validated structurally rather than by `Name`-alignment (a HEAD's Body is identified by role category, not by slot name — §6.17 H3). As with every Template, `Anchor` is excluded from the claim (§8.2.3); when a HEAD instance's `DEFHEAD` cannot be resolved, its conformance is reported as unevaluated (§8.5.3).
 
 A Template's *fields* are described using regular prefixes (not `DEF…` prefixes). The DEF prefix appears only at the Template's declaration root; the children are field descriptions using the standard structural and value prefixes.
 
@@ -1915,6 +1925,47 @@ A REF whose Resource is any non-`NameRef` literal MUST resolve to exactly one el
 
 A %-reference is GDX's value-resolution construct: structurally, a slot-filler whose Resource is a typed handle — the slot stores the resolved address of an independently-existing target whose role the prefix asserts, and dereferencing yields that target as the slot's effective content. The prefix declares the target's role; the Resource gives its address by name, path, or key; resolution dereferences and verifies the role. A REF asserts no relationship about its parent (its `#rel`, if present, aligns the slot — it never associates), does not contain its target (vs. VAL), and is inert toward the target while elaborated toward its own slot, exactly as any Property is.
 
+### 6.17 HEAD — `HEAD` (persistent aggregate head)
+
+A **HEAD** is a **persistent aggregate head** — a data-layer, root-eligible, independently-addressable container that represents the persistent aggregate a GDX document carries. It holds exactly one **Body** (its principal occupant) together with zero or more named typed **slots** describing the aggregate as a whole. A HEAD is the data-layer construct for "this document is one persistent thing, with envelope-level metadata about that thing" — a boundary a transport wrapper (Package) cannot express because a Package is transport-layer and not persisted, and a plain Object cannot express because an Object has children, not a principal-occupant/metadata division. `HEAD` has no minified form.
+
+A HEAD is root-eligible (§7.2) and MAY appear as transport payload (as a Package/Group child) or as a VAL occupant, but MUST NOT appear as an ordinary interior structural child of a data element. A HEAD MUST NOT contain a nested HEAD.
+
+**Genus.** HEAD takes its place among the container roles by a single distinguishing axis — what it is *for* and how its contents divide:
+
+| Role | Primary concern | Layer | Body cardinality |
+|------|-----------------|-------|------------------|
+| `PKG` | Transport | Transport | Multiple payload items |
+| `HEAD` | Persistent aggregate envelope | Data | Exactly one Body |
+| `OBJ` | Domain entity | Data | Children, no envelope/body division |
+| `BLK` | Contextual grouping | Data | Arbitrary admitted children |
+
+**Composition.** A HEAD's children divide into three disjoint categories, which is what makes the Body unambiguous without appeal to name or order:
+
+- **The Body** — exactly one child whose role is an **entity role**: an Object (`OBJ`) or a REL declaration (`REL`). It is the principal model content of the aggregate.
+- **Slots** — named typed metadata describing the aggregate, drawn from the **non-entity data roles**: Properties (`STR`, `INT`, `FLOAT`, `BOOL`, `BYTE`) and Records (`REC`). Because slots are never entity roles, the Body is the sole entity-role child and needs no other marker.
+- **Adjuncts** — Extensions and Annotations refining the HEAD itself.
+
+Zero entity-role children, or two, is malformed: a conforming HEAD holds exactly one Body at every observable state.
+
+**Identity.** A HEAD's `Anchor` is its durable machine identity (§3.1); as a root-level element it is a **root anchor** (§4.4.5), participating in the enclosing document scope, and it identifies the HEAD aggregate — *not*, automatically, the subject of its Body. Anchors on elements inside the HEAD participate in the HEAD scope and are interior anchors, addressable through REF but not as @-edge targets. A HEAD MAY carry a `Name` for descriptive alignment, exactly as any element.
+
+**Templates.** A HEAD MAY claim a `DEFHEAD` Template (§6.14, §8). Template slot alignment (§8.2) applies to the HEAD's named typed slots by `Name`; the Body is validated separately from `Name`-based slot alignment, since bodyhood is structural, not name-aligned. `Anchor` is excluded from Template claims (§8.2.3). When a HEAD's Template cannot be resolved, its conformance is reported as **unevaluated** (§8.5.3), not as conforming or non-conforming.
+
+**Axioms (H1–H9).**
+
+- **H1 — Singular persistent wrapper.** A HEAD is a persistent addressable container carrying exactly one principal occupant (its Body).
+- **H2 — Occupant eligibility.** The Body's role MUST be Object or REL declaration. Package and Group (transport-layer), Template declarations, and nested HEADs are NOT admitted as the Body. (The admitted Body set is intentionally small; it MAY be widened by a future revision.)
+- **H3 — Structural distinction.** The Body is distinguished by role category — it is the sole entity-role child — not by `Name`, child order, `Anchor`, or Template availability. All non-entity children are slots (Properties, Records) or adjuncts (Extensions, Annotations).
+- **H4 — Ownership.** The Body is owned by its HEAD and is not an independent graph entity while so contained.
+- **H5 — Extraction.** Removing the Body from its HEAD and installing it at document root changes its graph-entity status but not its intrinsic role or model fields.
+- **H6 — Addressability.** The HEAD's Anchor participates in the enclosing document scope (a root anchor); anchors inside the HEAD participate in the HEAD scope (interior anchors).
+- **H7 — Edge targeting.** A HEAD is an independent graph entity and MAY be targeted by `@HEAD` (§6.4). Its Body is not an @-edge target while contained (edges resolve to root-level entities only — §6.4 E5).
+- **H8 — Direct roots unchanged.** Wrapping is not required: an unwrapped root Object remains targetable by `@OBJ`; an unwrapped root REL remains targetable by `@REL`. Wrapping in a HEAD makes the HEAD the independent graph entity and the occupant owned interior content.
+- **H9 — Replaceable Body.** The Body is replaceable; replacing it does not change the HEAD's identity. The old and new occupants are distinct model elements unless an external vocabulary asserts stronger continuity. At every conforming observable state, the HEAD contains exactly one legal Body.
+
+**Wrapping contrast.** A Package wraps zero or more root-eligible elements for *transport* and is discarded on receipt (§9); a HEAD wraps exactly one root-eligible element as a *persistent aggregate* and is retained. An unwrapped root element remains independently addressable by its own role; once wrapped in a HEAD, the HEAD is the independent graph entity and the occupant is owned interior content.
+
 ---
 
 ## 7. Composition Axioms
@@ -1929,24 +1980,25 @@ Modifier-bearing and operator-bearing prefixes are validated as their base role 
 
 ### 7.1 Allowed Children Matrix
 
-| Parent ↓ \ Child →  | Object | Record | Block | Property | Set | Node | @-Edge | REF | Qualifier | Extension | Annotation | VAL | Template | REL | Package | Group |
-|---------------------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| **Object**          |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |   |   |
-| **Record**          |   | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |   |   |
-| **Block**           |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |   |   |
-| **Property**        |   |   |   |   |   | ✓ |   |   | ✓ | ✓ | ✓ |   |   |   |   |   |
-| **Set**             |   | ✓ |   | ✓ |   | ✓ |   |   | ✓ | ✓ | ✓ |   |   |   |   |   |
-| **Node**            |   |   |   |   |   | ✓ |   |   |   |   | ✓ |   |   |   |   |   |
-| **@-Edge**          |   | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |   |   |
-| **REF**             |   |   |   |   |   |   |   |   | ✓ | ✓ | ✓ |   |   |   |   |   |
-| **Qualifier**       |   |   |   |   |   |   |   |   |   | ✓ | ✓ |   |   |   |   |   |
-| **Extension**       |   |   |   |   |   |   |   |   |   | ✓ | ✓ |   |   |   |   |   |
-| **Annotation**      |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-| **VAL**             | ✓ | ✓ | ✓ | ✓ | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   |
-| **REL**             |   | ✓ | ✓ | ✓ | ✓ |   | ✓ | ✓ |   | ✓ | ✓ | ✓ |   |   |   |   |
-| **Package**         | ✓ | ✓ |   | ✓ | ✓ |   |   | ✓ |   | ✓ | ✓ |   | ✓ | ✓ |   | ✓ |
-| **Group**           | ✓ | ✓ |   | ✓ | ✓ |   |   | ✓ |   | ✓ | ✓ |   | ✓ | ✓ |   | ✓ |
-| **Document root**   | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ | ✓ | ✓ |   |
+| Parent ↓ \ Child →  | Object | Record | Block | Property | Set | Node | @-Edge | REF | Qualifier | Extension | Annotation | VAL | Template | REL | Package | Group | HEAD |
+|---------------------|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| **Object**          |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   |
+| **Record**          |   | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   |
+| **Block**           |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   |
+| **Property**        |   |   |   |   |   | ✓ |   |   | ✓ | ✓ | ✓ |   |   |   |   |   |   |
+| **Set**             |   | ✓ |   | ✓ |   | ✓ |   |   | ✓ | ✓ | ✓ |   |   |   |   |   |   |
+| **Node**            |   |   |   |   |   | ✓ |   |   |   |   | ✓ |   |   |   |   |   |   |
+| **@-Edge**          |   | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   |
+| **REF**             |   |   |   |   |   |   |   |   | ✓ | ✓ | ✓ |   |   |   |   |   |   |
+| **Qualifier**       |   |   |   |   |   |   |   |   |   | ✓ | ✓ |   |   |   |   |   |   |
+| **Extension**       |   |   |   |   |   |   |   |   |   | ✓ | ✓ |   |   |   |   |   |   |
+| **Annotation**      |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
+| **VAL**             | ✓ | ✓ | ✓ | ✓ | ✓ |   | ✓ | ✓ | ✓ | ✓ | ✓ |   |   |   |   |   | ✓ |
+| **REL**             |   | ✓ | ✓ | ✓ | ✓ |   | ✓ | ✓ |   | ✓ | ✓ | ✓ |   |   |   |   |   |
+| **HEAD**            | ✓ | ✓ |   | ✓ |   |   |   |   |   | ✓ | ✓ |   |   | ✓ |   |   |   |
+| **Package**         | ✓ | ✓ |   | ✓ | ✓ |   |   | ✓ |   | ✓ | ✓ |   | ✓ | ✓ |   | ✓ | ✓ |
+| **Group**           | ✓ | ✓ |   | ✓ | ✓ |   |   | ✓ |   | ✓ | ✓ |   | ✓ | ✓ |   | ✓ | ✓ |
+| **Document root**   | ✓ |   |   |   |   |   |   |   |   |   |   |   | ✓ | ✓ | ✓ |   | ✓ |
 
 There is no Template *row*: per rule 9, a `DEF…` element's children are validated by its base role's row (`DEFOBJ` admits what Object admits, `DEFREC` what Record admits, Property Templates what Property admits). The Template *column* governs where `DEF…` elements may be placed — Package and Group payload, and the document root (rule 9(c)).
 
@@ -1964,15 +2016,19 @@ The VAL row admits exactly one occupant of any data-bearing role (Object, Record
 
 The Package row admits Templates (any `DEF…` prefix) and REL declarations as payload along with Objects. For clarity: a Package may directly contain Object instances (`OBJ`/`O`), Template definitions (`DEF…`), REL declarations (`REL`), Properties (metadata), Records (metadata), Sets (metadata), REFs (metadata handles — e.g., a manifest entry pointing at a payload item or at another Group), Extensions, Annotations, and Groups for transport-internal organization. A Group admits the same children as a Package except for Package itself.
 
-The Document root row covers what may appear as the root of a GDX document: an Object, a Template, a REL, or a Package. A document MAY contain multiple top-level elements when each is a recognized root-eligible type.
+The HEAD row covers the persistent-aggregate container (§6.17). A HEAD admits exactly one **Body** — an Object or a REL declaration (the entity roles) — together with metadata **slots** drawn from the non-entity data roles (Properties, Records) and adjunct Extensions and Annotations. The single-Body cardinality and the "Body is the sole entity-role child" rule are stated normatively in §6.17 (H1, H3); the matrix admits the roles, and the axioms constrain their multiplicity. A HEAD is admitted as a child only at the document root, as Package/Group payload, and as a VAL occupant; it is never an ordinary interior child, and never contains another HEAD.
+
+The Document root row covers what may appear as the root of a GDX document: an Object, a HEAD, a Template, a REL, or a Package. A document MAY contain multiple top-level elements when each is a recognized root-eligible type.
 
 ### 7.2 Derived Rules
 
 The following rules are consequences of the matrix and are repeated here for clarity:
 
-1. **Root rule.** A document root MUST be an Object, a Template, a REL declaration, or a Package. A document MAY contain multiple top-level elements; each top-level element MUST independently be a root-eligible type.
+1. **Root rule.** A document root MUST be an Object, a HEAD, a Template, a REL declaration, or a Package. A document MAY contain multiple top-level elements; each top-level element MUST independently be a root-eligible type.
 
-2. **Object exclusion.** No role other than VAL (when its occupant is an Object, §6.11) and the transport-layer roles (Package, Group) may contain another Object. VAL expresses Object-as-element-value within data-layer composition; Package and Group contain Objects as transport-layer payload, not as ownership relationships.
+2. **Object exclusion.** No role other than VAL (when its occupant is an Object, §6.11), HEAD (as its Body, §6.17), and the transport-layer roles (Package, Group) may contain another Object. VAL expresses Object-as-element-value within data-layer composition; HEAD contains an Object as the owned Body of a persistent aggregate; Package and Group contain Objects as transport-layer payload, not as ownership relationships.
+
+2a. **HEAD composition.** A HEAD (§6.17) contains exactly one Body — an Object or a REL declaration — plus zero or more metadata slots (Properties, Records) and adjuncts (Extensions, Annotations). A HEAD MUST NOT contain a nested HEAD, a Package, or a Group, and MUST NOT appear as an ordinary interior child of a data element (only at the document root, as Package/Group payload, or as a VAL occupant). The Body is identified structurally, as the sole entity-role child (§6.17 H3).
 
 3. **Block containment.** A Block may only appear under an Object, another Block, or a REL declaration (§6.15) — or under a `DEFOBJ`, which composes as Object per rule 9. Blocks do not appear in transport-layer roles.
 
@@ -1998,7 +2054,7 @@ The following rules are consequences of the matrix and are repeated here for cla
 
 10. **Transport non-nesting.** Packages MUST NOT contain other Packages. Groups MUST NOT contain Packages. Transport-layer roles form a controlled structure: a Package may contain Groups and data-layer items; a Group may contain other Groups and data-layer items.
 
-11. **Transport non-persistence.** Package and Group elements are not persisted as such by storage layers. Their contents (Objects, Templates, REL declarations) are extracted and stored individually; transport-layer metadata MAY be retained as provenance information but the transport wrapping is discarded. See §9 and §10.4.
+11. **Transport non-persistence.** Package and Group elements are not persisted as such by storage layers. Their contents (Objects, HEADs, Templates, REL declarations) are extracted and stored individually; transport-layer metadata MAY be retained as provenance information but the transport wrapping is discarded. Note the layer distinction: a HEAD is data-layer and is retained as an aggregate on receipt, whereas the Package/Group wrapper around it is discarded. See §9 and §10.4.
 
 12. **Refinement modifiers do not stack.** An element carries at most one refinement modifier (`.`, `_`, `N`) or the `DEF` construct. The following are NOT valid prefixes:
     - `.NSTR` — Qualifier of a Node-zone element
@@ -2029,7 +2085,7 @@ The following rules are consequences of the matrix and are repeated here for cla
 
 13. **Set is a suffix.** The `*` Set marker is a suffix on the base prefix: `STR*`, `INT*`, `REC*`, etc. The `*` suffix MAY combine with refinement modifiers (`.STR*`, `_INT*`, `NSTR*`) and with the `%` REF sigil only where the wrapped Set prefix exists (`%STR*`, `%REC*`, `%.STR*`; `%DEF…*`, `%REL*`, `%OBJ*`, and `%@OBJ*` are malformed — their target Sets cannot exist). The `*` suffix does not compose with `DEF` (Templates are not collected as a Set in normal usage), with VAL (`VAL*` is malformed per §6.11 axiom 6), or with the @-Edge family (`@OBJ*` and `@REL*` are malformed per rule 14a — each @-edge is a single graph statement).
 
-14. **@-Edge family is closed at two members.** The `@` sigil produces the @-Edge family (§6.4), restricted to two members by axiom E5: `@OBJ` (target is an Object) and `@REL` (target is a REL declaration). The sigil does not compose with other bases or modifier-bases to produce additional edge prefixes; `@REC`, `@BLK`, `@.STR`, `@DEFOBJ`, `@VAL`, and so on are NOT @-edges. To point at any of those roles, use a REF (`%REC`, `%BLK`, `%.STR`, `%DEFOBJ`, `%VAL`, §6.16).
+14. **@-Edge family is closed at three members.** The `@` sigil produces the @-Edge family (§6.4), restricted to three members by axiom E5: `@OBJ` (target is an Object), `@REL` (target is a REL declaration), and `@HEAD` (target is a HEAD, §6.17). The sigil does not compose with any other base or modifier-base to produce additional edge prefixes; `@REC`, `@BLK`, `@.STR`, `@DEFOBJ`, `@VAL`, and so on are NOT @-edges. To point at any of those roles, use a REF (`%REC`, `%BLK`, `%.STR`, `%DEFOBJ`, `%VAL`, §6.16).
 
 14a. **No Sets of @-edges.** The compositions `@OBJ*` and `@REL*` are malformed. Each @-edge is a single graph statement (§6.4 axiom E2′); multiple edges from one source with the same predicate are expressed as siblings (`<@OBJ #knows : @bob> <@OBJ #knows : @carol>`), not as Set members.
 
@@ -2391,7 +2447,7 @@ Package (§6.7) and Group (§6.8) are the two roles reserved for transport: they
 
 ### 9.1 Package Patterns
 
-A Package carries Objects, Templates, and REL declarations as payload, alongside Properties, Records, Sets, and Annotations as transport metadata. The identifier (when present) is used for transport correlation: request/response matching, deduplication, audit.
+A Package carries Objects, HEADs, Templates, and REL declarations as payload, alongside Properties, Records, Sets, and Annotations as transport metadata. The identifier (when present) is used for transport correlation: request/response matching, deduplication, audit.
 
 A Package with transport metadata and payload:
 
@@ -2480,7 +2536,7 @@ A choice-of-one transport pattern, where Package metadata signals the receiver t
 A receiver processing a transport-layer wrapper:
 
 1. Reads transport-level metadata (Package and Group identifiers, Properties, Records, Annotations) for any provenance or processing context.
-2. Extracts the data-layer payload (Objects, Templates, REL declarations) from the wrapper.
+2. Extracts the data-layer payload (Objects, HEADs, Templates, REL declarations) from the wrapper.
 3. Stores or processes the extracted data items according to the receiver's data-layer rules.
 4. Discards the transport wrapping; Package and Group elements are not part of what the receiver retains as data.
 
@@ -2490,7 +2546,7 @@ Receivers MAY log transport metadata as audit information and MAY use Group iden
 
 Transport-layer wrappers do not survive a parse-store-serialize round-trip in their original form. A receiver that imports a Package and later exports the same data items will not necessarily produce a Package; the items might be exported bare or as a different Package with metadata reflecting the export rather than the original import.
 
-Persistence layers MAY retain transport metadata as provenance attached to the imported data items (for example, as a Qualifier or Annotation noting the source Package's identifier and timestamp). Such retention is application-defined and is not part of the core specification's round-trip contract. The data items themselves (Objects, Templates, REL declarations) round-trip per Appendix A regardless of the transport wrapper they arrived in.
+Persistence layers MAY retain transport metadata as provenance attached to the imported data items (for example, as a Qualifier or Annotation noting the source Package's identifier and timestamp). Such retention is application-defined and is not part of the core specification's round-trip contract. The data items themselves (Objects, HEADs, Templates, REL declarations) round-trip per Appendix A regardless of the transport wrapper they arrived in.
 
 ---
 
@@ -2763,6 +2819,20 @@ The test suite is exhaustive in concept and bounded in practice. Each category a
 ## Appendix B — Detailed Revision History
 
 This appendix records the per-revision change descriptions accumulated during the pre-1.0 working-draft phase. The Revision History table at the top of this document gives the version + date summary; this appendix carries the prose detail. Once the specification reaches v1.0, this appendix will be archived and subsequent revisions will use a leaner change-log format.
+
+### v0.25.0 — Identity/naming separation; the `HEAD` persistent-aggregate role
+
+This revision lands the Phase 1 identity/naming separation and introduces the `HEAD` role. Both are breaking changes, admissible pre-1.0.
+
+**(55) The `Id` field is renamed to `Name` and recast as descriptive, not durable.** The identity/naming field `Id` becomes `Name` throughout the specification family, along with its grammar tokens (`NameRef`, `NamePathRef`, `NameAnchorRef`, `NameSegment`, `NameStartChar`, `NameContChar`, and the corresponding `*Reference` productions). `Name` is the element's descriptive name — used for Template slot alignment, path and `@name` resolution, and structural reference — and is explicitly **not durable**: renaming an element does not change its machine identity. **Migration:** rename the field and any `IdRef`/`Id…Ref` reference-literal terminology to the `Name…` forms; document content is otherwise unchanged.
+
+**(56) `Anchor` becomes the durable machine identity.** The `Anchor` field (introduced as a rename of `Key` in v0.24.0) is recast as the element's durable machine identity — the token that persistence and durable graph relationships bind to. Changing an Anchor **re-identifies** an element; changing a Name merely renames it. The `AnchorToken` grammar is unchanged: its continuation set already admits IRIs, CURIEs, GUIDs, and hierarchical locals, so a durable identity may be written in any of those forms (only the leading-`/` path form remains reserved). §4.4.2/§4.4.3 move the "canonical globally-resolvable scheme" role from the descriptive Name to the durable Anchor. §4.4.5 adds the root-anchor/interior-anchor distinction and a global-resolution tier for globally-resolvable (IRI/CURIE) anchors; an element MUST carry an Anchor to be an `AnchorRef` target, and a persistence profile MAY require Anchors on stored entities.
+
+**(57) An @-edge MAY address a root entity by durable Anchor; targets tightened to root-level entities.** §6.4 axioms E1/E5 and the Resolution rule are revised: an @-edge's Resource may address its target by `Name` (`@identifier`) or by durable identity (`AnchorRef`, `&anchor`) when the anchor is a **root anchor** resolving to an independent graph entity of the declared role. Edge targets are now explicitly root-level entities only; interior anchors, `$path`, and the composed `@Base&anchor` / `@Base$path` forms remain Reference (REF) territory. E6 is recast so the **Anchor** is the edge's durable substance and the `Name` merely names it (previously the descriptive field carried the substance role).
+
+**(58) New `HEAD` role — a persistent aggregate head (§6.17).** `HEAD` is a data-layer, root-eligible, independently-addressable container representing the persistent aggregate a document carries. It holds exactly one **Body** — an Object or REL declaration (the entity roles) — plus named typed metadata **slots** (Properties, Records) and adjuncts (Extensions, Annotations). The Body is identified structurally, as the sole entity-role child (no Name/order/Template tie-breaker). Axioms H1–H9 govern its composition, ownership, extraction, addressability, and Body replacement. A HEAD's Anchor identifies the aggregate (a root anchor), not automatically its Body subject; interior anchors are REF-addressable only. A HEAD MUST NOT nest another HEAD, and appears only at the document root, as Package/Group payload, or as a VAL occupant.
+
+**(59) `HEAD` family additions reopen the closed prefix vocabulary.** The closed-vocabulary guarantee binds implementations, not the specification; while pre-1.0, a revision may add a prefix for a genuinely new role. This revision adds the `HEAD` base prefix, the `@HEAD` @-edge (the @-Edge family is now three members — `@OBJ`, `@REL`, `@HEAD` — E5 unchanged in principle: each targets an independent graph entity), the `DEFHEAD` Template prefix (8th DEF form), and `HEAD`/`DEFHEAD` role markers in the reference-literal `BaseRole` set. `%HEAD` follows automatically from the generative `%` family. §5, §5.2, §5.3.2, §6.4, §6.14, §6.17, §7.1 (matrix column + row), §7.2 (root rule; Object-exclusion; new rule 2a), §9, the Grammar, and the Path specification are updated accordingly.
 
 ### v0.24.0 — `Key` field renamed to `Anchor`; reference-base production renamed to `Base`
 
