@@ -125,7 +125,7 @@ This section defines the terms used throughout the specification. The key words 
 
 - **Value-Kind** — the type category of a Resource. Distinct from Role (which describes structural position). A Property of prefix `STR` carries a Resource of value-kind `string`.
 
-- **Identifier** — any of the three identity fields (`Id`, `Anchor`, `Rel`) that name or link an element. Some roles require at least one (§3.2).
+- **Identifier** — any of the three identity fields (`Name`, `Anchor`, `Rel`) that name or link an element. Some roles require at least one (§3.2).
 
 - **Document** — a single rooted GDX tree, or a sequence of root-eligible elements treated as a unit of serialization. Which roles may root a document is fixed normatively by the root rule (§7.2); informally, the root(s) are Objects, Templates, REL declarations, or Packages.
 
@@ -182,7 +182,7 @@ The data model defined here is the single authoritative content that every concr
 A GDX element is the tuple
 
 ```
-(Prefix, Anchor?, Rel?, Id?, Resource?, Type?, Children*, Metadata?)
+(Prefix, Anchor?, Rel?, Name?, Resource?, Type?, Children*, Metadata?)
 ```
 
 All fields except Prefix are optional at the data-model level. Whether a given role requires a particular field is governed by §6 (Element Roles) and §7 (Composition Axioms). `Metadata` is set apart from the other fields: it is realization-layer carriage annotation, explicitly **not** part of the model content, and is defined in §4.8.
@@ -196,24 +196,24 @@ An element has six model fields plus an out-of-model metadata channel. The Prefi
 | `Prefix`   | Declares the element's role. Required. Drawn from the closed vocabulary in §5. |
 | `Anchor`      | An optional named anchor identifying the element within its enclosing Object's scope, independent of its tree position. Used as a target for `&Anchor` reference literals (§4.2.6). |
 | `Rel`      | A predicate-style label naming the relationship between this element and its parent. |
-| `Id`       | A local or resource identifier — the element's name in the document. |
+| `Name`       | A local or resource identifier — the element's name in the document. |
 | `Resource` | The element's typed scalar value. |
 | `Type`     | A reference to a Template the element claims to satisfy. |
 | `Metadata` | *(Out-of-model.)* Realization-layer carriage annotation — flat key/value pairs about how the element is stored or transmitted, not about what it means. Not model content; see §4.8. |
 
-All identity fields (`Id`, `Anchor`, `Rel`) use case-sensitive ordinal comparison.
+All identity fields (`Name`, `Anchor`, `Rel`) use case-sensitive ordinal comparison.
 
 On an @-Edge element (§6.4), an existence/specification split applies to the `Rel` field: the *role* asserts that a relationship exists (an @-edge is, by its role, a relationship), while the `Rel` field specifies *what* the relationship is — and MAY be empty. An empty Rel parses to null and means the relationship is **undefined as to nature**: it exists (the role settled that), but its form is not yet specified (§6.4.2). The empty Rel is the field's ordinary null/absent state — no special syntax and no distinct construct are involved.
 
 Implementations MUST represent these fields as distinct elements of an element's runtime structure. The order in which fields are stored or accessed is implementation-defined; only the children list has a normative order (§3.4).
 
-**Decision: every element divides into an identity portion and a value portion.** The six fields partition into identity (`Prefix`, `Anchor`, `Rel`, `Id`) and value (`Resource`, `Type`), with the `:` separator marking the boundary in the text form (§4). *Alternatives considered:* JSON-style bare key-value pairs (identity and content on one syntactic level, with no way to distinguish "this element claims to be of type X" from "this element has value X"); XML-style attribute-versus-element placement (where either can carry identity or content by convention); RDF-style separate triples that must be reassembled to recover an element's full meaning. *Rejected because:* collapsing identity and value forces every richer claim — type, predicate alignment, stable anchor — to be bolted on by external convention rather than stated on the element itself. The explicit split is what makes an element self-describing (the self-describing-element concept; see the GDX Primer): a consumer can read the identity portion and know the element's role, type, and alignment, then read the value portion for its content, with no external schema. This is the structural basis for the typed-elements and inline-semantic-alignment goals (§1.2). The split is introduced conceptually in the GDX Primer; this is its authoritative basis in the data model.
+**Decision: every element divides into an identity portion and a value portion.** The six fields partition into identity (`Prefix`, `Anchor`, `Rel`, `Name`) and value (`Resource`, `Type`), with the `:` separator marking the boundary in the text form (§4). *Alternatives considered:* JSON-style bare key-value pairs (identity and content on one syntactic level, with no way to distinguish "this element claims to be of type X" from "this element has value X"); XML-style attribute-versus-element placement (where either can carry identity or content by convention); RDF-style separate triples that must be reassembled to recover an element's full meaning. *Rejected because:* collapsing identity and value forces every richer claim — type, predicate alignment, stable anchor — to be bolted on by external convention rather than stated on the element itself. The explicit split is what makes an element self-describing (the self-describing-element concept; see the GDX Primer): a consumer can read the identity portion and know the element's role, type, and alignment, then read the value portion for its content, with no external schema. This is the structural basis for the typed-elements and inline-semantic-alignment goals (§1.2). The split is introduced conceptually in the GDX Primer; this is its authoritative basis in the data model.
 
 ### 3.2 Identifier Requirements
 
 Identifier requirements apply to elements in *named-attribute positions* — positions where the element represents a distinct named property of its parent.
 
-The following roles, when in named-attribute position, MUST carry at least one of `Id`, `Anchor`, or `Rel`:
+The following roles, when in named-attribute position, MUST carry at least one of `Name`, `Anchor`, or `Rel`:
 
 - Object (`OBJ`/`O`, `DEFOBJ`)
 - Record (`REC`/`R`, `DEFREC`, `NREC`/`NR`) when not in Set member position
@@ -223,7 +223,7 @@ The following roles, when in named-attribute position, MUST carry at least one o
 
 Elements appearing as members of a Set (§6.13) are in *positional* rather than named-attribute position. They are not required to carry identifiers; they identify themselves by position and value within the Set. Identifiers on Set members are valid and MAY be used when meaningful (for example, to identify individual Records within a Record Set).
 
-An element appearing as the **occupant of a VAL slot** (§6.11) is similarly in a positional rather than named-attribute position with respect to the VAL: the slot is the named-attribute position, and the occupant fills it. The occupant MAY carry its own `Id`, `Anchor`, or `Rel` for its own purposes (occupant-level identity, addressable from references), but it is NOT required to carry an identifier merely because its role would otherwise require one in a named-attribute position. The two identity levels (slot-level on the VAL, occupant-level on the child) are independent; this separation is what distinguishes VAL from a plain Property whose Resource is the value.
+An element appearing as the **occupant of a VAL slot** (§6.11) is similarly in a positional rather than named-attribute position with respect to the VAL: the slot is the named-attribute position, and the occupant fills it. The occupant MAY carry its own `Name`, `Anchor`, or `Rel` for its own purposes (occupant-level identity, addressable from references), but it is NOT required to carry an identifier merely because its role would otherwise require one in a named-attribute position. The two identity levels (slot-level on the VAL, occupant-level on the child) are independent; this separation is what distinguishes VAL from a plain Property whose Resource is the value.
 
 A Prefix is REQUIRED on every element regardless of position. Set members MUST carry their prefix even when their identifier is omitted, because the prefix distinguishes Set members from Qualifiers, Annotations, Extensions, and other elements that may appear within a Set's children.
 
@@ -314,12 +314,12 @@ Other text forms (compact, binary, alternative tab-indented) MAY be defined else
 An element is written as a bracketed token sequence between `<` and `>`. The general form is:
 
 ```
-<Prefix [&Anchor] [#Rel] [Id] [: Resource] [--Type] [{Metadata}]>
+<Prefix [&Anchor] [#Rel] [Name] [: Resource] [--Type] [{Metadata}]>
     [child elements ...]
 >
 ```
 
-Field write order is **Prefix · Anchor · Rel · Id · Resource · Type · Metadata**. The Prefix is required; all other fields are optional. The metadata block, when present, is written last — after the Type — so that a reader (or a stripping tool) consumes the element's entire model content before reaching the out-of-model annotation; see §4.8.
+Field write order is **Prefix · Anchor · Rel · Name · Resource · Type · Metadata**. The Prefix is required; all other fields are optional. The metadata block, when present, is written last — after the Type — so that a reader (or a stripping tool) consumes the element's entire model content before reaching the out-of-model annotation; see §4.8.
 
 A leaf element MAY be written on a single line:
 
@@ -349,7 +349,7 @@ A *sigil* is a single non-alphabetic character (or short character sequence) tha
 | `@`   | Introduces an identifier-mode reference literal (§4.2.6) |
 | `$`   | Introduces a path-mode reference literal (§4.2.6); grammar specified in `GDX-Path.md` |
 
-The character `:` is a *separator*, not a sigil. It divides an element into an identity portion (Prefix, Anchor, Rel, Id) and a value portion (Resource, Type). The Resource itself has no sigil; it is identified by appearing on the value side of `:`.
+The character `:` is a *separator*, not a sigil. It divides an element into an identity portion (Prefix, Anchor, Rel, Name) and a value portion (Resource, Type). The Resource itself has no sigil; it is identified by appearing on the value side of `:`.
 
 The sigils `&`, `#`, and `--` MUST be immediately followed by their field content with no intervening whitespace. Whitespace MAY appear before a sigil to separate it from the preceding token. Whitespace MAY appear on either side of `:`. A bare sigil — `&`, `#`, or `--` followed by anything other than its field content — is malformed; an empty field is expressed by omitting the sigil entirely (for the significance of an omitted `#rel` on an @-Edge element, see §6.4.2).
 
@@ -361,7 +361,7 @@ When the `:` separator appears with no identity field on the left in a context w
 
 Tokens within an element are separated by whitespace. The following rules apply:
 
-- Whitespace MUST separate the Prefix from a following Id when no sigil-introduced field intervenes (so `<REC address>` not `<Raddress>`).
+- Whitespace MUST separate the Prefix from a following Name when no sigil-introduced field intervenes (so `<REC address>` not `<Raddress>`).
 - The `:` separator MAY have whitespace on either side. The forms `<STR name:"Alice">`, `<STR name :"Alice">`, `<STR name: "Alice">`, and `<STR name : "Alice">` are all valid and equivalent.
 - Whitespace MAY appear immediately after `<` and immediately before `>`.
 - Whitespace within an element is otherwise not significant.
@@ -550,12 +550,12 @@ A bytes literal with no following digits (`0x` alone) is malformed. A hex litera
 A reference literal designates another addressable element. Five forms are recognized, combining the three operations of name resolution (`@`), structural traversal (`$`), and anchor lookup (`&`):
 
 ```ebnf
-ReferenceLiteral ::= IdRef | PathRef | AnchorRef | IdPathRef | IdAnchorRef
-IdRef            ::= "@" Base
+ReferenceLiteral ::= NameRef | PathRef | AnchorRef | NamePathRef | NameAnchorRef
+NameRef            ::= "@" Base
 PathRef          ::= "$" PathExpression
 AnchorRef        ::= "&" AnchorToken
-IdPathRef        ::= "@" Base "$" PathExpression
-IdAnchorRef      ::= "@" Base "&" AnchorToken
+NamePathRef        ::= "@" Base "$" PathExpression
+NameAnchorRef      ::= "@" Base "&" AnchorToken
 
 Base             ::= (BaseRole ":")? Identifier
 BaseRole         ::= "OBJ"  | "REL"  | "PKG"  | "GRP"
@@ -567,7 +567,7 @@ The `Base` production carries an optional role marker — a closed-vocabulary ke
 
 The `PathExpression` grammar and the resolution algorithms are specified in the companion GDX Path Expressions Specification (`GDX-Path.md`); the `AnchorToken` grammar is defined in §4.4.3 of this document. Implementations MUST conform to `GDX-Path.md` for the contents of any `$`-introduced literal and for the resolution semantics of role markers.
 
-**Identifier-mode** (`IdRef`) is an `@` sigil followed by an identifier:
+**Identifier-mode** (`NameRef`) is an `@` sigil followed by an identifier:
 
 ```
 @people/bob
@@ -597,14 +597,14 @@ The `$` sigil MUST be immediately followed by the path expression with no interv
 
 The `&` sigil MUST be immediately followed by the Anchor token with no intervening whitespace.
 
-**Composed name + path** (`IdPathRef`) concatenates identifier-mode with path-mode. The `@Identifier` portion resolves to a starting element by scope walk; the `$PathExpression` portion is then evaluated rooted at that starting element:
+**Composed name + path** (`NamePathRef`) concatenates identifier-mode with path-mode. The `@Identifier` portion resolves to a starting element by scope walk; the `$PathExpression` portion is then evaluated rooted at that starting element:
 
 ```
 @gdx:bob$/contacts/[1]
 @https://acme.com/people/alice$/address/[2]
 ```
 
-**Composed name + anchor** (`IdAnchorRef`) concatenates identifier-mode with anchor-mode. The `@Base` portion resolves to a starting element; the `&Anchor` portion is then looked up within that element's scope. When the anchor carries no role marker, the starting element defaults to an Object:
+**Composed name + anchor** (`NameAnchorRef`) concatenates identifier-mode with anchor-mode. The `@Base` portion resolves to a starting element; the `&Anchor` portion is then looked up within that element's scope. When the anchor carries no role marker, the starting element defaults to an Object:
 
 ```
 @gdx:bob&shippingAddress                 // Object anchor (default)
@@ -613,9 +613,9 @@ The `&` sigil MUST be immediately followed by the Anchor token with no interveni
 @DEFOBJ:com.acme.Customer&firstName-doc  // Template anchor (explicit)
 ```
 
-The two composed forms are the canonical mechanisms for cross-document addressing. The `$` and `&` operators do not combine within a single reference literal; pick `IdPathRef` for structural traversal or `IdAnchorRef` for anchor-based addressing.
+The two composed forms are the canonical mechanisms for cross-document addressing. The `$` and `&` operators do not combine within a single reference literal; pick `NamePathRef` for structural traversal or `NameAnchorRef` for anchor-based addressing.
 
-Because `$` and `&` are not members of `IdContChar`, the boundary between the identifier portion and the path or anchor portion is lexically unambiguous. The optional `BaseRole` keyword before `:` is distinguished from a CURIE prefix (`gdx:`, `schema:`) by lookup against the closed `BaseRole` set: only `OBJ`, `REL`, `PKG`, `GRP`, `DEFOBJ`, `DEFREC`, `DEFSTR`, `DEFINT`, `DEFFLOAT`, `DEFBOOL`, `DEFBYTE` are recognized as role markers.
+Because `$` and `&` are not members of `NameContChar`, the boundary between the identifier portion and the path or anchor portion is lexically unambiguous. The optional `BaseRole` keyword before `:` is distinguished from a CURIE prefix (`gdx:`, `schema:`) by lookup against the closed `BaseRole` set: only `OBJ`, `REL`, `PKG`, `GRP`, `DEFOBJ`, `DEFREC`, `DEFSTR`, `DEFINT`, `DEFFLOAT`, `DEFBOOL`, `DEFBYTE` are recognized as role markers.
 
 **Parse-time vs. resolution-time validation of role markers.** The parser MUST reject an unknown role keyword (one not in the closed set). At resolution time, the resolver MUST verify that the named element actually has the claimed role; mismatch yields an unresolved reference.
 
@@ -629,13 +629,13 @@ Reference literals are commonly used as the Resource of @-Edge elements (`@OBJ`,
 >
 ```
 
-**Address-mode singularity.** A reference literal whose Resource is a `PathRef`, `AnchorRef`, `IdPathRef`, or `IdAnchorRef` resolves to a single element. The reference is resolved if and only if path or anchor evaluation yields exactly one element whose role matches the enclosing prefix; zero matches, multiple matches, and a single match of non-matching role all yield an unresolved reference. Resolvers MUST NOT silently select a first match in the multi-match case. See `GDX-Path.md` §7 for the normative definition.
+**Address-mode singularity.** A reference literal whose Resource is a `PathRef`, `AnchorRef`, `NamePathRef`, or `NameAnchorRef` resolves to a single element. The reference is resolved if and only if path or anchor evaluation yields exactly one element whose role matches the enclosing prefix; zero matches, multiple matches, and a single match of non-matching role all yield an unresolved reference. Resolvers MUST NOT silently select a first match in the multi-match case. See `GDX-Path.md` §7 for the normative definition.
 
 The five reference forms serve different addressing strategies. Identifier-mode looks up a target by name in the appropriate scope. Path-mode traverses a structural path to reach an element that may not have a global identifier. Anchor-mode looks up an element by its location-stable Anchor. The composed forms combine name resolution with one of structural traversal or anchor lookup. The choice among them is the author's, based on what the target is, where it lives, and how stably it is identified. When both an Anchor and a path could address the target, prefer the Anchor form — Anchors are location-stable, paths break under restructuring.
 
 ### 4.3 Type References
 
-A Type reference attaches to an element via the `--` sigil and follows the Resource (or the Id, if no Resource is present):
+A Type reference attaches to an element via the `--` sigil and follows the Resource (or the Name, if no Resource is present):
 
 ```
 <REC address : --com.acme.Address
@@ -655,15 +655,15 @@ A Type reference asserts that the element's contents satisfy the named Template.
 
 ### 4.4 Identifier Lexical Rules
 
-A single identifier grammar applies to all identifier-bearing positions: the `Id` field, the contents of the `Anchor` field (which additionally permits a leading digit — §4.4.3), the contents of the `Rel` field, and the contents of the `Type` field.
+A single identifier grammar applies to all identifier-bearing positions: the `Name` field, the contents of the `Anchor` field (which additionally permits a leading digit — §4.4.3), the contents of the `Rel` field, and the contents of the `Type` field.
 
 #### 4.4.1 Identifier Grammar
 
 ```
-Id              ::= IdStartChar IdContChar*
+Name              ::= NameStartChar NameContChar*
 
-IdStartChar     ::= ALPHA | "_"
-IdContChar      ::= ALPHA | DIGIT | "_" | "-" | "." | "/" | ":"
+NameStartChar     ::= ALPHA | "_"
+NameContChar      ::= ALPHA | DIGIT | "_" | "-" | "." | "/" | ":"
 
 ALPHA           ::= "A".."Z" | "a".."z"
 DIGIT           ::= "0".."9"
@@ -673,7 +673,7 @@ An identifier MUST begin with a letter or an underscore. It MAY continue with an
 
 The forward slash (`/`) is admitted as a continuation character so that IRIs (e.g., `https://acme.com/people/alice`) remain valid identifiers. The forward slash is **not** admitted as a start character: identifiers may not begin with `/`. This narrowing (introduced in v0.11.0) reserves the leading-slash syntactic slot for path-mode reference literals (§4.2.6 and the companion GDX Path Expressions Specification). Documents conforming to v0.10.0 or earlier that use leading-slash identifiers MUST be migrated; see `GDX-Path.md` Appendix C for migration patterns.
 
-**Decision: identifiers begin with a letter or underscore.** Restricting `IdStartChar` to `ALPHA | "_"` (and the broader restriction of identifiers to ASCII letters, digits, and a small punctuation set). *Alternatives considered:* permitting a leading digit, leading sigil characters, or Unicode identifier characters. *Rejected because:* a leading digit is lexically ambiguous with numeric literals, and a leading `/` is reserved for path-mode references — but beyond those mechanical reasons, the restriction is a deliberate human-factors commitment. Identifiers are read, typed, searched, and grepped by people; keeping them in keyboard-reachable ASCII means an identifier can always be produced from muscle memory and located by a plain text search, with no character-picker and no encoding surprises. This serves the human-authorability and round-trip-readability goals (§1.2) directly. A format that admitted arbitrary Unicode in identifier-start position would trade that everyday ergonomics for a generality GDX's target domain does not need.
+**Decision: identifiers begin with a letter or underscore.** Restricting `NameStartChar` to `ALPHA | "_"` (and the broader restriction of identifiers to ASCII letters, digits, and a small punctuation set). *Alternatives considered:* permitting a leading digit, leading sigil characters, or Unicode identifier characters. *Rejected because:* a leading digit is lexically ambiguous with numeric literals, and a leading `/` is reserved for path-mode references — but beyond those mechanical reasons, the restriction is a deliberate human-factors commitment. Identifiers are read, typed, searched, and grepped by people; keeping them in keyboard-reachable ASCII means an identifier can always be produced from muscle memory and located by a plain text search, with no character-picker and no encoding surprises. This serves the human-authorability and round-trip-readability goals (§1.2) directly. A format that admitted arbitrary Unicode in identifier-start position would trade that everyday ergonomics for a generality GDX's target domain does not need.
 
 Identifiers MUST NOT begin with a digit (which would be lexically ambiguous with numeric literals). Identifiers MUST NOT contain whitespace, brackets, sigil characters (other than as listed above), or other punctuation.
 
@@ -702,14 +702,14 @@ CURIEs are typically expanded to full IRIs by the resolver. The choice between I
 
 This identity model parallels RDF's: globally resolvable identifiers are the canonical scheme; CURIEs and other syntactic forms (paths, local names, GUIDs) are conveniences for specific use cases.
 
-When an IRI appears in `Rel` position, the lexer recognizes it by the `://` scheme separator and parses it as a URI reference following RFC 3986 syntax. In other identifier positions, the same input is parsed as a maximal identifier (which incidentally captures the URI-like form because all its characters are valid IdContChars). Either way, the value carried is the same identifier; the distinction is lexical.
+When an IRI appears in `Rel` position, the lexer recognizes it by the `://` scheme separator and parses it as a URI reference following RFC 3986 syntax. In other identifier positions, the same input is parsed as a maximal identifier (which incidentally captures the URI-like form because all its characters are valid NameContChars). Either way, the value carried is the same identifier; the distinction is lexical.
 
 #### 4.4.3 Anchor Field Values
 
 The `Anchor` field carries a **Anchor token**: an identifier token whose grammar additionally permits a leading digit.
 
 ```ebnf
-AnchorToken     ::= AnchorStartChar IdContChar*
+AnchorToken     ::= AnchorStartChar NameContChar*
 AnchorStartChar ::= ALPHA | DIGIT | "_"
 ```
 
@@ -723,9 +723,9 @@ All of the following are valid anchor values:
 <REC &7f3a2b9c-4e21-4f88-91d5-abcdef012345 #log:event ...>
 ```
 
-The leading-digit relaxation is unambiguous because an Anchor token never appears in an open lexical position: it is always introduced by the `&` sigil, whether in field position (§4.1) or in a `AnchorRef`/`IdAnchorRef` reference literal (§4.2.6), so the digit-start ambiguity with numeric literals that motivates the `IdStartChar` restriction (§4.4.1) cannot arise. Anchor tokens are opaque: they carry NO numeric interpretation and are compared by case-sensitive ordinal equality like every other identity field (§3.2). An all-digit Anchor is a token, not a number — `&01` and `&1` are distinct Anchors.
+The leading-digit relaxation is unambiguous because an Anchor token never appears in an open lexical position: it is always introduced by the `&` sigil, whether in field position (§4.1) or in a `AnchorRef`/`NameAnchorRef` reference literal (§4.2.6), so the digit-start ambiguity with numeric literals that motivates the `NameStartChar` restriction (§4.4.1) cannot arise. Anchor tokens are opaque: they carry NO numeric interpretation and are compared by case-sensitive ordinal equality like every other identity field (§3.2). An all-digit Anchor is a token, not a number — `&01` and `&1` are distinct Anchors.
 
-The digit-permissive start admits the two anchor idioms that plain identifiers exclude: sequential tokens (`&1`, `&2`, … for log entries and append-only records) and digit-leading GUID/UUID tokens (`&7f3a2b9c-…`). Named Anchors remain the idiom for semantic anchors (named addresses, designated child records). The Anchor field provides a location-stable anchor for references (§4.2.6, §4.4.5). Anchors are NOT slot positions for Template-instance alignment, and the `Anchor` field is excluded from the universal claim rule (§8.2.3): alignment uses the `Id` field, and Anchors are never Template-declared.
+The digit-permissive start admits the two anchor idioms that plain identifiers exclude: sequential tokens (`&1`, `&2`, … for log entries and append-only records) and digit-leading GUID/UUID tokens (`&7f3a2b9c-…`). Named Anchors remain the idiom for semantic anchors (named addresses, designated child records). The Anchor field provides a location-stable anchor for references (§4.2.6, §4.4.5). Anchors are NOT slot positions for Template-instance alignment, and the `Anchor` field is excluded from the universal claim rule (§8.2.3): alignment uses the `Name` field, and Anchors are never Template-declared.
 
 #### 4.4.4 Identifier Length and Collisions
 
@@ -738,30 +738,30 @@ Practical guidance:
 - IRI-form identifiers may run to several hundred characters when full URIs are used. This is acceptable but compact identifiers (CURIEs, GUIDs) are preferred for documents that are read or edited by humans.
 - Implementations SHOULD impose an upper limit on identifier length (a reasonable default is 1024 characters) to bound memory use and prevent denial-of-service via pathologically long identifiers in untrusted documents.
 
-Identifier collisions across documents are an application concern, not a parser concern. Two documents using `gdx:Person` are referencing the same conceptual identifier; whether they refer to the same Template depends on the resolver's vocabulary mapping (§8.5.2). Within a single document, identifiers in the same scope MUST be unique among elements that compete for resolution (e.g., two top-level Objects with the same Id is malformed); identifiers in different scopes (different parents) are independent.
+Identifier collisions across documents are an application concern, not a parser concern. Two documents using `gdx:Person` are referencing the same conceptual identifier; whether they refer to the same Template depends on the resolver's vocabulary mapping (§8.5.2). Within a single document, identifiers in the same scope MUST be unique among elements that compete for resolution (e.g., two top-level Objects with the same Name is malformed); identifiers in different scopes (different parents) are independent.
 
 #### 4.4.5 Anchor Uniqueness and Scope
 
-When an element carries a `Anchor` field, the Anchor value participates in a scope-local namespace used for `AnchorRef` and `IdAnchorRef` reference resolution (§4.2.6).
+When an element carries a `Anchor` field, the Anchor value participates in a scope-local namespace used for `AnchorRef` and `NameAnchorRef` reference resolution (§4.2.6).
 
 Anchor scope is determined by the element's position in the document:
 
 - **Object-scoped.** An element whose nearest enclosing addressable container is an Object has its Anchor scoped within that Object. Two elements inside the same Object MUST NOT share an Anchor value.
 - **Document-scoped.** An element at transport-layer position — a direct child of a Package, Group, or document root — has its Anchor scoped within the document. Two elements at this level MUST NOT share an Anchor value.
 
-The enclosing-Object rule means that two different Objects MAY each contain an element with the same Anchor (`&entry-12345` in two different log Objects is permitted), because Anchor resolution within each Object is independent. The composed `IdAnchorRef` form (`@anchor-id&key`) pins the scope explicitly when addressing across Object boundaries.
+The enclosing-Object rule means that two different Objects MAY each contain an element with the same Anchor (`&entry-12345` in two different log Objects is permitted), because Anchor resolution within each Object is independent. The composed `NameAnchorRef` form (`@anchor-id&key`) pins the scope explicitly when addressing across Object boundaries.
 
 **Embedded Objects open a fresh Anchor scope.** An Object occupying a VAL slot (§6.11) is an Object for the purposes of the nearest-enclosing-container rule: elements inside it are Anchor-scoped to the embedded Object, not to the host Object. The embedded Object's own Anchor, if it carries one, belongs to the host's scope, exactly as any other child of the host.
 
-**Lookup consults exactly one scope.** A `AnchorRef` is resolved against the single scope determined by the rules above — the scope of the *referencing* element. Resolution MUST NOT fall back to an enclosing scope when the Anchor is not found; there is no scope chain and no shadowing. A bare `&key` inside an embedded Object cannot see the host Object's Anchors; addressing across the boundary uses the composed `IdAnchorRef` form.
+**Lookup consults exactly one scope.** A `AnchorRef` is resolved against the single scope determined by the rules above — the scope of the *referencing* element. Resolution MUST NOT fall back to an enclosing scope when the Anchor is not found; there is no scope chain and no shadowing. A bare `&key` inside an embedded Object cannot see the host Object's Anchors; addressing across the boundary uses the composed `NameAnchorRef` form.
 
-**Default anchor role in composed references.** In a composed reference (`IdPathRef`, `IdAnchorRef`), if the `@Base` portion carries no role marker, the resolved element MUST be of role Object. This default reflects the common case for cross-document addressing. To anchor a composed reference at a non-Object element (a REL, a Template, a Package, or a Group), the author MUST use an explicit role marker (§4.2.6).
+**Default anchor role in composed references.** In a composed reference (`NamePathRef`, `NameAnchorRef`), if the `@Base` portion carries no role marker, the resolved element MUST be of role Object. This default reflects the common case for cross-document addressing. To anchor a composed reference at a non-Object element (a REL, a Template, a Package, or a Group), the author MUST use an explicit role marker (§4.2.6).
 
 Anchor collisions within the same scope make the document malformed; conforming parsers SHOULD emit a diagnostic, and conforming resolvers MUST NOT silently pick one matching element over another.
 
 All Anchor tokens — named, all-digit, and GUID-form alike (§4.4.3) — participate in the same scope rules and compare by ordinal equality; `&01` and `&1` are distinct Anchors.
 
-Anchors are OPTIONAL. An element MAY omit the Anchor field entirely; in that case the element is addressable only by `Id` (if present) or by structural path. The decision to carry an Anchor is the author's, based on whether the element needs to be a stable reference target.
+Anchors are OPTIONAL. An element MAY omit the Anchor field entirely; in that case the element is addressable only by `Name` (if present) or by structural path. The decision to carry an Anchor is the author's, based on whether the element needs to be a stable reference target.
 
 ### 4.5 Whitespace Between Elements
 
@@ -807,7 +807,7 @@ MetaLiteral ::= StringLiteral | IntLiteral | FloatLiteral
               | BoolLiteral   | BytesLiteral
 ```
 
-- **Anchors** are identifiers (§4.4.1); the CURIE form (`porthol:sid`) is admitted for namespacing and lexes by the same rule that admits `gdx:name` in element positions (`:` is an `IdContChar`; the pair separator `=` is not, so the key/value boundary is unambiguous even without surrounding whitespace).
+- **Anchors** are identifiers (§4.4.1); the CURIE form (`porthol:sid`) is admitted for namespacing and lexes by the same rule that admits `gdx:name` in element positions (`:` is an `NameContChar`; the pair separator `=` is not, so the key/value boundary is unambiguous even without surrounding whitespace).
 - **Values** are Resource literals (§4.2) of the five value-kinds — string, integer, float, boolean, bytes. Reference literals are NOT admitted (metadata addresses nothing). A value MUST be a literal: a bare unquoted token that is not a recognized literal keyword is malformed, not an implicit string. Strings are quoted or they do not appear — this is what keeps the channel free of implicit-typing ambiguity.
 - **Separators.** `=` separates a key from its value; `,` separates pairs. Whitespace MAY appear around either. The `=`/`,` pairing (rather than `:`/whitespace) is deliberate: it visually marks the block as annotation rather than element structure, and avoids adjacency between the CURIE `:` and a separator `:`.
 - **Value-kind** is carried by the literal form exactly as in Resource position (§4.2): quoted → string, bare digits → integer, decimal-point/exponent/suffix/keyword → float, `true`/`false` → boolean, `0x`/`0z` → bytes. No prefix token is written; the pair is not an element and takes no role.
@@ -873,7 +873,7 @@ Both forms are equivalent at the data-model level. Conversion is deterministic; 
 - Implementations MUST recognize both canonical and minified forms on input.
 - Prefix tokens are case-insensitive. `STR`, `Str`, `str`, and `sTR` are all recognized; the canonical case for output is uppercase.
 - Mixed forms within a document are accepted on input. The serializer normalizes to the configured output style.
-- Identifiers (Id, Anchor, Rel) remain case-sensitive (§4.4). The case-insensitive rule applies only to prefix tokens at prefix position.
+- Identifiers (Name, Anchor, Rel) remain case-sensitive (§4.4). The case-insensitive rule applies only to prefix tokens at prefix position.
 
 **Form is style, not data.** Round-trip preserves data and configured output style, not authorial form choices. Tools serializing in canonical form produce uppercase three-letter prefixes regardless of input case or form.
 
@@ -971,7 +971,7 @@ The `@` prefix marks an element as a member of the **@-Edge family** (§6.4) —
 - `@OBJ` — @-edge to an Object (data-Objects, including concept-Objects per §6.15)
 - `@REL` — @-edge to a REL declaration (predicate-to-predicate or REL-to-concept-Object)
 
-@-edges carry an associative `#rel` specifying the relationship's nature — the field MAY be empty, leaving the relationship undefined pending refinement (§6.4 axiom E4, §6.4.2) — and MAY carry attribute children, identity (`Id`/`Anchor`), Qualifiers, Extensions, and Annotations.
+@-edges carry an associative `#rel` specifying the relationship's nature — the field MAY be empty, leaving the relationship undefined pending refinement (§6.4 axiom E4, §6.4.2) — and MAY carry attribute children, identity (`Name`/`Anchor`), Qualifiers, Extensions, and Annotations.
 
 ```
 <@OBJ #knows : @bob>                  ← @-edge: alice knows bob
@@ -1010,7 +1010,7 @@ where the layer-1 role-prefix follows the established pattern `[@?][refinement-m
 - `%PKG`, `%GRP` — REF to a transport wrapper (meaningful within the transport context that carries it; see §6.16)
 - `%STR*`, `%REC*`, `%.STR*`, and the other Set forms — REF to a Set element. Valid only where the wrapped Set prefix itself exists (value primitives, REC, and modifier Sets per §5.3.1/rule 13); `%DEF…*`, `%REL*`, `%OBJ*`, and `%@OBJ*` are malformed — their target Sets cannot exist (rules 13, 14a; Templates and RELs are root-level declarations, a Set of them does not make sense)
 
-REFs MAY carry a `#rel` (compositional — aligns the slot to a vocabulary predicate; see §6.16 axiom R4), Qualifiers, Extensions, an `Id` (slot name), and Annotations. They MUST NOT carry structural children — that would make a REF a substance rather than a handle.
+REFs MAY carry a `#rel` (compositional — aligns the slot to a vocabulary predicate; see §6.16 axiom R4), Qualifiers, Extensions, an `Name` (slot name), and Annotations. They MUST NOT carry structural children — that would make a REF a substance rather than a handle.
 
 ```
 <%OBJ database : @primary-db>                ← REF: handle to an Object
@@ -1097,7 +1097,7 @@ A Record is a **compound property** — a named composite that belongs to its pa
 
 Structurally, a Record is a container of named children, admitting Properties, Sets, Edges, nested Records, Qualifiers, Nodes, and Annotations. A Record's identifier is a local identifier, meaningful within its containing scope — it names the slot the Record fills in its parent, not a globally addressable resource. A Record *contains* its children, in contrast to a Block which merely *labels* a region of children (§6.5). Records may not contain Objects (except as the occupant of a VAL slot, §6.11) or Groups.
 
-**Records and Objects share structural shape** (both are composites of named children) but differ conceptually: an Object stands as an identified thing; a Record belongs to its parent as a compound property. The distinction matters for addressability (Objects are globally referenceable by Id; Records require path or key composition to reach — see §4.2.6), for persistence (Objects are the unit of storage; Records are stored as part of their containing Object), and for what may root a document (Objects may root; Records may not).
+**Records and Objects share structural shape** (both are composites of named children) but differ conceptually: an Object stands as an identified thing; a Record belongs to its parent as a compound property. The distinction matters for addressability (Objects are globally referenceable by Name; Records require path or key composition to reach — see §4.2.6), for persistence (Objects are the unit of storage; Records are stored as part of their containing Object), and for what may root a document (Objects may root; Records may not).
 
 ```
 <REC address
@@ -1108,7 +1108,7 @@ Structurally, a Record is a container of named children, admitting Properties, S
 
 ### 6.3 Property — `STR`, `INT`, `FLOAT`, `BOOL`, `BYTE`
 
-A Property is an **attribute of its parent** — a single typed value that participates in the parent's structure. Conceptually, the Property's Id names the attribute; the Resource carries its value; the parent owns the Property as part of its content. Properties do not stand on their own — like Records, they belong to their containing element rather than being addressable as independent entities. Properties are GDX's leaves: the smallest carriers of typed information.
+A Property is an **attribute of its parent** — a single typed value that participates in the parent's structure. Conceptually, the Property's Name names the attribute; the Resource carries its value; the parent owns the Property as part of its content. Properties do not stand on their own — like Records, they belong to their containing element rather than being addressable as independent entities. Properties are GDX's leaves: the smallest carriers of typed information.
 
 Structurally, value primitives carry typed scalar values as their Resource. The Resource value-kind MUST match the prefix family.
 
@@ -1134,10 +1134,10 @@ Properties require an identifier when in named-attribute position and may carry 
 
 | Canonical | Minified | Resource value-kind | Identifier |
 |-----------|----------|---------------------|------------|
-| `@OBJ`    | —        | `reference` (target: Object) | `#rel` OPTIONAL (empty = undefined nature, §6.4.2); `Id`/`Anchor` OPTIONAL |
-| `@REL`    | —        | `reference` (target: REL)    | `#rel` OPTIONAL (empty = undefined nature, §6.4.2); `Id`/`Anchor` OPTIONAL |
+| `@OBJ`    | —        | `reference` (target: Object) | `#rel` OPTIONAL (empty = undefined nature, §6.4.2); `Name`/`Anchor` OPTIONAL |
+| `@REL`    | —        | `reference` (target: REL)    | `#rel` OPTIONAL (empty = undefined nature, §6.4.2); `Name`/`Anchor` OPTIONAL |
 
-An **@-edge** is a **first-class but dependent relationship** — a persistent entity owned by and serialized within its source element, asserting a directed link to an independent graph-entity that exists elsewhere. The prefix asserts the *target's role*; the Resource asserts the *target's identity*; the `#rel` predicate, when specified, asserts what the relationship currently means (an empty rel leaves the relationship undefined as to nature — §6.4.2); an optional `Id` or `Anchor` makes the relationship itself a trackable, reference-able substance; optional attribute children describe that substance.
+An **@-edge** is a **first-class but dependent relationship** — a persistent entity owned by and serialized within its source element, asserting a directed link to an independent graph-entity that exists elsewhere. The prefix asserts the *target's role*; the Resource asserts the *target's identity*; the `#rel` predicate, when specified, asserts what the relationship currently means (an empty rel leaves the relationship undefined as to nature — §6.4.2); an optional `Name` or `Anchor` makes the relationship itself a trackable, reference-able substance; optional attribute children describe that substance.
 
 @-edges are GDX's labeled-property-graph mechanism. They are how a document carries the assertion that one graph-entity stands in some named relation to another, optionally with attributes refining the relation.
 
@@ -1173,7 +1173,7 @@ An **@-edge** is a **first-class but dependent relationship** — a persistent e
 
 **E5 — Family is enumerated by target role and restricted to independent graph-entities.** The family consists of exactly `@OBJ` and `@REL`. The restriction is principled: only Objects (including concept-Objects, since GDX uses concept-as-Object for ontology layering — see §6.15) and REL declarations are independent graph-entities. Source role is orthogonal to membership: any role admitted as a parent of an @-edge by the composition matrix (§7.1) may carry @-edges; the family enumeration is over targets only. The Set forms `@OBJ*` and `@REL*` are **malformed** — each @-edge is a single graph statement (per E2′); multiple edges from one source are expressed as siblings, not as Set members. To address multiple edges as a collection (e.g., for iteration or query), the parent Object's children are filtered by prefix — the structure is implicit in the document, not collected into a Set.
 
-**E6 — Identity is optional and orthogonal to predicate.** An @-edge MAY carry an `Id` and/or a `Anchor`. Identity is the edge's *substance* — the persistent entity (per E2′) that endures across changes to predicate, attributes, or target, and that disambiguates multiple edges between the same endpoints. The substance/predication distinction is the spine of the model: the `Id` is what the edge *is* (the enduring thing); the `#rel` is what it currently *asserts*; attribute children ride on the substance. Identity with an empty rel is well-formed and is the canonical capture-first pattern (§6.4.2 — the substance exists, the predication is pending); predicate-without-identity is the common case (most edges are content with anonymous substance). Two @-edges that share the same source, predicate, and target ARE distinct edges if they carry different identities; uniqueness is by identity, not by the (source, predicate, target) triple.
+**E6 — Identity is optional and orthogonal to predicate.** An @-edge MAY carry an `Name` and/or a `Anchor`. Identity is the edge's *substance* — the persistent entity (per E2′) that endures across changes to predicate, attributes, or target, and that disambiguates multiple edges between the same endpoints. The substance/predication distinction is the spine of the model: the `Name` is what the edge *is* (the enduring thing); the `#rel` is what it currently *asserts*; attribute children ride on the substance. Identity with an empty rel is well-formed and is the canonical capture-first pattern (§6.4.2 — the substance exists, the predication is pending); predicate-without-identity is the common case (most edges are content with anonymous substance). Two @-edges that share the same source, predicate, and target ARE distinct edges if they carry different identities; uniqueness is by identity, not by the (source, predicate, target) triple.
 
 **Resolution.** An @-edge's Resource is name-addressed only — `@identifier` per §4.2.6. Bare `$path` and `&key` reference literals address interior elements of other Objects and are handled by the Reference family (§6.16), not by @-Edges. The composed `@Base$PathExpression` and `@Base&Anchor` forms similarly address interior locations and are Reference territory. An @-edge resolves to a single named entity; interior-reaching is by definition not an @-edge concern.
 
@@ -1219,7 +1219,7 @@ An empty rel is therefore never ambiguous about whether a relationship exists �
 
 **Position in the model.** The empty rel is the natural limit of the identity-present / meaning-deferred principle that runs through GDX — not merely "meaning needs the schema" but "meaning not yet assigned at all." The edge is a declared-but-unbound relationship: well-formed and *undefined-pending*, never malformed. This is consistent with the well-formed-but-undefined posture GDX takes elsewhere (predicates need no REL declaration to be used; constraint identifiers are recorded without interpretation).
 
-**Refinement.** Later refinement fills the `#rel` field on the same edge. Edges are first-class identifiable entities (E6): the edge's identity persists across refinement — nothing is created or replaced; an open field is filled. This is the open-slot refinement pattern of the universal claim rule (§8.2.3): narrowing what was left open, never mutating a prior claim. Because refinement addresses the edge after the fact, an edge with an empty rel SHOULD carry an `Id` or `Anchor` so it remains addressable; an unidentified one can be refined only by structural position, which is fragile under restructuring.
+**Refinement.** Later refinement fills the `#rel` field on the same edge. Edges are first-class identifiable entities (E6): the edge's identity persists across refinement — nothing is created or replaced; an open field is filled. This is the open-slot refinement pattern of the universal claim rule (§8.2.3): narrowing what was left open, never mutating a prior claim. Because refinement addresses the edge after the fact, an edge with an empty rel SHOULD carry an `Name` or `Anchor` so it remains addressable; an unidentified one can be refined only by structural position, which is fragile under restructuring.
 
 **Required disciplines.** Three disciplines keep undefined relationships from becoming invisible debt:
 
@@ -1359,7 +1359,7 @@ Extensions range broadly. Schema-validation rules on Templates (numeric bounds, 
 
 Even when a Template incorporates an Extension into a conformance claim — e.g., a `_INT xsd:minInclusive` that the validator enforces against instance values — the Extension itself remains adjunct in nature. Its bindingness is conferred by the validator or Template that chooses to honor its vocabulary, not by the Extension itself.
 
-Structurally, the `_` modifier marks an element as an Extension. Extensions MAY appear as children of any element that admits children (the composition matrix §7.1 lists Extension as an admitted child role on all data-bearing and declaration-bearing parents). The Extension carries a vocabulary-defined identifier in its `Id`-position field (the assertion's name) and a typed Resource (the assertion's value, of value-kind matching the Extension's prefix family).
+Structurally, the `_` modifier marks an element as an Extension. Extensions MAY appear as children of any element that admits children (the composition matrix §7.1 lists Extension as an admitted child role on all data-bearing and declaration-bearing parents). The Extension carries a vocabulary-defined identifier in its `Name`-position field (the assertion's name) and a typed Resource (the assertion's value, of value-kind matching the Extension's prefix family).
 
 **Extensions carry primitive value-kinds only.** The closed Extension prefix vocabulary admits string, int, float, bool, and bytes (the table below). To express an adjunct statement whose value is a *reference* to another element, the construct depends on whether the assertion is a graph statement or a slot binding:
 
@@ -1472,7 +1472,7 @@ Here the VAL `nameSlot` carries `#gdx:legalName` — the slot's alignment in `pe
 
 3. **Occupant role.** The occupant may be a Property (any value-kind), Record, Object, Block, Set, Edge (as a graph-statement value), or Reference (as a typed-pointer value). The occupant MUST NOT be a VAL (no double-wrapping), a Template or REL (vocabulary-layer roles are not embeddable as values), a Qualifier, Extension, or Annotation (refinement and adjunct roles are not values), a Node-zone element (Node isolation per §7.2 rule 5), or a transport-layer role (Package/Group).
 
-4. **Two-level identity.** The occupant's identity fields (`Id`, `Anchor`, `Rel`) are part of the embedded value and describe the value itself. The VAL's own identity fields name the slot the value fills and describe the slot's role in the parent. The occupant is in *positional* context within the VAL (the slot name comes from the VAL, not the occupant); the §3.2 identifier requirements that apply to Properties and Records in named-attribute position are accordingly relaxed for VAL occupants. The occupant MAY be anonymous (slot-named only) or identified (when its own identity carries information — for example, a `Rel` alignment for the value's semantic content).
+4. **Two-level identity.** The occupant's identity fields (`Name`, `Anchor`, `Rel`) are part of the embedded value and describe the value itself. The VAL's own identity fields name the slot the value fills and describe the slot's role in the parent. The occupant is in *positional* context within the VAL (the slot name comes from the VAL, not the occupant); the §3.2 identifier requirements that apply to Properties and Records in named-attribute position are accordingly relaxed for VAL occupants. The occupant MAY be anonymous (slot-named only) or identified (when its own identity carries information — for example, a `Rel` alignment for the value's semantic content).
 
 5. **Object licensing.** VAL is the data-layer licensing point for an Object in non-root position. The §7.2 rule-2 Object-exclusion exception that historically permitted `%O` is provided by VAL: a VAL whose occupant is an Object is the only data-layer form (besides transport-layer Package and Group payload) that may contain an Object as a non-root element.
 
@@ -1806,7 +1806,7 @@ The prefix is a *role-to-dereference* (`%OBJ` → resolves to an Object element)
 - a `#rel` field (compositional alignment — see R4),
 - Qualifiers (refining the slot's binding, exactly as on any Property),
 - Extensions (adjunct vocabulary-keyed assertions about the slot or its binding — e.g., provenance about how the handle was selected, audit info about the binding),
-- an `Id` (the slot name within its parent's scope),
+- an `Name` (the slot name within its parent's scope),
 - Annotations.
 
 It MUST NOT carry structural children (Properties, @-edges, Sets, Records, Objects, Blocks, VAL, REL, Template). Structural children would make the REF a substance rather than a handle, collapsing the genus distinction with VAL and Edge.
@@ -1819,7 +1819,7 @@ The structural test (proof by collapse): if `<%OBJ #X x : @T>` and `<@OBJ #X : @
 
 Bases in composed references remain restricted to globally-addressable entities (Objects, RELs, Templates, transport wrappers — see §4.2.6). The "any addressable element" of R5 refers to the *target*, not the anchor; reaching interior targets is accomplished by anchor-plus-path/key.
 
-**R6 — A REF has no identity of its own beyond the slot it fills.** A handle is not a substance; the only name a REF bears is its slot name (a Property's `Id`), which is the parent's concern. A REF is **never itself a reference target** — to point at what a REF points at, point at the target directly; do not chain through the intermediate REF.
+**R6 — A REF has no identity of its own beyond the slot it fills.** A handle is not a substance; the only name a REF bears is its slot name (a Property's `Name`), which is the parent's concern. A REF is **never itself a reference target** — to point at what a REF points at, point at the target directly; do not chain through the intermediate REF.
 
 To attach adjunct metadata about a specific binding (provenance, audit, confidence in the resolution), use Extensions *on* the REF (per R3). The asymmetry with @-Edge is intentional: @-edges have identity (E6) and ARE addressable substances; REFs are slot-contents and are NOT. Reification — making a statement *about* a relationship — is the @-Edge's identity-bearing job, accessed from outside via a `%@OBJ` or `%@REL` REF.
 
@@ -1903,7 +1903,7 @@ A REF's Resource is a reference literal per §4.2.6. Resolution behavior paralle
 4. **Role verification.** The resolver MUST verify the resolved element's role matches the REF prefix. Mismatch yields an unresolved reference.
 5. **Resolution failure.** Unresolved REFs are reported as schema-non-conforming (Layer 2); the REF element itself is structurally well-formed (Layer 1).
 
-A REF whose Resource is any non-`IdRef` literal MUST resolve to exactly one element of the matching role (see `GDX-Path.md` §7).
+A REF whose Resource is any non-`NameRef` literal MUST resolve to exactly one element of the matching role (see `GDX-Path.md` §7).
 
 #### Summary
 
@@ -2036,7 +2036,7 @@ The following rules are consequences of the matrix and are repeated here for cla
 
 ### 7.3 Identifier Rules
 
-Per §3.2, the following roles MUST carry at least one identifier (`Id`, `Anchor`, or `Rel`) when in named-attribute position:
+Per §3.2, the following roles MUST carry at least one identifier (`Name`, `Anchor`, or `Rel`) when in named-attribute position:
 
 - Object (`OBJ`/`O`, `DEFOBJ`)
 - Record (`REC`/`R`, `DEFREC`, `NREC`/`NR`) when not in Set member position
@@ -2102,7 +2102,7 @@ Schemas in GDX are themselves GDX documents. This section defines the schema mec
 
 - **Template structure (§8.1, §8.3).** Templates are GDX elements with `DEF…` prefixes. They declare the structural shape an instance is expected to satisfy: which child slots exist, what role each carries, what Rel each aligns to, what Type each claims. Templates are GDX-native: this specification defines their grammar, their composition rules, and how they are resolved.
 
-- **Template-instance alignment (§8.2).** An instance carrying a `--type` reference asserts that its structure aligns to the referenced Template. Slot alignment is by `Id` with `Rel` as a cross-vocabulary bridge; the universal claim rule (§8.2.3) governs how Template-declared and instance-declared values reconcile on aligned slots; materialization (§8.2.4) is the recommended persistence form. This is Layer 2a (§2.2).
+- **Template-instance alignment (§8.2).** An instance carrying a `--type` reference asserts that its structure aligns to the referenced Template. Slot alignment is by `Name` with `Rel` as a cross-vocabulary bridge; the universal claim rule (§8.2.3) governs how Template-declared and instance-declared values reconcile on aligned slots; materialization (§8.2.4) is the recommended persistence form. This is Layer 2a (§2.2).
 
 - **Constraint Extensions (§8.4).** Constraint vocabularies — XSD, JSON Schema, OWL profiles, bespoke domain vocabularies — are expressed as Extension elements on Template slots. The Extension carriers (`_STR`, `_INT`, etc.) are GDX-native. The constraint identifiers they carry (`xsd:minInclusive`, `json:pattern`, etc.) are vocabulary-defined and opaque to GDX. This is Layer 2b (§2.2). Multiple constraint vocabularies MAY coexist on the same Template; each is interpreted independently by consumers that understand its identifiers.
 
@@ -2147,9 +2147,9 @@ The `--type` reference is a Layer 2 (schema) assertion (§2.2). Resolving the re
 
 #### 8.2.1 Slot Alignment
 
-An instance child satisfies a Template slot by matching the slot's `Id` field, using case-sensitive ordinal comparison (§3.2). When a Template slot declares a `Rel`, an instance child carrying the same `Rel` MAY align to the slot even if its local `Id` differs; in that case the `Rel` is the alignment key, supporting cross-vocabulary instances whose local names differ from the Template's slot names.
+An instance child satisfies a Template slot by matching the slot's `Name` field, using case-sensitive ordinal comparison (§3.2). When a Template slot declares a `Rel`, an instance child carrying the same `Rel` MAY align to the slot even if its local `Name` differs; in that case the `Rel` is the alignment key, supporting cross-vocabulary instances whose local names differ from the Template's slot names.
 
-The `Anchor` field plays no role in Template-instance alignment. Anchors are an independent named-anchor mechanism (§4.4.5) used by `AnchorRef` and `IdAnchorRef` reference literals; they are not consulted during schema validation and are excluded from the universal claim rule (§8.2.3).
+The `Anchor` field plays no role in Template-instance alignment. Anchors are an independent named-anchor mechanism (§4.4.5) used by `AnchorRef` and `NameAnchorRef` reference literals; they are not consulted during schema validation and are excluded from the universal claim rule (§8.2.3).
 
 #### 8.2.2 Cross-Role and Transport Restrictions
 
@@ -2516,7 +2516,7 @@ A single table can store an arbitrary GDX document with the following column str
 | `Prefix`       | The element's prefix token                                         |
 | `Anchor`          | The element's Anchor field (NULL if not present)                      |
 | `Rel`          | The element's Rel field (NULL if not present)                      |
-| `Id`           | The element's Id field (NULL if not present)                       |
+| `Name`           | The element's Name field (NULL if not present)                       |
 | `ValueKind`    | The value-kind of the Resource (NULL if not present)               |
 | `ResourceValue`| The Resource value, encoded per the value-kind                     |
 | `Type`         | The element's Type reference (NULL if not present)                 |
@@ -2525,7 +2525,7 @@ This single-schema approach allows GDX storage without per-document schema migra
 
 Store-native columns beyond those above (a persistence identifier, a row version, delta-handling state) are the at-rest form of an element's metadata channel (§4.8): they annotate how the element is stored, not what it means, and they are the natural source and sink for the `{...}` block when the element is serialized out or parsed in. Because metadata is out-of-model, these columns are outside the round-trip contract (§A.2) — a backend MAY carry, add, or drop them without affecting model-conforming round-trip.
 
-@-Edge and Reference targets stored as `ResourceValue` strings can be resolved at query time by joining against the `Id` column. For systems where the reference target is known at write time, the reference can be denormalized to a `TargetRowId` column for direct lookup. The resolution strategy is implementation choice; both approaches are conforming. Per §6.4 axiom E2′, @-edges are owned by their source element and SHOULD be modeled with `ON DELETE CASCADE` on the source foreign key so that deleting a source removes its edges.
+@-Edge and Reference targets stored as `ResourceValue` strings can be resolved at query time by joining against the `Name` column. For systems where the reference target is known at write time, the reference can be denormalized to a `TargetRowId` column for direct lookup. The resolution strategy is implementation choice; both approaches are conforming. Per §6.4 axiom E2′, @-edges are owned by their source element and SHOULD be modeled with `ON DELETE CASCADE` on the source foreign key so that deleting a source removes its edges.
 
 Other persistence strategies (document store, graph database, key-value store) follow analogous principles: preserve the data model, preserve element ordering, and preserve the round-trip contract (§10.4).
 
@@ -2575,12 +2575,12 @@ The introduction of distinct absent/null/present states implies three independen
 
 Path-mode reference resolution is normatively specified by the companion GDX Path Expressions Specification (`GDX-Path.md`). All sub-items previously open under this issue are addressed:
 
-- **The path expression grammar.** Specified in `GDX-Path.md` §3 and §3. Three segment kinds — `IdSegment`, `RelSegment`, `OrdinalSegment` — separated by `/`. Anchor-based addressing is provided through the `AnchorRef` and `IdAnchorRef` reference-literal forms rather than as a path segment.
+- **The path expression grammar.** Specified in `GDX-Path.md` §3 and §3. Three segment kinds — `NameSegment`, `RelSegment`, `OrdinalSegment` — separated by `/`. Anchor-based addressing is provided through the `AnchorRef` and `NameAnchorRef` reference-literal forms rather than as a path segment.
 - **The resolution algorithm.** Specified in `GDX-Path.md` §5. Left-to-right segment traversal from a defined starting element, with per-segment match semantics and explicit handling of zero, one, and multi-match outcomes.
-- **The composition matrix expansion.** Specified in `GDX-Path.md` §8.5 (changes required of this specification). `%REC`, `%BLK`, `%.STR`, `%_INT`, `%VAL`, value-Property targets, and other interior elements become resolvable when the resource is a `PathRef` or `IdPathRef`. Parent-context restrictions are unchanged; only target-addressability expands. (Under v0.13.0, these targets are addressed via the REF family `%KIND`; prior to v0.13.0 they were addressed via leaf-like `@KIND` references, now migrated.)
+- **The composition matrix expansion.** Specified in `GDX-Path.md` §8.5 (changes required of this specification). `%REC`, `%BLK`, `%.STR`, `%_INT`, `%VAL`, value-Property targets, and other interior elements become resolvable when the resource is a `PathRef` or `NamePathRef`. Parent-context restrictions are unchanged; only target-addressability expands. (Under v0.13.0, these targets are addressed via the REF family `%KIND`; prior to v0.13.0 they were addressed via leaf-like `@KIND` references, now migrated.)
 - **Modifier-stacking interaction.** The `%`-with-modifier-bases pattern (`%.STR`, `%_INT`) resolves through path-mode references.
 
-The composed reference form `@Identifier$PathExpression` is the canonical mechanism for cross-document addressing: the identifier portion resolves a starting element by scope walk (per §6.16), and the path portion traverses structurally from there. This form replaces the speculative path-style identifier convention (e.g., `@/people/alice`) used in earlier revisions; with the v0.11.0 narrowing of `IdStartChar` (§4.4.1), identifiers no longer begin with `/`.
+The composed reference form `@Identifier$PathExpression` is the canonical mechanism for cross-document addressing: the identifier portion resolves a starting element by scope walk (per §6.16), and the path portion traverses structurally from there. This form replaces the speculative path-style identifier convention (e.g., `@/people/alice`) used in earlier revisions; with the v0.11.0 narrowing of `NameStartChar` (§4.4.1), identifiers no longer begin with `/`.
 
 ---
 
@@ -2596,7 +2596,7 @@ This subsection is the authoritative normative statement of GDX's layered confor
 
 **Schema Conformance (Layer 2)** addresses how data aligns to declared shapes and constraints, and decomposes into two sub-layers:
 
-- **Layer 2a — Template structural conformance.** Covers the Template-based alignment of §8.1, §8.2, §8.3: instance children align to Template slots by `Id` (with `Rel` as cross-vocabulary bridge), and `--type` references resolve. Owned by GDX. Decidable by any consumer that can resolve Templates.
+- **Layer 2a — Template structural conformance.** Covers the Template-based alignment of §8.1, §8.2, §8.3: instance children align to Template slots by `Name` (with `Rel` as cross-vocabulary bridge), and `--type` references resolve. Owned by GDX. Decidable by any consumer that can resolve Templates.
 
 - **Layer 2b — Constraint-vocabulary conformance.** Covers the Constraint Extensions of §8.4: whether instance values satisfy the constraints expressed by a particular constraint vocabulary (XSD, JSON Schema, the GDX Common Vocabulary, or any other). Owned by the constraint vocabulary, not by GDX. Decidable only by a consumer that understands the vocabulary's constraint identifiers. A document MAY be Layer 2b-conforming with respect to one vocabulary and Layer 2b-non-conforming with respect to another; the verdicts are independent and vocabulary-relative.
 
@@ -2609,7 +2609,7 @@ The layers are independent: a document may be Layer 1-conforming but Layer 2a-no
 A serialization is **representation-conforming** if and only if a round-trip through it preserves, for every element in the document:
 
 1. The Prefix.
-2. The presence and value of `Anchor`, `Rel`, `Id`, and `Type` (string-equal, ordinal comparison). An @-edge's empty Rel (§6.4.2) round-trips as empty — the field is not invented, defaulted, or dropped.
+2. The presence and value of `Anchor`, `Rel`, `Name`, and `Type` (string-equal, ordinal comparison). An @-edge's empty Rel (§6.4.2) round-trips as empty — the field is not invented, defaulted, or dropped.
 3. The Resource — including:
    - The null state (an element with no Resource value MUST round-trip as a null-state element).
    - The value-kind of the Resource (per §3.3).
@@ -2672,7 +2672,7 @@ For applications requiring byte-for-byte stability (content-addressable storage,
 8. Hex digits in bytes literals appear in lowercase.
 9. Boolean values appear as `true` or `false` (lowercase spelled-out form). The single-letter forms (`t`, `f`) and uppercase variants are NOT used in canonical output.
 10. Null Properties appear in the bare form (`<STR name>`), not the empty-value form (`<STR name : >`). The empty-value form is accepted on input but normalized to the bare form on canonical output.
-11. Field write order is exactly Prefix · Anchor · Rel · Id · Resource · Type.
+11. Field write order is exactly Prefix · Anchor · Rel · Name · Resource · Type.
 12. Prefixes appear in **canonical form** — three-letter (or longer where natural) names in uppercase: `STR`, `INT`, `BOOL`, `FLOAT`, `BYTE`, `REC`, `OBJ`, `GRP`, `STR*`, `INT*`, `.STR`, `_STR`, `VAL`, `NSTR`, `NINT`, `NBOOL`, `NFLOAT`, `NBYTE`, `NREC`, `DEFSTR`, `DEFINT`, `DEFBOOL`, `DEFFLOAT`, `DEFBYTE`, `DEFREC`, `DEFOBJ`, `REL`, `REM`, `PKG`, `BLK`, the @-Edge family (`@OBJ`, `@REL`), and the REF family (every `%KIND` form generated by `%` wrapping a layer-1 role-prefix). The minified single-letter forms (`S`, `I`, `L`, `F`, `B`, `R`, `O`, `G`, `S*`, `.S`, `_S`, `V`, `NS`, etc.) are valid GDX but do not produce strict canonical bytes; conversion to canonical form is required before content addressing. The `E` minified slot is unassigned (formerly the minified form of `EDGE`, now removed in v0.12.0; see changelog entry 41).
 
 Two strict-canonical-form documents that represent the same data model produce byte-identical serializations. This property allows the strict canonical form to serve as the input to content-addressing functions.
@@ -2764,7 +2764,7 @@ This appendix records the per-revision change descriptions accumulated during th
 
 - **Rationale.** The field is, and since v0.22.0 has purely been, a scope-local, opaque, location-stable reference target — precisely what every neighbouring format calls an *anchor* (YAML `&anchor`, JSON Schema `$anchor`, HTML fragment anchors). The name `Key` imported two wrong intuitions from readers' backgrounds: a relational identity constraint (XSD `xs:key`/`xs:keyref`, database keys) and a dictionary lookup key (JSON object keys) — neither of which the field is. The v0.22.0 claim-rule exclusion severed the field's last tie to schema alignment, leaving the name as the only remaining source of confusion. Renaming pre-1.0 is the cheap window.
 
-- **Field and token renames.** `Key` → `Anchor`; `KeyRef` → `AnchorRef`; `IdKeyRef` → `IdAnchorRef`; `KeyToken` → `AnchorToken`; `KeyStartChar` → `AnchorStartChar`. In the Standard Grammar, `KeyReference` → `AnchorReference` and `IdKeyReference` → `IdAnchorReference`. The `&` sigil is unchanged and continues to introduce the field and the anchor-mode reference literal.
+- **Field and token renames.** `Key` → `Anchor`; `KeyRef` → `AnchorRef`; `NameAnchorRef` → `NameAnchorRef`; `KeyToken` → `AnchorToken`; `KeyStartChar` → `AnchorStartChar`. In the Standard Grammar, `KeyReference` → `AnchorReference` and `NameAnchorReference` → `NameAnchorReference`. The `&` sigil is unchanged and continues to introduce the field and the anchor-mode reference literal.
 
 - **The reference-base production is renamed `Anchor` → `Base` (with `AnchorRole` → `BaseRole`).** The reference grammar previously used `Anchor` for the `@`-resolved *starting element* of a composed reference (`@Anchor$path`, `@Anchor&key`) — a different thing from the field. Renaming the field to `Anchor` would have collided head-on with it. `Base` is the more honest name for that production regardless: it is the element a composed reference resolves *from*. Composed references now read `@Base&Anchor` — the `@` portion establishes the base scope, the `&` portion names the anchor within it.
 
@@ -2780,7 +2780,7 @@ Migration: mechanical and total. Documents are unaffected — the serialized for
 
 - **Element tuple and field model updated (§3, §3.1).** The element tuple gains a trailing `Metadata?`; the §3.1 field table gains a `Metadata` row explicitly marked out-of-model. The six model fields are unchanged; metadata is set apart as a channel, not a seventh model field.
 
-- **Field order and lexis (§4.1, §4.1.1).** Write order becomes `Prefix · Anchor · Rel · Id · Resource · Type · Metadata`; the general form and the sigil/separator table are updated (`{ }` delimit the block). Trailing position lets a reader or stripping tool consume all model content before the annotation.
+- **Field order and lexis (§4.1, §4.1.1).** Write order becomes `Prefix · Anchor · Rel · Name · Resource · Type · Metadata`; the general form and the sigil/separator table are updated (`{ }` delimit the block). Trailing position lets a reader or stripping tool consume all model content before the annotation.
 
 - **Persistence and conformance (§10.2, §A.2).** §10.2 notes that store-native columns (persistence id, row version, delta state) are the at-rest form of the metadata channel and sit outside the round-trip contract. §A.2 adds metadata to the MAY-normalize set with an explicit out-of-model note: adding, altering, or dropping metadata does not affect representation-conformance, which ranges over model content only. The canonical form (§A.5) excludes metadata, so signatures over canonical content cover model content only.
 
@@ -2792,9 +2792,9 @@ Migration: purely additive. No existing document changes; documents with no `{..
 
 - **`Anchor` removed from the universal claim rule (§8.2.3, §8.2.4, §8.2.1).** Templates could previously declare a `Anchor` value on a slot, reconciled by the claim rule and written into instances by materialization. This was incoherent: Anchors are scope-unique (§4.4.5) while Templates are reusable shapes, so a Template-declared Anchor materialized into two same-typed instances within one Object scope produced an Anchor collision — a malformed document generated from conforming inputs by a RECOMMENDED operation. The claim-bearing field list is now `Rel`, nested `--type`, and default `Resource`; a normative exclusion paragraph in §8.2.3 records the rationale (Templates MUST NOT declare a `Anchor` on a slot). This removes the last residue of the pre-v0.11 Template-slot-alignment role of Anchors (entry 7).
 
-- **Anchor token grammar unified; the “numeric form” framing removed (§4.4.3, §4.2.6, §4.4).** The Anchor field previously admitted two forms — standard identifiers and all-digit “numeric Anchors” — which left digit-leading mixed tokens (GUIDs such as `7f3a2b9c-…`, already used as examples in §4.2.6 and §4.4.3) formally admitted by neither form. The Anchor token is now a single grammar: an identifier token whose start set additionally admits digits (`AnchorToken ::= (ALPHA | DIGIT | "_") IdContChar*`). The relaxation is lexically safe because Anchor tokens are always `&`-introduced, so the digit-start/numeric-literal ambiguity behind the `IdStartChar` restriction cannot arise. Anchor tokens carry no numeric interpretation; comparison remains ordinal (`&01` ≠ `&1`). Authority for `AnchorToken` moves from `GDX-Path.md` into §4.4.3 (the field's home); `GDX-Path.md` retains `PathExpression` and the resolution algorithms and MUST be aligned to the §4.4.3 grammar in its next revision.
+- **Anchor token grammar unified; the “numeric form” framing removed (§4.4.3, §4.2.6, §4.4).** The Anchor field previously admitted two forms — standard identifiers and all-digit “numeric Anchors” — which left digit-leading mixed tokens (GUIDs such as `7f3a2b9c-…`, already used as examples in §4.2.6 and §4.4.3) formally admitted by neither form. The Anchor token is now a single grammar: an identifier token whose start set additionally admits digits (`AnchorToken ::= (ALPHA | DIGIT | "_") NameContChar*`). The relaxation is lexically safe because Anchor tokens are always `&`-introduced, so the digit-start/numeric-literal ambiguity behind the `NameStartChar` restriction cannot arise. Anchor tokens carry no numeric interpretation; comparison remains ordinal (`&01` ≠ `&1`). Authority for `AnchorToken` moves from `GDX-Path.md` into §4.4.3 (the field's home); `GDX-Path.md` retains `PathExpression` and the resolution algorithms and MUST be aligned to the §4.4.3 grammar in its next revision.
 
-- **Anchor scope pinned for embedded Objects; single-scope lookup made explicit (§4.4.5).** An Object occupying a VAL slot opens a fresh Anchor scope: its interior Anchors are scoped to it, while its own Anchor belongs to the host's scope. `AnchorRef` resolution consults exactly one scope — no outward walk, no shadowing, no fallback — and cross-boundary addressing uses `IdAnchorRef`. Previously the nearest-enclosing-container rule left the VAL-occupant case implicit and the single-scope discipline unstated, inviting divergent lexical-scoping implementations.
+- **Anchor scope pinned for embedded Objects; single-scope lookup made explicit (§4.4.5).** An Object occupying a VAL slot opens a fresh Anchor scope: its interior Anchors are scoped to it, while its own Anchor belongs to the host's scope. `AnchorRef` resolution consults exactly one scope — no outward walk, no shadowing, no fallback — and cross-boundary addressing uses `NameAnchorRef`. Previously the nearest-enclosing-container rule left the VAL-occupant case implicit and the single-scope discipline unstated, inviting divergent lexical-scoping implementations.
 
 Migration: Templates that declare `Anchor` on slots MUST remove the declaration (instances carry their own Anchors). Documents using digit-leading GUID Anchors — previously present in the specification's own examples but admitted by neither lexical form — become formally valid. No other document changes.
 
@@ -2830,7 +2830,7 @@ Normative changes:
 - **§4.1.1** — sigil tightness restated: a bare sigil is malformed everywhere; an empty field is expressed by omitting the sigil.
 - **§6.4 E4** — rewritten from "predicate is mandatory" to "role asserts existence; `#rel` specifies nature and MAY be empty." The construct-discrimination function the mandatory field once served is obsolete since the v0.13 sigil partition (`@` is edges, `%` is REFs). The empty rel is not an idiom for permanent type-free adjacency — that remains a designated predicate value.
 - **§6.4 E6** — identity with an empty rel is well-formed and is the canonical capture-first pattern.
-- **§6.4.2 (new), "Undefined Relationships — the Empty Rel"** — the split, the motivation, the refinement model (same edge, field filled; `Id`/`Anchor` RECOMMENDED for addressability), and the three disciplines: queryable-as-undefined (MUST), schema-may-require-specification (vocabulary constraint, §8.4), staleness-is-tooling. Empty rels are a transitional state — easy to create, easy to find, easy to require resolution of.
+- **§6.4.2 (new), "Undefined Relationships — the Empty Rel"** — the split, the motivation, the refinement model (same edge, field filled; `Name`/`Anchor` RECOMMENDED for addressability), and the three disciplines: queryable-as-undefined (MUST), schema-may-require-specification (vocabulary constraint, §8.4), staleness-is-tooling. Empty rels are a transitional state — easy to create, easy to find, easy to require resolution of.
 - **§6.4 identifier table, §5.3.2** — `#rel` is OPTIONAL (empty = undefined nature).
 - **§7.5** — a conforming parser MUST accept an @-Edge element with no `#rel` field.
 - **§8.2.3** — an empty instance rel is the instance-silent case of the universal claim rule: a Template-declared predicate supplies the name (case 3) and materialization (§8.2.4) fills the field on the same edge; a vocabulary constraint may instead forbid undefined relationships (Layer 2b).
@@ -2914,25 +2914,25 @@ Substantial changes:
 
 ### v0.11.0
 
-(1) **Path-mode and key-mode reference resolution are now normative.** The `$PathExpression` form reserved in v0.10.0 §12.4 is fully specified in a new companion document, the GDX Path Expressions Specification (`GDX-Path.md`). The path grammar supports three segment kinds — `IdSegment` (bareword, matches `Id`), `RelSegment` (`#R`, matches `Rel`), and `OrdinalSegment` (`[N]`, matches by 1-based document order). The `&Anchor` reference literal provides key-based addressing through the location-stable `Anchor` anchor. Five reference-literal forms are recognized: `IdRef` (`@Base`), `PathRef` (`$PathExpression`), `AnchorRef` (`&Anchor`), `IdPathRef` (`@Base$PathExpression`), and `IdAnchorRef` (`@Base&Anchor`). The composed forms express cross-document addressing. The `@Base` production carries an optional role marker (`@OBJ:id`, `@REL:id`, `@DEFOBJ:id`, etc.) drawn from the closed prefix vocabulary; when omitted, composed references default to an Object anchor. The marker enables composed references to non-Object anchors (RELs, Templates, transport-layer containers) without requiring resolver inference.
+(1) **Path-mode and key-mode reference resolution are now normative.** The `$PathExpression` form reserved in v0.10.0 §12.4 is fully specified in a new companion document, the GDX Path Expressions Specification (`GDX-Path.md`). The path grammar supports three segment kinds — `NameSegment` (bareword, matches `Name`), `RelSegment` (`#R`, matches `Rel`), and `OrdinalSegment` (`[N]`, matches by 1-based document order). The `&Anchor` reference literal provides key-based addressing through the location-stable `Anchor` anchor. Five reference-literal forms are recognized: `NameRef` (`@Base`), `PathRef` (`$PathExpression`), `AnchorRef` (`&Anchor`), `NamePathRef` (`@Base$PathExpression`), and `NameAnchorRef` (`@Base&Anchor`). The composed forms express cross-document addressing. The `@Base` production carries an optional role marker (`@OBJ:id`, `@REL:id`, `@DEFOBJ:id`, etc.) drawn from the closed prefix vocabulary; when omitted, composed references default to an Object anchor. The marker enables composed references to non-Object anchors (RELs, Templates, transport-layer containers) without requiring resolver inference.
 
 (2) **§12.4 closes.** Path-mode reference resolution is no longer an open issue. References to §12.4 in earlier revisions are satisfied by the companion specification.
 
-(3) **`/` removed from `IdStartChar` (§5.4.1).** Breaking change. Identifiers may no longer begin with `/`. The `IdContChar` set is unchanged, so identifiers may continue to contain `/` (e.g., IRIs like `https://acme.com/people/alice` remain valid). The narrowing makes the `$/...` path-mode form unambiguous and the `@Identifier$PathExpression` boundary lexically clean. Path-style local identifiers such as `<OBJ /people/alice>` MUST be migrated; the recommended migrations are documented in `GDX-Path.md` Appendix C.
+(3) **`/` removed from `NameStartChar` (§5.4.1).** Breaking change. Identifiers may no longer begin with `/`. The `NameContChar` set is unchanged, so identifiers may continue to contain `/` (e.g., IRIs like `https://acme.com/people/alice` remain valid). The narrowing makes the `$/...` path-mode form unambiguous and the `@Identifier$PathExpression` boundary lexically clean. Path-style local identifiers such as `<OBJ /people/alice>` MUST be migrated; the recommended migrations are documented in `GDX-Path.md` Appendix C.
 
 (4) **§5.4.2 identifier-forms table updated.** The "Path" row is removed; path-style local naming is replaced by path-mode reference resolution. The remaining identifier forms (Local name, Single letter, CURIE, Dotted CURIE local, GUID/opaque, IRI) are unchanged.
 
 (5) **§5.2.6 reference literal grammar updated.** The five-form `ReferenceLiteral` production replaces the placeholder. Address-mode singularity is incorporated by reference to `GDX-Path.md` §8.
 
-(6) **§8.1 composition matrix expands the resolvable target set.** `@KIND` references composed with a `PathRef`, `AnchorRef`, `IdPathRef`, or `IdAnchorRef` resource may now resolve against Records, Blocks, value Properties, Qualifiers, Extensions, and Embedded elements. Parent-context restrictions on where `@KIND` reference elements may appear are unchanged; only the addressability of the target expands.
+(6) **§8.1 composition matrix expands the resolvable target set.** `@KIND` references composed with a `PathRef`, `AnchorRef`, `NamePathRef`, or `NameAnchorRef` resource may now resolve against Records, Blocks, value Properties, Qualifiers, Extensions, and Embedded elements. Parent-context restrictions on where `@KIND` reference elements may appear are unchanged; only the addressability of the target expands.
 
 (7) **`Anchor` field reframed from Template-slot identifier to location-stable anchor.** The §3.2 description of `Anchor` is rewritten: Anchors are an opt-in named-anchor mechanism providing stable reference targets for elements that lack global identifiers. The Template-alignment justification is removed. A new §5.4.5 defines Anchor uniqueness rules (scoped to the enclosing Object, or to the document at transport-layer position). The numeric Anchor form is retained as a lexical convenience but no longer carries Template-slot semantics.
 
-(8) **§9.2 Template-instance alignment pinned.** A new normative paragraph specifies that alignment is by `Id` matching (case-sensitive ordinal), with `Rel` matching as a cross-vocabulary fallback. The `Anchor` field plays no role in alignment.
+(8) **§9.2 Template-instance alignment pinned.** A new normative paragraph specifies that alignment is by `Name` matching (case-sensitive ordinal), with `Rel` matching as a cross-vocabulary fallback. The `Anchor` field plays no role in alignment.
 
 (9) **§5.1.1 sigils table updated.** The `$` row is updated from "reserved, grammar deferred" to "introduces a path-mode reference literal (§5.2.6, `GDX-Path.md`)."
 
-(10) **Migration impact.** Existing documents using leading-slash identifiers MUST be migrated (drop the leading slash, retaining any interior `/`). Existing documents using only `@Identifier` references are unaffected. Existing documents that used `&K` numeric Anchors for Template-slot alignment MUST be migrated to named-Id Template slots; the `Anchor` field continues to be lexically valid but no longer carries slot-alignment semantics. Templates that previously used `&1`, `&2` positional slots are migrated to named slots (`firstName`, `lastName`, etc.). Existing documents that used a non-normative `$`-prefixed literal under v0.10.0 §12.4's implementation-defined window MUST conform to the v0.11.0 grammar.
+(10) **Migration impact.** Existing documents using leading-slash identifiers MUST be migrated (drop the leading slash, retaining any interior `/`). Existing documents using only `@Identifier` references are unaffected. Existing documents that used `&K` numeric Anchors for Template-slot alignment MUST be migrated to named-Name Template slots; the `Anchor` field continues to be lexically valid but no longer carries slot-alignment semantics. Templates that previously used `&1`, `&2` positional slots are migrated to named slots (`firstName`, `lastName`, etc.). Existing documents that used a non-normative `$`-prefixed literal under v0.10.0 §12.4's implementation-defined window MUST conform to the v0.11.0 grammar.
 
 (11) **§1.3 adds the substrate-with-pluggable-constraints positioning.** A new design-goal paragraph names GDX as a structural schema (the prefix vocabulary, element model, Template structure, composition axioms) with no constraint implementation. Constraint vocabularies layer on top as Constraint Extensions whose identifiers GDX records but never interprets.
 
@@ -2946,7 +2946,7 @@ Substantial changes:
 
 (16) **§9.6 updates Common Vocabulary framing.** The Common Vocabulary is positioned as one vocabulary among many — it ships with GDX as a convenience and reference but has no privileged status at the GDX layer. `gdx:` constraint identifiers are opaque to GDX in the same way as `xsd:`, `json:`, or any other.
 
-(17) **§9.2 expands into subsections covering the universal claim rule and materialization.** §9.2.1 (Slot Alignment) carries forward the Id-and-Rel alignment rule. §9.2.2 (Cross-Role and Transport Restrictions) carries forward the prefix-matching rules. §9.2.3 (The Universal Claim Rule) is new: a four-case matrix governs how Template-declared and instance-declared values reconcile on any claim-bearing field (Rel, Anchor, default Resource, nested `--type`). Differing claims are conflicts; matching claims are confirmed; silent-on-one-side defers to the other. §9.2.4 (Materialization) is new: defines the build-time operation of writing Template-supplied values into the instance as explicit fields, motivated by the searchability and self-description requirements of persisted documents. Materialization is RECOMMENDED for persistence and OPTIONAL for in-memory processing.
+(17) **§9.2 expands into subsections covering the universal claim rule and materialization.** §9.2.1 (Slot Alignment) carries forward the Name-and-Rel alignment rule. §9.2.2 (Cross-Role and Transport Restrictions) carries forward the prefix-matching rules. §9.2.3 (The Universal Claim Rule) is new: a four-case matrix governs how Template-declared and instance-declared values reconcile on any claim-bearing field (Rel, Anchor, default Resource, nested `--type`). Differing claims are conflicts; matching claims are confirmed; silent-on-one-side defers to the other. §9.2.4 (Materialization) is new: defines the build-time operation of writing Template-supplied values into the instance as explicit fields, motivated by the searchability and self-description requirements of persisted documents. Materialization is RECOMMENDED for persistence and OPTIONAL for in-memory processing.
 
 (18) **§9.2 distinguishes named type identity from observable conformance.** Two new paragraphs in §9.2: (a) `--type` is an identity claim anchored to the Template name; two Templates with identical shapes are different types, and an instance of one is not silently an instance of the other; (b) cross-type conformance — an instance of type A structurally satisfying Template B — is a separately observable relation, useful for validation against multiple schemas, version-compatibility checks, and migration tooling. Conformance does not redefine identity. Consumers MUST NOT silently substitute one type for another even when their instances mutually conform; any cross-conformance is surfaced as a derived observation, not a rewrite of the original `--type` claim.
 
@@ -2956,7 +2956,7 @@ Substantial changes:
 
 (21) **§2.1 adds Core / Extension definitional pair.** New terminology entries formally distinguish the **core** (what GDX itself defines and interprets — prefix vocabulary, element model, grammars, composition, Template-instance alignment, claim rule, primitive value-kind axioms) from **extension** (vocabulary-defined material that rides on top of the core — Rel identifiers, Type identifiers, Constraint Extension content). The pair names the **interpretation** boundary between what GDX understands and what GDX hosts. The terms *core layer* and *extension layer* are introduced as a convenient shorthand for the two sides of the boundary.
 
-(22) **§3.7 articulates the optional-elaboration principle.** New subsection: elements are valid at their minimum form (Prefix alone); elaboration is opt-in and proceeds along two structurally distinct patterns. Identity elaboration is orthogonal across three independent axes (`Id`, `Anchor`, `Rel`). Value elaboration is layered across five layers (category, value, structural identity, constraint attachment, constraint semantics), where each layer is optional given the layer above and the layers live in different places (instance, Template, vocabulary). The principle organizes how to read the rest of §3 and explains why simple GDX stays simple while richer cases grow without restructuring.
+(22) **§3.7 articulates the optional-elaboration principle.** New subsection: elements are valid at their minimum form (Prefix alone); elaboration is opt-in and proceeds along two structurally distinct patterns. Identity elaboration is orthogonal across three independent axes (`Name`, `Anchor`, `Rel`). Value elaboration is layered across five layers (category, value, structural identity, constraint attachment, constraint semantics), where each layer is optional given the layer above and the layers live in different places (instance, Template, vocabulary). The principle organizes how to read the rest of §3 and explains why simple GDX stays simple while richer cases grow without restructuring.
 
 (23) **§1.3 adds integration-surface, not-LCD framing.** A clause in the substrate-paragraph clarifies that GDX is the integration surface where multiple vocabularies coexist, not a lowest-common-denominator subset of them. The structural schema is opinionated and complete; what's neutral is the constraint layer.
 
@@ -3002,11 +3002,11 @@ The prior commit (38) introduced examples in §7.10, §7.15, and Cookbook Patter
 
 ### v0.12.0
 
-(40) **Embedded modifier `%` replaced by VAL role.** The Embedded refinement modifier (`%STR`, `%REC`, `%OBJ`, etc.) is removed from the prefix vocabulary and replaced by a new first-class role, **VAL** (minified **V**), defined in §7.11. Where `%X` previously expressed "an X element in property-value position," `<VAL name <X : value>>` now expresses "a slot named `name` whose value is an X element." The change is motivated by two structural needs the modifier could not express: (a) two-level identity — VAL distinguishes the slot's identity (Id/Anchor/Rel on the VAL itself) from the occupant's identity (Id/Anchor/Rel on the contained element), allowing a single position to be both vocabulary-aligned at the slot level and addressable at the occupant level; (b) closed occupant enumeration — VAL admits Properties, Records, Objects, Blocks, Sets, Edges, and References as occupants under a single uniform role, rather than requiring a separate `%`-form for each primitive.
+(40) **Embedded modifier `%` replaced by VAL role.** The Embedded refinement modifier (`%STR`, `%REC`, `%OBJ`, etc.) is removed from the prefix vocabulary and replaced by a new first-class role, **VAL** (minified **V**), defined in §7.11. Where `%X` previously expressed "an X element in property-value position," `<VAL name <X : value>>` now expresses "a slot named `name` whose value is an X element." The change is motivated by two structural needs the modifier could not express: (a) two-level identity — VAL distinguishes the slot's identity (Name/Anchor/Rel on the VAL itself) from the occupant's identity (Name/Anchor/Rel on the contained element), allowing a single position to be both vocabulary-aligned at the slot level and addressable at the occupant level; (b) closed occupant enumeration — VAL admits Properties, Records, Objects, Blocks, Sets, Edges, and References as occupants under a single uniform role, rather than requiring a separate `%`-form for each primitive.
 
 §6.2 adds the VAL/V row. §6.4 drops the `%` modifier row and gains a paragraph pointing readers to VAL. §8.1 adds a VAL column and VAL row to the composition matrix. §8.2 rules 2 (Object exclusion), 9 (modifier transparency), 12 (modifier stacking), and 13 (Set as suffix) are updated to reference VAL rather than `%`. §8.4 drops `%X` from the value-kind family lists. §8.5 validation lists VAL rather than `%O` as the data-layer Object licensing form. §4.2 gains an "occupant of a VAL slot" carve-out paragraph mirroring the Set-member positional exemption, so that an occupant inherits the slot's named-attribute role without needing its own identifier.
 
-Migration: every `%X` element becomes `<VAL #rel name <X : value>>`, with the slot's `#rel` predicate (and any Id/Anchor) moved to the VAL and the value moved into the occupant. The `VAL*` form is malformed (§7.11 axiom 6); Set-of-VAL semantics are expressed as a Set of the underlying occupant role. Examples throughout the spec, Cookbook, Path, Grammar, Compact Form, and Quick Start companions are migrated. Cookbook Pattern 10 (Embedded Structured Value) and Pattern 11 (Embedded Alternative Representations) are rewritten to demonstrate slot-level and occupant-level alignment respectively.
+Migration: every `%X` element becomes `<VAL #rel name <X : value>>`, with the slot's `#rel` predicate (and any Name/Anchor) moved to the VAL and the value moved into the occupant. The `VAL*` form is malformed (§7.11 axiom 6); Set-of-VAL semantics are expressed as a Set of the underlying occupant role. Examples throughout the spec, Cookbook, Path, Grammar, Compact Form, and Quick Start companions are migrated. Cookbook Pattern 10 (Embedded Structured Value) and Pattern 11 (Embedded Alternative Representations) are rewritten to demonstrate slot-level and occupant-level alignment respectively.
 
 (41) **EDGE prefix replaced by the @-Edge family (`@OBJ`, `@REL`); §7.4 rewritten as the @-Edge Family with axioms E1–E6.** The `EDGE`/`E` prefix is removed from the closed vocabulary. Where `<EDGE #knows : @bob>` previously expressed a graph-statement element, `<@OBJ #knows : @bob>` now does. `@REL` is promoted from a leaf-like reference to a first-class @-edge whose target is a predicate (REL declaration). The two members of the @-Edge family, `@OBJ` and `@REL`, are enumerated by target role and restricted to *independent graph-entities* — Objects (including concept-Objects per §3.7's concept-as-Object pattern) and REL declarations. All other `@KIND` forms remain in the Reference family (§7.16, pending a separate refinement pass), which retains leaf-like-pointer semantics.
 
@@ -3016,9 +3016,9 @@ Migration: every `%X` element becomes `<VAL #rel name <X : value>>`, with the sl
 - **E3.** Attribute children describe the relationship-entity. When the edge carries identity (E6), attributes belong to the persistent edge-entity, not to any single predication.
 - **E4.** Predicate (`#rel`) is MANDATORY. No unlabeled adjacency — adjacency-if-wanted is a designated `#rel` value, not its absence.
 - **E5.** Family is enumerated by target role and restricted to independent graph-entities. Exactly two members (`@OBJ`, `@REL`); source role is orthogonal.
-- **E6.** Identity (`Id`/`Anchor`) is optional and orthogonal to predicate. Identity is the edge's *substance* — the persistent entity that endures across predicate/attribute changes and disambiguates multiple edges between the same endpoints. Two @-edges with the same (source, predicate, target) ARE distinct if their identities differ; uniqueness is by identity, not by the triple. Identity-without-predicate is malformed; predicate-without-identity is the common case.
+- **E6.** Identity (`Name`/`Anchor`) is optional and orthogonal to predicate. Identity is the edge's *substance* — the persistent entity that endures across predicate/attribute changes and disambiguates multiple edges between the same endpoints. Two @-edges with the same (source, predicate, target) ARE distinct if their identities differ; uniqueness is by identity, not by the triple. Identity-without-predicate is malformed; predicate-without-identity is the common case.
 
-The substance/predication split is the spine: Id is what the edge *is*, `#rel` is what it currently *asserts*, attributes ride on the substance. This delivers named edges, predicate mutation over stable identity, and multi-edge disambiguation — all from E2′ with no RDF-style reification machinery.
+The substance/predication split is the spine: Name is what the edge *is*, `#rel` is what it currently *asserts*, attributes ride on the substance. This delivers named edges, predicate mutation over stable identity, and multi-edge disambiguation — all from E2′ with no RDF-style reification machinery.
 
 Cascade changes:
 - §3.5 (graph statements) updated to use `@OBJ` instead of `EDGE`.
@@ -3070,7 +3070,7 @@ The genus split is the load-bearing structural commitment: `%` always fills a sl
 - **R1.** Prefix asserts target role; Resource asserts target identity; resolution dereferences and verifies the role.
 - **R1a.** The role-assertion is a resolution constraint, particularly pronounced for path/key resolution.
 - **R2.** A REF fills a slot; it asserts nothing about its parent.
-- **R3.** A REF is Property-shaped — admits `#rel` (compositional), Qualifiers, Extensions, an `Id` (slot name), and Annotations; admits no structural children.
+- **R3.** A REF is Property-shaped — admits `#rel` (compositional), Qualifiers, Extensions, an `Name` (slot name), and Annotations; admits no structural children.
 - **R4.** `#rel` on a REF is always compositional alignment (slot-level), never associative (parent-relationship). Associative is the exclusive province of @-Edge.
 - **R5.** A REF may target any addressable element by any resolution mode (name, path, key, composed cross-document) — including @-edges by key (reification via `%@OBJ`/`%@REL`).
 - **R6.** A REF has no identity of its own beyond its slot; a REF is never itself a reference target.
@@ -3161,7 +3161,7 @@ Additive editorial pass: four design-decision records (ADRs) written inline at t
 
 (45) **Four inline ADRs added for decisions whose rationale was previously undocumented or only present in teaching prose:**
 
-- **§5.4.1 — ASCII identifier start.** Records the human-factors rationale (identifiers stay greppable and keyboard-reachable) behind `IdStartChar = ALPHA | "_"`, which the spec previously justified only on numeric-ambiguity and path-syntax grounds.
+- **§5.4.1 — ASCII identifier start.** Records the human-factors rationale (identifiers stay greppable and keyboard-reachable) behind `NameStartChar = ALPHA | "_"`, which the spec previously justified only on numeric-ambiguity and path-syntax grounds.
 - **§6 — closed prefix vocabulary.** Records why the prefix set is closed (structural validity must not depend on loading a vocabulary; an open set would collapse the Layer 1 / Layer 2b boundary), against the rejected open/extensible-prefix alternative.
 - **§4.1 — the identity/value split.** Records the data-model basis for the split (self-describing elements; the typed-elements and inline-alignment goals) against the rejected JSON/XML/RDF alternatives. Placed in §4.1 (the authoritative field model) rather than §3.3 (which teaches the concept).
 - **§9.4 — core records but does not interpret constraints.** Records why the core holds no constraint opinion even for primitives (a built-in `min` would compete with vocabulary constraints and break parallel-vocabulary coexistence), against the rejected core-interprets-common-constraints alternative.

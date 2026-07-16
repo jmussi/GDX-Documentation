@@ -125,7 +125,7 @@ Two documents using `#schema:givenName` are talking about the same attribute reg
 
 ## 6. Schema-Aligned Slot
 
-A Template declares slots with `Id` fields; an instance satisfies the Template by giving its children the same `Id` values. Cross-vocabulary alignment uses `#Rel` to bridge differing local names.
+A Template declares slots with `Name` fields; an instance satisfies the Template by giving its children the same `Name` values. Cross-vocabulary alignment uses `#Rel` to bridge differing local names.
 
 ```
 <DEFREC schema:address
@@ -143,7 +143,7 @@ A Template declares slots with `Id` fields; an instance satisfies the Template b
 >
 ```
 
-Instance children align to Template slots by `Id` matching. When local names differ from Template slot names (for example, a localized instance using `prenom` where the Template declares `firstName`), the `#Rel` field provides the alignment bridge:
+Instance children align to Template slots by `Name` matching. When local names differ from Template slot names (for example, a localized instance using `prenom` where the Template declares `firstName`), the `#Rel` field provides the alignment bridge:
 
 ```
 <REC ProfileFR --schema:Person
@@ -152,7 +152,7 @@ Instance children align to Template slots by `Id` matching. When local names dif
 >
 ```
 
-Here the instance children have local `Id`s `prenom` and `nom`, which do not match the Template's slot `Id`s. The shared `#Rel` values (`schema:givenName`, `schema:familyName`) align them to the corresponding slots.
+Here the instance children have local `Name`s `prenom` and `nom`, which do not match the Template's slot `Name`s. The shared `#Rel` values (`schema:givenName`, `schema:familyName`) align them to the corresponding slots.
 
 The `&Anchor` field is NOT used for Template-instance alignment; Anchors are a separate location-stable anchor mechanism for references (see Pattern 22).
 
@@ -204,7 +204,7 @@ An @-edge asserts a graph statement and admits attribute children. When you want
 >
 ```
 
-"sensor-hub stands in some relationship to device-7 — nature pending." Give the edge a `Anchor` (or `Id`) so it stays addressable; when the relationship is classified, refine the *same* edge by filling the field:
+"sensor-hub stands in some relationship to device-7 — nature pending." Give the edge a `Anchor` (or `Name`) so it stays addressable; when the relationship is classified, refine the *same* edge by filling the field:
 
 ```
 <OBJ sensor-hub
@@ -629,7 +629,7 @@ The `@people/alice` portion resolves the Object by name (per the resolver's scop
 
 Path segments select by different fields depending on the segment's first character:
 
-- A bareword (`shipping`, `addresses`) matches by `Id`.
+- A bareword (`shipping`, `addresses`) matches by `Name`.
 - A `#`-prefixed token (`#gdx:knows`) matches by `Rel`.
 - A bracketed numeral (`[1]`, `[3]`) matches the *N*-th child in document order, 1-based.
 
@@ -662,7 +662,7 @@ When an element carries a `Anchor` field, it becomes a location-stable anchor �
 >
 ```
 
-The reference `@system/audit-log&entry-12345` is an `IdAnchorRef`. The `@system/audit-log` portion resolves the audit-log Object by name; the `&entry-12345` portion then looks up the Anchored element within that Object's scope. The reference resolves to the Record with that Anchor.
+The reference `@system/audit-log&entry-12345` is an `NameAnchorRef`. The `@system/audit-log` portion resolves the audit-log Object by name; the `&entry-12345` portion then looks up the Anchored element within that Object's scope. The reference resolves to the Record with that Anchor.
 
 If the audit log is later restructured — entries archived into nested categories, reorganized by severity, etc. — the reference continues to resolve as long as the Anchor is preserved. A path-based equivalent like `$/system/audit-log/entries/[1]` would break under any such change.
 

@@ -193,7 +193,7 @@ L active : true
 
 The line content uses the same lexical rules as the corresponding Standard Form element body, with the `<` and `>` brackets implicit at the line boundaries.
 
-Field write order on a line is the same as in Standard Form: **Prefix · Anchor · Rel · Id · Resource · Type**.
+Field write order on a line is the same as in Standard Form: **Prefix · Anchor · Rel · Name · Resource · Type**.
 
 ```
 S &1 #schema:givenName firstName : "Alice" --gdx:string
@@ -254,9 +254,9 @@ The field order, sigils, and lexical rules are identical to Standard Form (Core 
 - The prefix is first.
 - The Anchor field, if present, follows the prefix and uses the `&` sigil.
 - The Rel field, if present, follows the Anchor (or prefix) and uses the `#` sigil.
-- The Id field, if present, follows the Rel (or prior fields) with no sigil.
-- The Resource section, if present, follows the Id and uses `:` as separator.
-- The Type field, if present, follows the Resource (or Id) and uses the `--` sigil.
+- The Name field, if present, follows the Rel (or prior fields) with no sigil.
+- The Resource section, if present, follows the Name and uses `:` as separator.
+- The Type field, if present, follows the Resource (or Name) and uses the `--` sigil.
 - The metadata block, if present, is written last on the line — after the Type — as a brace-delimited `{...}` sequence (Core Spec §4.8; §3.5 below). It is out-of-model carriage annotation, not a model field.
 
 All sigil tightness rules from the Standard Grammar (§8) apply: `&`, `#`, `--`, `@` MUST be immediately followed by their content with no intervening whitespace.
@@ -638,7 +638,7 @@ The conversion is deterministic: a given data-model state produces a single cano
 A document that round-trips Compact → Standard → Compact (or Standard → Compact → Standard) preserves the data model exactly. The properties preserved are the same as the Core Spec's round-trip contract (§A.2):
 
 - Element prefixes
-- Identity fields (Id, Anchor, Rel, Type)
+- Identity fields (Name, Anchor, Rel, Type)
 - Resource value-kinds and values, including representation tags
 - Child element order
 - Annotations (REM elements)
@@ -984,7 +984,7 @@ ChildBlock      ::= (Element | MultiLineContinuation)+
 ElementBody     ::= Prefix
                     (SPACE Anchor)?
                     (SPACE Rel)?
-                    (SPACE Id)?
+                    (SPACE Name)?
                     (ResourceSection)?
 
 ResourceSection ::= SPACE? ":" SPACE? Resource? (SPACE "--" Type)?
@@ -1025,10 +1025,10 @@ SetSuffix       ::= "*"
 
 Anchor             ::= "&" AnchorContent
 Rel             ::= "#" RelContent
-Id              ::= IdStartChar IdContChar*
+Name              ::= NameStartChar NameContChar*
 Type            ::= "--" TypeContent
 
-// AnchorContent, RelContent, TypeContent, IdStartChar, IdContChar
+// AnchorContent, RelContent, TypeContent, NameStartChar, NameContChar
 // are inherited from the Standard Grammar.
 
 
