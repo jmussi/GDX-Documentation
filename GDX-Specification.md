@@ -1038,7 +1038,7 @@ REFs MAY carry a `#rel` (compositional — aligns the slot to a vocabulary predi
 
 ```
 <%OBJ database : @primary-db>                ← REF: handle to an Object
-<%DEFOBJ #conformsTo : @ServerConfigV2>      ← REF: handle to a Template, slot aligned
+<%DEFOBJ #conformsTo : &ServerConfigV2>      ← REF: handle to a Template, slot aligned
 <%REC mailing : @alice$/addresses/[1]>       ← REF: handle to an interior Record
 <%@OBJ source : @alice&knows-bob-2024>       ← REF: handle to an @-edge (reification)
 ```
@@ -1393,7 +1393,7 @@ Structurally, the `_` modifier marks an element as an Extension. Extensions MAY 
 **Extensions carry primitive value-kinds only.** The closed Extension prefix vocabulary admits string, int, float, bool, and bytes (the table below). To express an adjunct statement whose value is a *reference* to another element, the construct depends on whether the assertion is a graph statement or a slot binding:
 
 - For **graph statements between graph-entities** (Objects, RELs) — e.g., "this predicate has `gdx:Person` as domain," "this REL is the inverse of `gdx:knownBy`" — use an @-edge (`@OBJ` or `@REL`, §6.4) with an associative `#rel`: `<@OBJ #gdx:domain : @gdx:Person>`, `<@REL #gdx:inverse : @gdx:knownBy>`.
-- For **handle slots pointing at non-graph-entities** (Templates, Records, value-Properties, Qualifiers, etc.) — e.g., "this slot holds a handle to the schema that types the range" — use a REF (`%KIND`, §6.16) with optional compositional `#rel`: `<%DEFOBJ #gdx:rangeSchema : @PersonTemplate>`, `<%REC defaultMailing : @global-defaults$/mailing>`.
+- For **handle slots pointing at non-graph-entities** (Templates, Records, value-Properties, Qualifiers, etc.) — e.g., "this slot holds a handle to the schema that types the range" — use a REF (`%KIND`, §6.16) with optional compositional `#rel`: `<%DEFOBJ #gdx:rangeSchema : &PersonTemplate>`, `<%REC defaultMailing : @global-defaults$/mailing>`.
 
 Extensions, @-edges, and REFs together cover the adjunct-statement surface: Extensions for primitive-valued assertions, @-edges for graph-statement assertions, REFs for handle-valued assertions. All three attach to elements as vocabulary-keyed children; the choice follows the value-kind and genus (slot-filling vs relationship-asserting) of the assertion.
 
@@ -1453,7 +1453,7 @@ A migration directive attached to a Template:
     <STR firstName>
     <STR lastName>
     <STR email>
-    <%DEFOBJ #gdx:supersedes : @CustomerV1>
+    <%DEFOBJ #gdx:supersedes : &CustomerV1>
     <_STR migrate:from-v1 : "add-email-from-default">
 >
 ```
@@ -1701,7 +1701,7 @@ Structurally, a `REL` element declares a predicate as a first-class entity. The 
 - **Records, Sets, Blocks, VAL** — structured data, collections of data, and organizational containers, by the same principle. A REL with a `<REC documentation>` carrying a structured description block, or a `<STR* aliases>` carrying alias strings, is well-formed; the vocabulary that interprets these structures decides their meaning.
 - **@-edges** (§6.4) — first-class predicate-axiom statements. An `@OBJ` edge to a concept-Object expresses domain or range (`<@OBJ #gdx:domain : @gdx:Person>`); an `@REL` edge to another REL expresses inverse, subPropertyOf, or equivalent-property relationships (`<@REL #gdx:inverse : @gdx:reportsTo>`). These are first-class assertions about the predicate — they may carry their own identity (per §6.4 axiom E6) and attribute children describing the axiom.
 - **Extensions** (§6.10) — primitive-valued vocabulary-defined predicate axioms: symmetry (`<_BOOL gdx:symmetric : true>`), cardinality bounds, transitivity flags, and any other primitive-valued semantic claim a vocabulary defines.
-- **REFs** (§6.16) — typed handles to non-graph-entities: a Template that types the range (`<%DEFOBJ #gdx:rangeSchema : @PersonTemplate>`), a documentation document, a related vocabulary file.
+- **REFs** (§6.16) — typed handles to non-graph-entities: a Template that types the range (`<%DEFOBJ #gdx:rangeSchema : &PersonTemplate>`), a documentation document, a related vocabulary file.
 - **Annotations** (§6.6) — free-text notes for human readers.
 
 **Excluded children.** A REL does NOT admit:
@@ -1878,7 +1878,7 @@ Configuration / wiring:
     <STR name : "web-01">
     <%OBJ database : @primary-db>
     <%OBJ fallback : @secondary-db>
-    <%DEFOBJ #conformsTo : @ServerConfigV2>
+    <%DEFOBJ #conformsTo : &ServerConfigV2>
 >
 ```
 

@@ -383,7 +383,7 @@ The `@Base` production may carry an optional role marker (`@OBJ:id`, `@REL:id`, 
 ```
 O alice
   S name : "Alice"
-  %DEFOBJ #conformsTo : @Customer
+  %DEFOBJ #conformsTo : &Customer
   @OBJ #knows : @bob
 ```
 

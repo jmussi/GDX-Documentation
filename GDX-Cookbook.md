@@ -492,7 +492,7 @@ A migration directive attached to a Template:
     <STR firstName>
     <STR lastName>
     <STR email>
-    <%DEFOBJ #gdx:supersedes : @CustomerV1>
+    <%DEFOBJ #gdx:supersedes : &CustomerV1>
     <_STR migrate:from-v1 : "add-email-from-default">
     <_STR migrate:default-email : "unknown@example.com">
 >
@@ -547,7 +547,7 @@ Configuration / wiring:
     <STR name : "web-01">
     <%OBJ database : @primary-db>
     <%OBJ fallback : @secondary-db>
-    <%DEFOBJ #conformsTo : @ServerConfigV2>
+    <%DEFOBJ #conformsTo : &ServerConfigV2>
     <%REC sharedDefaults : @global-defaults$/server-defaults>
 >
 ```
@@ -710,7 +710,7 @@ Schema cross-references between predicates and Templates use the same mechanism:
 
 ```
 <REL gdx:hasAuthor
-    <%DEFOBJ #gdx:range : @Person>
+    <%DEFOBJ #gdx:range : &Person>
 >
 
 <DEFOBJ Person
@@ -797,7 +797,7 @@ Templates can reference other Templates to declare version succession, supersess
     <STR firstName>
     <STR lastName>
     <STR email>
-    <%DEFOBJ #gdx:supersedes : @CustomerV1>
+    <%DEFOBJ #gdx:supersedes : &CustomerV1>
 >
 ```
 
@@ -807,7 +807,7 @@ The same mechanism works for marking deprecation:
 
 ```
 <DEFOBJ Customer
-    <%DEFOBJ #gdx:supersededBy : @CustomerV2>
+    <%DEFOBJ #gdx:supersededBy : &CustomerV2>
     <STR firstName>
     <STR lastName>
 >
