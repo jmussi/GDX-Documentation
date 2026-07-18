@@ -1,8 +1,8 @@
 # GDX Path Expressions — Specification
 
-- **Status:** Draft v0.8 (companion to GDX Core Specification v0.25.0, working draft)
+- **Status:** Draft v0.8 (companion to GDX Core Specification v0.26.0, working draft)
 - **Date:** 2026-07-17
-- **Companion to:** GDX Core Specification v0.25.0
+- **Companion to:** GDX Core Specification v0.26.0
 - **Authors:** Julian Mussi
 
 

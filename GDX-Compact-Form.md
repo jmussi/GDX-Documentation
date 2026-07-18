@@ -1,8 +1,8 @@
 # GDX Compact Form — Grammar Specification
 
-- **Status:** Draft v0.11 (companion to GDX Core Specification v0.25.0, working draft)
+- **Status:** Draft v0.11 (companion to GDX Core Specification v0.26.0, working draft)
 - **Date:** 2026-07-17
-- **Companion to:** GDX Core Specification v0.25.0, GDX Standard Grammar v0.14, GDX Path Expressions v0.8
+- **Companion to:** GDX Core Specification v0.26.0, GDX Standard Grammar v0.14, GDX Path Expressions v0.8
 - **Authors:** Julian Mussi
 
 
@@ -19,7 +19,7 @@ This document does not address the Standard Form, the Binary Form, semantic vali
 
 This is the v0.3 working draft. The grammar, indentation model, and Standard Form mapping are stable. The conversion algorithm in §6 is sketched at the structural level; a future revision may include a more detailed algorithmic treatment if implementer experience reveals ambiguities.
 
-Changes from v0.10 to v0.11: conformance with Core Specification v0.25.0. **Terminology rename; no grammar-shape change.** The `Anchor` field is renamed `Id` (Core Spec v0.25.0, entries 55–56), completing the identity/naming split in which the former descriptive `Id` field became `Name`. The `&` sigil is unchanged and continues to introduce the field and the id-mode reference literal. The Appendix A grammar production is updated (`Anchor`→`Id`, and its inherited content token to `IdToken`); the metadata block's keys keep the word *key* (a metadata key is not an id). Companion-version line updated to Core v0.25.0, Standard Grammar v0.14, and Path v0.8.
+Changes from v0.10 to v0.11: conformance with Core Specification v0.26.0. **Terminology rename; no grammar-shape change.** The `Anchor` field is renamed `Id` (Core Spec v0.26.0, entry 60), completing the identity/naming split begun in v0.25.0 (in which the former descriptive `Id` field became `Name`). The `&` sigil is unchanged and continues to introduce the field and the id-mode reference literal. The Appendix A grammar production is updated (`Anchor`→`Id`, and its inherited content token to `IdToken`); the metadata block's keys keep the word *key* (a metadata key is not an id). Companion-version line updated to Core v0.26.0, Standard Grammar v0.14, and Path v0.8.
 
 Changes from v0.1 to v0.2: conformance with Core Specification v0.9.10. Cross-references updated to current section numbering: §8.2 rule 1 (root rule) → §7.2 rule 1; §5.10 (REM Annotation) → §6.3.6; §4.2 (Resource Literals) → §5.2; §3.3.4 (Null Forms) → §5.1.3; §3.1, §4.1 (field order/sigils) → §5.1 and §5.1.1; "§4" in the intro (Standard Form definition) → §5. Example fixes: the §1.1 opening example, the §6.2 standard-to-compact example, and the §7.1 Simple Configuration example were updated to use an Object root (`O config`) rather than a bare Record (`R config`), which is non-conformant per §7.2 rule 1. The §7.4 example was updated from the legacy `TDR Customer` Template form to the current `DEFOBJ Customer`. The §7.6 Transport Wrappers example was updated from `PACKAGE`/`BLOCK` (legacy names) to `PKG`/`GRP` (current names); Block is a data-layer construct, while Group is the transport-layer partition. Companion-version line updated to GDX Core Specification v0.9.10 and GDX Standard Grammar v0.5.
 

@@ -1,6 +1,6 @@
 # GDX — Cookbook of Canonical Patterns
 
-- **Status:** Draft v0.20.0 (companion to GDX Core Specification v0.25.0, working draft, pre-1.0)
+- **Status:** Draft v0.20.0 (companion to GDX Core Specification v0.26.0, working draft, pre-1.0)
 - **Date:** 2026-07-17
 - **Editors:** 
 - **Authors:** Julian Mussi
