@@ -126,7 +126,7 @@ The per-element metadata channel (Core Spec §4.8) carries out-of-model carriage
 
 Considerations:
 
-- **Unvalidated by construction.** Metadata is out-of-model, so Layer 2 validation (Templates, constraint Extensions) does not apply to it. A metadata pair that is well-formed lexically has been subject to no semantic check whatsoever. Consumers that read metadata keys (`sid`, `pid`, a revision token) MUST validate and bound those values themselves before use; a schema-conforming document says nothing about them.
+- **Unvalidated by construction.** Metadata is out-of-model, so structural and constraint validation (Layer 2 Templates and Layer 3 constraint Extensions, Core Spec §2.2) does not apply to it. A metadata pair that is well-formed lexically has been subject to no semantic check whatsoever. Consumers that read metadata keys (`sid`, `pid`, a revision token) MUST validate and bound those values themselves before use; a structurally-conforming document says nothing about them.
 
 - **Injection into downstream sinks.** Because metadata values commonly flow into other systems — a `sid` used to build a database lookup, a `pid` written to a log line, a revision string echoed into an HTTP header — they are an injection vector exactly as any untrusted string is. A value like `sid = "455; DROP TABLE …"` is a well-formed GDX string literal; the risk is entirely in the sink. Consumers MUST treat metadata values as untrusted input and apply the escaping/parameterization appropriate to each sink.
 
@@ -143,7 +143,7 @@ Considerations:
 A few practices apply across the categories above:
 
 - **Unknown is untrusted.** Documents from unknown sources should be processed with all relevant limits enabled, regardless of how benign they appear. Trust comes from authenticated sources or signatures, not from document content.
-- **Validation is not authorization.** A Layer 2 schema-conforming document is not necessarily trustworthy; it just satisfies a particular schema. Authentication, authorization, and integrity verification are application-layer concerns above GDX.
+- **Validation is not authorization.** A structurally-conforming (Layer 2) document is not necessarily trustworthy; it just satisfies a particular schema. Authentication, authorization, and integrity verification are application-layer concerns above GDX.
 - **Errors should not leak.** Error messages from parsers and validators may inadvertently disclose internal paths, file contents, or system configuration. Error messages exposed to untrusted parties should be sanitized.
 - **Resource limits are configuration.** The recommended defaults in this document are starting points. Production deployments should tune limits based on observed legitimate document characteristics and threat model.
 
