@@ -357,9 +357,9 @@ A single property can carry both a representation suffix (Layer 1) and a Templat
 <INT count : 25i8 --vocab:positive-i8>
 ```
 
-The suffix asserts representation (`i8` width). The Template reference asserts schema conformance (the value satisfies the `vocab:positive-i8` Template, which might constrain the value to be greater than zero).
+The suffix asserts representation (`i8` width). The Template reference asserts structural conformance — the element resolves the `vocab:positive-i8` Template (by its `Id`, Core Spec §8.5.2) and aligns to its shape; any value constraint that Template carries (here, greater than zero) is checked separately.
 
-The two layers operate independently and are validated separately. Per Core Spec §2.2, conformance is further decomposed: Layer 2 splits into Layer 2a (Template structural conformance — owned by GDX) and Layer 2b (constraint-vocabulary conformance — owned by external vocabularies). The next pattern shows how Layer 2b admits multiple constraint vocabularies on a single Template.
+The two assertions operate independently and are validated separately. Per Core Spec §2.2, conformance is layered into three rungs: representation (Layer 1), **structural conformance** (Layer 2 — reference resolution and Template-instance alignment, owned by GDX) and **constraint conformance** (Layer 3 — constraint-vocabulary checks, owned by external vocabularies). The Template reference here is a Layer 2 assertion; the greater-than-zero constraint the Template carries is Layer 3. The next pattern shows how Layer 3 admits multiple constraint vocabularies on a single Template.
 
 ## 16. Parallel Constraint Vocabularies on One Template
 
