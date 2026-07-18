@@ -1,8 +1,8 @@
 # GDX Standard Form — Grammar Specification
 
-- **Status:** Draft v0.13 (companion to GDX Core Specification v0.24.0, working draft)
-- **Date:** 2026-06-09
-- **Companion to:** GDX Core Specification v0.24.0
+- **Status:** Draft v0.14 (companion to GDX Core Specification v0.25.0, working draft)
+- **Date:** 2026-07-17
+- **Companion to:** GDX Core Specification v0.25.0
 - **Authors:** Julian Mussi
 
 
@@ -23,7 +23,9 @@ Changes from v0.5 (revision v0.6): conformance with Core Specification v0.10.0. 
 Changes from v0.6 (this revision, v0.7): conformance with Core Specification v0.11.0. (1) **§5.6 reference literal grammar normatively specifies path-mode and key-mode.** The placeholder `PathExpression ::= (* reserved; grammar deferred *)` is replaced by a forward reference to the companion GDX Path Expressions Specification (`GDX-Path.md`). Five `ReferenceLiteral` productions are recognized: `NameReference` (`@Base`), `PathReference` (`$PathExpression`), `AnchorReference` (`&AnchorToken`), `NamePathReference` (`@Base$PathExpression`), and `NameAnchorReference` (`@Base&AnchorToken`). The `AnchorReference` and `NameAnchorReference` forms address an element by its location-stable `Anchor` anchor, scoped per Core Specification §4.4.5. The `Base` production extends the identifier portion of `@`-references with an optional `BaseRole` keyword drawn from the closed prefix vocabulary (`OBJ`, `REL`, `DEFOBJ`, `PKG`, etc.) followed by `:`, disambiguating the role of the resolved element. Default anchor role in composed references is `OBJ`. (2) **§6 identifier grammar narrows.** `NameStartChar` no longer admits `/`. Identifiers may continue to contain `/` (`NameContChar` unchanged); only the leading-`/` form is removed. This change is a breaking change for documents conforming to v0.6 or earlier; the migration is mechanical (drop the leading `/` or move to a path-mode reference). (3) Appendix A updated to reflect the new reference-literal productions, the `Base` production, and the narrowed identifier grammar. (4) Cross-references to Core Specification updated to v0.11.0.
 
 
-Changes from v0.12 (this revision, v0.13): conformance with Core Specification v0.24.0. **Terminology rename; no semantic or structural change.** The `Key` field is renamed `Anchor` (Core Spec v0.24.0, entry 54): productions `Key`→`Anchor`, `KeyToken`→`AnchorToken`, `KeyStartChar`→`AnchorStartChar`, `KeyReference`→`AnchorReference`, `NameAnchorReference`→`NameAnchorReference`. Separately, the reference-literal `Anchor` production — the `@`-resolved starting element of a composed reference — is renamed `Base` (and `AnchorRole`→`BaseRole`) to free the name for the field. The `&` sigil is unchanged; the grammar shape is unchanged; no document changes. The metadata `MetaKey` production is NOT renamed (a KVP key is not an anchor).
+Changes from v0.13 (this revision, v0.14): conformance with Core Specification v0.25.0. **Terminology rename; no semantic or structural change.** The `Anchor` field is renamed `Id` (Core Spec v0.25.0, entries 55–56), completing the identity/naming split in which the former descriptive `Id` field became `Name`: productions `Anchor`→`Id`, `AnchorToken`→`IdToken`, `AnchorStartChar`→`IdStartChar`, `AnchorReference`→`IdReference`, `NameAnchorReference`→`NameIdReference`. The `&` sigil is unchanged and continues to introduce the field and the `IdReference` reference literal; the reference-base production `Base` (and `BaseRole`) are unaffected. The metadata `MetaKey` production is NOT renamed (a KVP key is not an id).
+
+Changes from v0.12 (v0.13): conformance with Core Specification v0.24.0. **Terminology rename; no semantic or structural change.** The `Key` field is renamed `Anchor` (Core Spec v0.24.0, entry 54): productions `Key`→`Anchor`, `KeyToken`→`AnchorToken`, `KeyStartChar`→`AnchorStartChar`, `KeyReference`→`AnchorReference`, `NameAnchorReference`→`NameAnchorReference`. Separately, the reference-literal `Anchor` production — the `@`-resolved starting element of a composed reference — is renamed `Base` (and `AnchorRole`→`BaseRole`) to free the name for the field. The `&` sigil is unchanged; the grammar shape is unchanged; no document changes. The metadata `MetaKey` production is NOT renamed (a KVP key is not an anchor).
 
 Changes from v0.11 (v0.12): conformance with Core Specification v0.23.0. Two production changes. (1) **Metadata section added to `ElementBody`.** Core v0.23.0 adds a per-element metadata channel (Core Spec §4.8): a brace-delimited block of flat key/value pairs, written after the Resource/Type and before any child list, carrying out-of-model carriage annotation. `ElementBody` gains an optional `MetadataSection` between `ResourceSection` and `Children`; the productions `MetadataSection`, `MetaPair`, `MetaKey`, and `MetaLiteral` are defined in §4.5. Because metadata is out-of-model, its presence or absence does not change the data-model content a document carries. (2) **`AnchorContent` unified to a single Anchor-token grammar (`AnchorToken`).** Core v0.23.0 (via the v0.22.0 Anchor-token unification) replaces the former two-form `NumericAnchor | Name` split with one grammar that permits a leading digit; authority for `AnchorToken` now lives in Core Spec §4.4.3 (moved out of `GDX-Path.md`). §4.1 and Appendix A are updated: `AnchorContent`/`NumericAnchor` are removed in favour of `AnchorToken`, and the `AnchorReference`/`NameAnchorReference` productions reference the same token. A digit-leading GUID Anchor (`&7f3a2b9c-…`), previously admitted by neither form, is now well-formed.
 
@@ -109,7 +111,7 @@ Element         ::= "<" WS? Prefix ElementBody WS? ">"
 
 ElementBody     ::= IdentitySection? ResourceSection? MetadataSection? Children?
 
-IdentitySection ::= (WS Anchor)? (WS Rel)? (WS Name)?
+IdentitySection ::= (WS Id)? (WS Rel)? (WS Name)?
 
 ResourceSection ::= WS? ":" WS? Resource? (WS "--" Type)?
                   | WS "--" Type
@@ -181,16 +183,16 @@ These are aliases of the general Element production for documentation purposes. 
 
 Each identity field has its own production that includes its sigil and content.
 
-### 4.1 Anchor Field
+### 4.1 Id Field
 
 ```ebnf
-Anchor          ::= "&" AnchorToken
+Id          ::= "&" IdToken
 
-AnchorToken     ::= AnchorStartChar NameContChar*
-AnchorStartChar ::= ALPHA | DIGIT | "_"
+IdToken     ::= IdStartChar NameContChar*
+IdStartChar ::= ALPHA | DIGIT | "_"
 ```
 
-The `&` sigil MUST be immediately followed by the Anchor token with no intervening whitespace. An Anchor token is an identifier token whose start set additionally admits a leading digit (Core Spec §4.4.3); this admits sequential tokens (`&1`, `&2`) and digit-leading GUID/UUID anchors (`&7f3a2b9c-…`) alongside named anchors. The relaxation is unambiguous because an Anchor token is always `&`-introduced. Anchor tokens carry no numeric interpretation and compare by ordinal equality (`&01` ≠ `&1`). This grammar is identical to the `AnchorToken` used in the reference-literal forms (§5.6); authority is Core Spec §4.4.3.
+The `&` sigil MUST be immediately followed by the Id token with no intervening whitespace. An Id token is an identifier token whose start set additionally admits a leading digit (Core Spec §4.4.3); this admits sequential tokens (`&1`, `&2`) and digit-leading GUID/UUID ids (`&7f3a2b9c-…`) alongside named ids. The relaxation is unambiguous because an Id token is always `&`-introduced. Id tokens carry no numeric interpretation and compare by ordinal equality (`&01` ≠ `&1`). This grammar is identical to the `IdToken` used in the reference-literal forms (§5.6); authority is Core Spec §4.4.3.
 
 ### 4.2 Rel Field
 
@@ -396,20 +398,20 @@ Base64Char ::= ALPHA | DIGIT | "+" | "/"
 
 ### 5.6 Reference Literals
 
-Reference literals designate addressable elements. Five forms are recognized, combining the three operations of name resolution (`@`), structural traversal (`$`), and key lookup (`&`):
+Reference literals designate addressable elements. Five forms are recognized, combining the three operations of name resolution (`@`), structural traversal (`$`), and id lookup (`&`):
 
 ```ebnf
 ReferenceLiteral    ::= NameReference
                       | PathReference
-                      | AnchorReference
+                      | IdReference
                       | NamePathReference
-                      | NameAnchorReference
+                      | NameIdReference
 
 NameReference ::= "@" Base
 PathReference       ::= "$" PathExpression
-AnchorReference     ::= "&" AnchorToken
+IdReference     ::= "&" IdToken
 NamePathReference     ::= "@" Base "$" PathExpression
-NameAnchorReference   ::= "@" Base "&" AnchorToken
+NameIdReference   ::= "@" Base "&" IdToken
 
 Base                ::= (BaseRole ":")? Name
 BaseRole            ::= "OBJ"  | "REL"  | "PKG"  | "GRP"  | "HEAD"
@@ -417,22 +419,22 @@ BaseRole            ::= "OBJ"  | "REL"  | "PKG"  | "GRP"  | "HEAD"
                       | "DEFINT" | "DEFFLOAT" | "DEFBOOL" | "DEFBYTE" | "DEFHEAD"
 
 PathExpression      ::= (* specified in GDX-Path.md §3-§4 *)
-AnchorToken         ::= AnchorStartChar NameContChar*   (* Core Spec §4.4.3; = §4.1 *)
+IdToken         ::= IdStartChar NameContChar*   (* Core Spec §4.4.3; = §4.1 *)
 ```
 
-**Identifier-mode** (`@Base`) is normatively defined. The `@` sigil MUST be immediately followed by the anchor with no intervening whitespace. The identifier portion may be in any of the forms permitted by §6 (CURIEs, GUIDs, IRIs, local names, or hierarchical local names). The optional `BaseRole` prefix carries a role-disambiguation keyword from the closed Core Specification §5.2 vocabulary.
+**Identifier-mode** (`@Base`) is normatively defined. The `@` sigil MUST be immediately followed by the base identifier with no intervening whitespace. The identifier portion may be in any of the forms permitted by §6 (CURIEs, GUIDs, IRIs, local names, or hierarchical local names). The optional `BaseRole` prefix carries a role-disambiguation keyword from the closed Core Specification §5.2 vocabulary.
 
 **Path-mode** (`$PathExpression`) is normatively defined by the companion GDX Path Expressions Specification (`GDX-Path.md`). The `$` sigil introduces a path expression addressing an element by its structural location in the document tree. The `$` sigil MUST be immediately followed by the `/` of the path with no intervening whitespace.
 
-**Anchor-mode** (`&AnchorToken`) uses the `AnchorToken` grammar defined in §4.1 (authority: Core Spec §4.4.3); its resolution semantics are defined by `GDX-Path.md`. The `&` sigil introduces a key lookup; the Anchor is resolved within the scope of the reference (the enclosing Object, or the document at transport-layer position; see Core Specification §4.4.5). The `&` sigil MUST be immediately followed by the Anchor token with no intervening whitespace.
+**Id-mode** (`&IdToken`) uses the `IdToken` grammar defined in §4.1 (authority: Core Spec §4.4.3); its resolution semantics are defined by `GDX-Path.md`. The `&` sigil introduces an id lookup; the Id is resolved within the scope of the reference (the enclosing Object, or the document at transport-layer position; see Core Specification §4.4.5). The `&` sigil MUST be immediately followed by the Id token with no intervening whitespace.
 
-**Composed name + path** (`@Base$PathExpression`) expresses cross-document addressing by structural traversal. The `@Base` portion resolves to a starting element by scope walk (per Core Specification §6.16), and the `$PathExpression` portion is then evaluated rooted at that starting element. No whitespace is permitted between `@`, the anchor, `$`, and the path. When the anchor carries no role marker, the starting element defaults to an Object.
+**Composed name + path** (`@Base$PathExpression`) expresses cross-document addressing by structural traversal. The `@Base` portion resolves to a starting element by scope walk (per Core Specification §6.16), and the `$PathExpression` portion is then evaluated rooted at that starting element. No whitespace is permitted between `@`, the base, `$`, and the path. When the base carries no role marker, the starting element defaults to an Object.
 
-**Composed name + key** (`@Base&AnchorToken`) expresses cross-document addressing by key anchor. The `@Base` portion resolves to a starting element, and the `&AnchorToken` portion is then looked up within that element's scope. No whitespace is permitted. When the anchor carries no role marker, the starting element defaults to an Object.
+**Composed name + id** (`@Base&IdToken`) expresses cross-document addressing by id. The `@Base` portion resolves to a starting element, and the `&IdToken` portion is then looked up within that element's scope. No whitespace is permitted. When the base carries no role marker, the starting element defaults to an Object.
 
-**Base role markers.** The optional `BaseRole` prefix is distinguished from a CURIE prefix by lookup against the closed `BaseRole` set defined above. The parser MUST reject an unknown role keyword. At resolution time, the resolver MUST verify that the named element actually has the claimed role; mismatch yields an unresolved reference. Role markers are most useful in composed references where the anchor's role differs from the terminal target's role (for example, a `@STR` reference targeting an annotation child of a REL: `<@STR x : @REL:my-rel&annotation>`); in plain references and Object-anchored composed references, the marker is optional.
+**Base role markers.** The optional `BaseRole` prefix is distinguished from a CURIE prefix by lookup against the closed `BaseRole` set defined above. The parser MUST reject an unknown role keyword. At resolution time, the resolver MUST verify that the named element actually has the claimed role; mismatch yields an unresolved reference. Role markers are most useful in composed references where the base's role differs from the terminal target's role (for example, a `@STR` reference targeting an annotation child of a REL: `<@STR x : @REL:my-rel&annotation>`); in plain references and Object-based composed references, the marker is optional.
 
-The `$` and `&` operators do not combine within a single reference literal. The form `@Base$PathExpression&AnchorToken` is malformed; an author chooses one of `NamePathReference` or `NameAnchorReference` for the composed reference.
+The `$` and `&` operators do not combine within a single reference literal. The form `@Base$PathExpression&IdToken` is malformed; an author chooses one of `NamePathReference` or `NameIdReference` for the composed reference.
 
 When a reference literal appears as the Resource of a `@KIND` reference element (Core Specification §6.16), it MUST resolve to exactly one element of the matching role. See `GDX-Path.md` §7 for the normative address-mode singularity rule.
 
@@ -509,7 +511,7 @@ Where (layer 2):
 
 Three composition prohibitions: `@@KIND` (no @-edge to @-edge), `@OBJ*`/`@REL*`/`@HEAD*` (no Set of @-edges, per E5), `%%KIND` (no REF to REF, per R6), `@%KIND` (no @-edge to REF, per E5).
 
-Prefix recognition is case-insensitive. The grammar productions below show prefixes in their uppercase canonical case for clarity; conforming parsers MUST accept the same tokens in any combination of upper and lower case (`STR`, `Str`, `str`, `sTR` are all valid). Identifiers (Name, Anchor, Rel) remain case-sensitive (§6).
+Prefix recognition is case-insensitive. The grammar productions below show prefixes in their uppercase canonical case for clarity; conforming parsers MUST accept the same tokens in any combination of upper and lower case (`STR`, `Str`, `str`, `sTR` are all valid). Identifiers (Name, Id, Rel) remain case-sensitive (§6).
 
 ```ebnf
 Prefix               ::= RefSigil? RolePrefix
@@ -978,20 +980,20 @@ BytesLiteral         ::= HexBytes | Base64Bytes
 
 ReferenceLiteral     ::= NameReference
                        | PathReference
-                       | AnchorReference
+                       | IdReference
                        | NamePathReference
-                       | NameAnchorReference
+                       | NameIdReference
 NameReference  ::= "@" Base
 PathReference        ::= "$" PathExpression
-AnchorReference      ::= "&" AnchorToken
+IdReference      ::= "&" IdToken
 NamePathReference      ::= "@" Base "$" PathExpression
-NameAnchorReference    ::= "@" Base "&" AnchorToken
+NameIdReference    ::= "@" Base "&" IdToken
 Base                 ::= (BaseRole ":")? Name
 BaseRole             ::= "OBJ"  | "REL"  | "PKG"  | "GRP"
                        | "DEFOBJ" | "DEFREC" | "DEFSTR"
                        | "DEFINT" | "DEFFLOAT" | "DEFBOOL" | "DEFBYTE"
 PathExpression       ::= /* specified in GDX-Path.md §3-§4 */
-AnchorToken          ::= AnchorStartChar NameContChar*   /* Core Spec §4.4.3; = §4.1 */
+IdToken          ::= IdStartChar NameContChar*   /* Core Spec §4.4.3; = §4.1 */
 
 Resource             ::= StringLiteral
                        | IntLiteral
@@ -1003,9 +1005,9 @@ Resource             ::= StringLiteral
 
 // ===== Fields =====
 
-AnchorToken          ::= AnchorStartChar NameContChar*
-AnchorStartChar      ::= ALPHA | DIGIT | "_"
-Anchor               ::= "&" AnchorToken
+IdToken          ::= IdStartChar NameContChar*
+IdStartChar      ::= ALPHA | DIGIT | "_"
+Id               ::= "&" IdToken
 
 RelContent           ::= UriReference | Name
 Rel                  ::= "#" RelContent
@@ -1016,7 +1018,7 @@ Type                 ::= "--" TypeContent
 
 // ===== Element Structure =====
 
-IdentitySection      ::= (WS Anchor)? (WS Rel)? (WS Name)?
+IdentitySection      ::= (WS Id)? (WS Rel)? (WS Name)?
 
 ResourceSection      ::= WS? ":" WS? Resource? (WS "--" TypeContent)?
                        | WS "--" TypeContent

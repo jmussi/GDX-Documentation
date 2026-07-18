@@ -1,7 +1,7 @@
 # GDX — Cookbook of Canonical Patterns
 
-- **Status:** Draft v0.20.0 (companion to GDX Core Specification v0.20.0, working draft, pre-1.0)
-- **Date:** 2026-06-09
+- **Status:** Draft v0.20.0 (companion to GDX Core Specification v0.25.0, working draft, pre-1.0)
+- **Date:** 2026-07-17
 - **Editors:** 
 - **Authors:** Julian Mussi
 
@@ -38,7 +38,7 @@ The Cookbook is organized by pattern type:
 - **Schema and Constraints** (10–16): Templates, semantic types, validation, refinement, layered conformance, parallel constraint vocabularies.
 - **Predicates and Vocabulary** (17): REL declarations.
 - **Node-Zone, Annotation, and Adjunct Extensions** (18–20): semi-structured material, free-text notes, vocabulary-keyed adjunct statements.
-- **References and Vocabularies** (21–27): identifier schemes, typed pointers, path-mode addressing, key-mode anchors, vocabulary metadata, complete vocabulary documents, version chains.
+- **References and Vocabularies** (21–27): identifier schemes, typed pointers, path-mode addressing, id references, vocabulary metadata, complete vocabulary documents, version chains.
 - **Property State** (28): null, absent, and present.
 - **Transport** (29–31): packaging, grouping, vocabulary export.
 - **Use-Case Framings** (32–36): typed configuration through graph-structured data.
@@ -154,7 +154,7 @@ Instance children align to Template slots by `Name` matching. When local names d
 
 Here the instance children have local `Name`s `prenom` and `nom`, which do not match the Template's slot `Name`s. The shared `#Rel` values (`schema:givenName`, `schema:familyName`) align them to the corresponding slots.
 
-The `&Anchor` field is NOT used for Template-instance alignment; the Anchor is an element's durable machine identity and location-stable reference target, a separate concern from the `Name`-based (and `Rel`-bridged) alignment shown here (see Pattern 22).
+The `&Id` field is NOT used for Template-instance alignment; the Id is an element's durable machine identity and location-stable reference target, a separate concern from the `Name`-based (and `Rel`-bridged) alignment shown here (see Pattern 22).
 
 ## 7. Edge Between Entities
 
@@ -204,7 +204,7 @@ An @-edge asserts a graph statement and admits attribute children. When you want
 >
 ```
 
-"sensor-hub stands in some relationship to device-7 — nature pending." Give the edge an `Anchor` — its durable identity, the substance that endures while the predicate is still pending — so it stays addressable; when the relationship is classified, refine the *same* edge by filling the field:
+"sensor-hub stands in some relationship to device-7 — nature pending." Give the edge an `Id` — its durable identity, the substance that endures while the predicate is still pending — so it stays addressable; when the relationship is classified, refine the *same* edge by filling the field:
 
 ```
 <OBJ sensor-hub
@@ -586,7 +586,7 @@ Pick `%` when the slot's content is sourced from elsewhere; pick `@` when you wa
 >
 
 <OBJ audit-record
-    <%@OBJ source : @alice&knows-bob-2024>  -- REF to the edge by key
+    <%@OBJ source : @alice&knows-bob-2024>  -- REF to the edge by id
     <STR confidence : "verified">
     <STR auditedBy : "SecurityTeam">
 >
@@ -635,11 +635,11 @@ Path segments select by different fields depending on the segment's first charac
 
 A path used as a reference Resource MUST resolve to exactly one element of the matching role; zero matches, multiple matches, and matches of the wrong role all yield an unresolved reference. The GDX Path Expressions Specification (`GDX-Path.md`) gives the full grammar and resolution rules.
 
-Anchor-based addressing — for elements that carry an `Anchor` field (their durable machine identity) — is covered in Pattern 22; it provides location-stable references that survive document restructuring.
+Id-based addressing — for elements that carry an `Id` field (their durable machine identity) — is covered in Pattern 22; it provides location-stable references that survive document restructuring.
 
-## 24. Reference to an Anchored Element via Base
+## 24. Reference to an Id-Bearing Element via Base
 
-When an element carries an `Anchor` field, that Anchor is its **durable machine identity** — a fixed handle independent of the element's Name and of where it sits in the document tree, and the thing persistence and durable graph links bind to. Because it is location-stable, it is the recommended target for references that must survive document restructuring: long-lived archival references, cross-document audit links, and references into Sets of similar elements (log entries, transactions, events). (An element's `Name`, by contrast, is a *descriptive* handle used for alignment and by-name resolution; renaming an element does not change its identity, but changing its Anchor does.) When the anchored element is a **root-level entity** (a top-level Object, REL, or HEAD), its Anchor is a *root anchor* and may also be the target of an `@`-edge — `<@OBJ #knows : &bob-anchor>` — not only of a `%`-reference; an Anchor on an interior element is REF-addressable only (Core Specification §4.4.5, §6.4).
+When an element carries an `Id` field, that Id is its **durable machine identity** — a fixed handle independent of the element's Name and of where it sits in the document tree, and the thing persistence and durable graph links bind to. Because it is location-stable, it is the recommended target for references that must survive document restructuring: long-lived archival references, cross-document audit links, and references into Sets of similar elements (log entries, transactions, events). (An element's `Name`, by contrast, is a *descriptive* handle used for alignment and by-name resolution; renaming an element does not change its identity, but changing its Id does.) When the id-bearing element is a **root-level entity** (a top-level Object, REL, or HEAD), its Id is a *root id* and may also be the target of an `@`-edge — `<@OBJ #knows : &bob-id>` — not only of a `%`-reference; an Id on an interior element is REF-addressable only (Core Specification §4.4.5, §6.4).
 
 ```
 <OBJ system/audit-log
@@ -662,11 +662,11 @@ When an element carries an `Anchor` field, that Anchor is its **durable machine 
 >
 ```
 
-The reference `@system/audit-log&entry-12345` is an `NameAnchorRef`. The `@system/audit-log` portion resolves the audit-log Object by name; the `&entry-12345` portion then looks up the Anchored element within that Object's scope. The reference resolves to the Record with that Anchor.
+The reference `@system/audit-log&entry-12345` is an `NameIdRef`. The `@system/audit-log` portion resolves the audit-log Object by name; the `&entry-12345` portion then looks up the id-bearing element within that Object's scope. The reference resolves to the Record with that Id.
 
-If the audit log is later restructured — entries archived into nested categories, reorganized by severity, etc. — the reference continues to resolve as long as the Anchor is preserved. A path-based equivalent like `$/system/audit-log/entries/[1]` would break under any such change.
+If the audit log is later restructured — entries archived into nested categories, reorganized by severity, etc. — the reference continues to resolve as long as the Id is preserved. A path-based equivalent like `$/system/audit-log/entries/[1]` would break under any such change.
 
-When the referencing element shares a document with the Anchored target, the `@Identifier` portion may be omitted; bare `&entry-12345` is an `AnchorRef` that looks up within the document scope.
+When the referencing element shares a document with the id-bearing target, the `@Identifier` portion may be omitted; bare `&entry-12345` is an `IdRef` that looks up within the document scope.
 
 ```
 <OBJ compliance/internal-incident
@@ -674,9 +674,9 @@ When the referencing element shares a document with the Anchored target, the `@I
 >
 ```
 
-Anchor uniqueness is scoped to the enclosing Object (or to the document for transport-layer elements); see Core Specification §4.4.5. Two different audit-log Objects MAY each have their own `&entry-12345` without collision, because Anchor resolution is scoped to one Object at a time.
+Id uniqueness is scoped to the enclosing Object (or to the document for transport-layer elements); see Core Specification §4.4.5. Two different audit-log Objects MAY each have their own `&entry-12345` without collision, because Id resolution is scoped to one Object at a time.
 
-When the anchor is not an Object — for example, an Anchored annotation on a REL declaration or an Anchored slot-documentation inside a Template — use an explicit anchor role marker. The marker is one of the closed prefix-vocabulary keywords (`OBJ`, `REL`, `DEFOBJ`, `PKG`, `GRP`, etc.) followed by `:`:
+When the base is not an Object — for example, an id-bearing annotation on a REL declaration or an id-bearing slot-documentation inside a Template — use an explicit base role marker. The marker is one of the closed prefix-vocabulary keywords (`OBJ`, `REL`, `DEFOBJ`, `PKG`, `GRP`, etc.) followed by `:`:
 
 ```
 <REL gdx:knows
@@ -688,9 +688,9 @@ When the anchor is not an Object — for example, an Anchored annotation on a RE
 >
 ```
 
-The `@REL:gdx:knows` anchor explicitly resolves as a REL rather than an Object. The default anchor role in composed references is `OBJ`, so the marker is only needed when the target lives inside something else.
+The `@REL:gdx:knows` base explicitly resolves as a REL rather than an Object. The default base role in composed references is `OBJ`, so the marker is only needed when the target lives inside something else.
 
-XML practitioners may recognize this pattern as the equivalent of `xml:id`. Convention: when converting GDX ↔ XML, GDX's `Anchor` corresponds to XML's `xml:id` attribute.
+XML practitioners may recognize this pattern as the equivalent of `xml:id`. Convention: when converting GDX ↔ XML, GDX's `Id` corresponds to XML's `xml:id` attribute.
 
 ## 25. Vocabulary Metadata Link
 

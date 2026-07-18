@@ -1,18 +1,18 @@
 # GDX Path Expressions — Specification
 
-- **Status:** Draft v0.7 (companion to GDX Core Specification v0.24.0, working draft)
-- **Date:** 2026-06-09
-- **Companion to:** GDX Core Specification v0.24.0
+- **Status:** Draft v0.8 (companion to GDX Core Specification v0.25.0, working draft)
+- **Date:** 2026-07-17
+- **Companion to:** GDX Core Specification v0.25.0
 - **Authors:** Julian Mussi
 
 
 ## Abstract
 
-This document defines the GDX Path Expression — a syntax and resolution model for addressing individual elements within a GDX document by their structural location. Path expressions complement the identifier-mode reference syntax (`@Identifier`) and the key-mode reference syntax (`&Anchor`) defined in the GDX Core Specification by providing access to elements that lack a globally addressable identifier, including Records, Blocks, value Properties, Qualifiers, and Extensions.
+This document defines the GDX Path Expression — a syntax and resolution model for addressing individual elements within a GDX document by their structural location. Path expressions complement the identifier-mode reference syntax (`@Identifier`) and the id-mode reference syntax (`&Id`) defined in the GDX Core Specification by providing access to elements that lack a globally addressable identifier, including Records, Blocks, value Properties, Qualifiers, and Extensions.
 
 The path grammar is uniform across all consuming contexts. This specification defines the syntax and per-segment selection semantics; the cardinality and failure semantics for any given consumer (references, delta operations, queries) are specified by the consuming layer. This document normatively defines address-mode behavior — the cardinality contract used by `@KIND` reference elements (Core Specification §6.16). Query-mode and delta-mode behaviors are reserved for future companion specifications.
 
-This specification resolves the `$PathExpression` reservation in Core Specification §11.4 (Path-Mode Reference Resolution). It defines the five reference-literal forms recognized in `%KIND` REF resources and `@OBJ`/`@REL`/`@HEAD` @-Edge resources: `NameRef` (`@Base`), `PathRef` (`$PathExpression`), `AnchorRef` (`&Anchor`), `NamePathRef` (`@Base$PathExpression`), and `NameAnchorRef` (`@Base&Anchor`). The composed forms `NamePathRef` and `NameAnchorRef` express cross-document addressing by structural path or by Anchor-based anchor respectively. The `Base` production carries an optional role marker (`@OBJ:id`, `@REL:id`, `@DEFOBJ:id`, etc.) drawn from the closed prefix vocabulary; when omitted, composed references default to an Object anchor.
+This specification resolves the `$PathExpression` reservation in Core Specification §11.4 (Path-Mode Reference Resolution). It defines the five reference-literal forms recognized in `%KIND` REF resources and `@OBJ`/`@REL`/`@HEAD` @-Edge resources: `NameRef` (`@Base`), `PathRef` (`$PathExpression`), `IdRef` (`&Id`), `NamePathRef` (`@Base$PathExpression`), and `NameIdRef` (`@Base&Id`). The composed forms `NamePathRef` and `NameIdRef` express cross-document addressing by structural path or by durable id respectively. The `Base` production carries an optional role marker (`@OBJ:id`, `@REL:id`, `@DEFOBJ:id`, etc.) drawn from the closed prefix vocabulary; when omitted, composed references default to an Object base.
 
 This document does not address query-mode semantics (wildcards, filters, descendant axis, projections), delta/patch operations, or filter expression languages. The syntactic territory those features require is enumerated as reserved (§9) so that v1 path expressions remain forward-compatible.
 
@@ -23,7 +23,7 @@ This document does not address query-mode semantics (wildcards, filters, descend
 2. [Scope and Modes](#2-scope-and-modes)
 3. [Path Expression Syntax](#3-path-expression-syntax)
 4. [Segment Kinds](#4-segment-kinds)
-5. [Composition with Identifier and Anchor References](#5-composition-with-identifier-and-key-references)
+5. [Composition with Identifier and Id References](#5-composition-with-identifier-and-id-references)
 6. [Resolution Algorithm](#6-resolution-algorithm)
 7. [Address-Mode Singularity](#7-address-mode-singularity)
 8. [Required Changes to GDX Core Specification](#8-required-changes-to-gdx-core-specification)
@@ -116,7 +116,7 @@ Segment kind is determined by the segment's first character:
 
 A v1 segment carries exactly one selector. Compound segments — those combining more than one selector form within a single step (for example, an Name combined with a Rel constraint) — are reserved for a future revision (§9).
 
-Anchor-based addressing does not appear as a path segment. The `Anchor` field is a document-anchor mechanism (Core Spec §3.2, §5.4.3) and is addressed via the `&Anchor` reference literal forms (§5) rather than by path traversal. A path expression that walks structurally to an Anchored element is permissible (matching the element by Name, Rel, or position) but inefficient compared to the direct Anchor reference; the path syntax intentionally does not provide an Anchor-matching segment kind.
+Id-based addressing does not appear as a path segment. The `Id` field is a in-document id mechanism (Core Spec §3.2, §5.4.3) and is addressed via the `&Id` reference literal forms (§5) rather than by path traversal. A path expression that walks structurally to an id-bearing element is permissible (matching the element by Name, Rel, or position) but inefficient compared to the direct Id reference; the path syntax intentionally does not provide an Id-matching segment kind.
 
 ### 3.3 Lexical Alphabet
 
@@ -159,7 +159,7 @@ Examples:
 - `gdx:Person` matches a child with `Name` `gdx:Person` (a CURIE; `:` is in `SegContChar`).
 - `com.acme.Address` matches a child with that dotted Name.
 
-The `SegContChar` alphabet excludes `/` (cf. Core Spec §4.4.1 `NameContChar`). To address an element whose `Name` itself contains `/`, give the element an Anchor (Core Spec §3.2, §5.4.3) and reference it via the `&Anchor` reference literal (§5.1), or address the element directly via an identifier-mode reference (`@Identifier`).
+The `SegContChar` alphabet excludes `/` (cf. Core Spec §4.4.1 `NameContChar`). To address an element whose `Name` itself contains `/`, give the element an Id (Core Spec §3.2, §5.4.3) and reference it via the `&Id` reference literal (§5.1), or address the element directly via an identifier-mode reference (`@Identifier`).
 
 ### 4.2 RelSegment
 
@@ -167,7 +167,7 @@ The `SegContChar` alphabet excludes `/` (cf. Core Spec §4.4.1 `NameContChar`). 
 RelSegment ::= "#" SegmentName
 ```
 
-A `RelSegment` matches a child element whose `Rel` field is string-equal to `SegmentName`. CURIEs and other identifier forms admitted by `SegmentName` are valid as the Rel value. An element whose Rel field is empty — for example, an @-edge whose relationship is undefined as to nature (Core Spec §6.4.2, added in Core v0.20.0) — is matched by no `RelSegment`; only a named Rel can be selected by `#SegmentName`. To address such an element, use an `OrdinalSegment` or, when it carries a `Anchor`, the `&Anchor` reference literal.
+A `RelSegment` matches a child element whose `Rel` field is string-equal to `SegmentName`. CURIEs and other identifier forms admitted by `SegmentName` are valid as the Rel value. An element whose Rel field is empty — for example, an @-edge whose relationship is undefined as to nature (Core Spec §6.4.2, added in Core v0.20.0) — is matched by no `RelSegment`; only a named Rel can be selected by `#SegmentName`. To address such an element, use an `OrdinalSegment` or, when it carries an `Id`, the `&Id` reference literal.
 
 Examples:
 
@@ -176,7 +176,7 @@ Examples:
 
 The Rel field is not constrained to be unique among the children of an element. Multiple Properties, Edges, or other elements MAY share the same Rel value (Core Spec §6.4 explicitly allows multiple Edges of the same Rel between the same source/target pair). A `RelSegment` therefore may match zero, one, or many child elements at the data layer.
 
-Address-mode consumers (§7) require exactly one match. Authors writing paths in address-mode contexts SHOULD select segments such that the terminal step matches a single child; this typically means using an `NameSegment` or `OrdinalSegment` at any step where multiple siblings could share a Rel. Alternatively, when the target element carries a `Anchor`, the `&Anchor` reference literal (§5.1) addresses it directly without requiring path traversal at all.
+Address-mode consumers (§7) require exactly one match. Authors writing paths in address-mode contexts SHOULD select segments such that the terminal step matches a single child; this typically means using an `NameSegment` or `OrdinalSegment` at any step where multiple siblings could share a Rel. Alternatively, when the target element carries an `Id`, the `&Id` reference literal (§5.1) addresses it directly without requiring path traversal at all.
 
 ### 4.3 OrdinalSegment
 
@@ -196,7 +196,7 @@ The following forms are malformed:
 - `[]` — empty brackets.
 - `[ 3 ]`, `[3 ]` — no whitespace inside brackets.
 
-The ordinal counts all child elements of the parent in document order, regardless of role or modifier. It is a positional selector based purely on document order; it does not consult the `Anchor` field or Set-membership ordering.
+The ordinal counts all child elements of the parent in document order, regardless of role or modifier. It is a positional selector based purely on document order; it does not consult the `Id` field or Set-membership ordering.
 
 The contents of `[ ]` are restricted to a base-10 numeral in v1. Wildcards (`[*]`), ranges (`[1:5]`, `[1..3]`), filter expressions (`[?(…)]`), unions (`[1,3]`), and named subscripts (`[name]`) are reserved (§9).
 
@@ -210,44 +210,44 @@ The contents of `[ ]` are restricted to a base-10 numeral in v1. Wildcards (`[*]
 
 The uniqueness column indicates the data-layer guarantee per Core Specification. The grammar does not require an `NameSegment` to match exactly one child if the data is malformed; resolution behavior in the presence of duplicate Names is implementation-defined. Conforming documents do not produce such collisions (Core Spec §3.2).
 
-Anchor-based addressing — matching an element by its `Anchor` field — is not a path segment kind in v1. Anchors are addressed directly via the `&Anchor` and `@Identifier&Anchor` reference literal forms (§5). The rationale is that Anchors provide location-stable anchors (Core Spec §3.2); folding Anchor matching into path segments would couple Anchors to the very location they are designed to be independent of. A path expression that matches by Name, Rel, or ordinal at each step composes naturally with an Anchor reference at the start; a path that uses Anchor matching mid-way is redundant with the direct reference form.
+Id-based addressing — matching an element by its `Id` field — is not a path segment kind in v1. Ids are addressed directly via the `&Id` and `@Identifier&Id` reference literal forms (§5). The rationale is that Ids provide location-stable reference targets (Core Spec §3.2); folding Id matching into path segments would couple Ids to the very location they are designed to be independent of. A path expression that matches by Name, Rel, or ordinal at each step composes naturally with an Id reference at the start; a path that uses Id matching mid-way is redundant with the direct reference form.
 
 
 ---
 
-## 5. Composition with Identifier and Anchor References
+## 5. Composition with Identifier and Id References
 
-The `$PathExpression` syntax composes with the identifier-mode reference (`@Identifier`, Core Spec §4.2.6) and the key-mode reference (`&Anchor`, Core Spec §4.2.6) to express references that combine name resolution, structural traversal, and key-based anchoring. Five reference-literal forms are recognized:
+The `$PathExpression` syntax composes with the identifier-mode reference (`@Identifier`, Core Spec §4.2.6) and the id-mode reference (`&Id`, Core Spec §4.2.6) to express references that combine name resolution, structural traversal, and id lookup. Five reference-literal forms are recognized:
 
 ```ebnf
-ReferenceLiteral ::= NameRef | PathRef | AnchorRef | NamePathRef | NameAnchorRef
+ReferenceLiteral ::= NameRef | PathRef | IdRef | NamePathRef | NameIdRef
 
 NameRef            ::= "@" Base
 PathRef          ::= "$" PathExpression
-AnchorRef        ::= "&" AnchorToken
+IdRef        ::= "&" IdToken
 NamePathRef        ::= "@" Base "$" PathExpression
-NameAnchorRef      ::= "@" Base "&" AnchorToken
+NameIdRef      ::= "@" Base "&" IdToken
 
 Base             ::= (BaseRole ":")? Identifier
 BaseRole         ::= "OBJ"  | "REL"  | "PKG"  | "GRP"  | "HEAD"
                    | "DEFOBJ" | "DEFREC" | "DEFSTR"
                    | "DEFINT" | "DEFFLOAT" | "DEFBOOL" | "DEFBYTE" | "DEFHEAD"
 
-AnchorToken      ::= AnchorStartChar NameContChar*   (* Core Spec §4.4.3 — authoritative *)
-AnchorStartChar  ::= ALPHA | DIGIT | "_"
+IdToken      ::= IdStartChar NameContChar*   (* Core Spec §4.4.3 — authoritative *)
+IdStartChar  ::= ALPHA | DIGIT | "_"
 ```
 
-The `AnchorToken` production above is reproduced for reference only; Core Spec §4.4.3 is authoritative for it (a single grammar permitting a leading digit, replacing the earlier `SegmentName | DIGIT+` split). The `Base` production extends the identifier portion of `@`-references with an optional role marker. The marker is a closed-vocabulary keyword drawn from §6.2 of the Core Specification, followed by `:`, followed by the identifier. The marker is lexically distinguished from a CURIE prefix (`gdx:Person`, `schema:givenName`) by lookup against the closed `BaseRole` set: only the keywords listed above are recognized as role markers; anything else parses as part of the identifier.
+The `IdToken` production above is reproduced for reference only; Core Spec §4.4.3 is authoritative for it (a single grammar permitting a leading digit, replacing the earlier `SegmentName | DIGIT+` split). The `Base` production extends the identifier portion of `@`-references with an optional role marker. The marker is a closed-vocabulary keyword drawn from §6.2 of the Core Specification, followed by `:`, followed by the identifier. The marker is lexically distinguished from a CURIE prefix (`gdx:Person`, `schema:givenName`) by lookup against the closed `BaseRole` set: only the keywords listed above are recognized as role markers; anything else parses as part of the identifier.
 
 ### 5.1 Form Semantics
 
-- **`NameRef`** — name-mode resolution. The `@Base` is resolved per the scope walk of Core Spec §6.16. When the anchor carries no role marker, the role is inferred from the enclosing `@KIND` reference element's prefix. When the anchor carries a role marker, the resolver looks for an element of the named role with the matching identifier.
+- **`NameRef`** — name-mode resolution. The `@Base` is resolved per the scope walk of Core Spec §6.16. When the base carries no role marker, the role is inferred from the enclosing `@KIND` reference element's prefix. When the base carries a role marker, the resolver looks for an element of the named role with the matching identifier.
 - **`PathRef`** — structural traversal rooted at the document containing the reference literal.
-- **`AnchorRef`** — key-mode lookup within the scope of the reference (Core Spec §4.4.5).
-- **`NamePathRef`** — composed name + path. The `@Base` portion resolves to a starting element; the `$PathExpression` portion is then evaluated rooted at that starting element. When the anchor carries no role marker, the starting element defaults to an Object (the most common anchor for cross-document path addressing).
-- **`NameAnchorRef`** — composed name + key. The `@Base` portion resolves to a starting element; the `&Anchor` portion is then looked up within that element's scope. When the anchor carries no role marker, the starting element defaults to an Object.
+- **`IdRef`** — id-mode lookup within the scope of the reference (Core Spec §4.4.5).
+- **`NamePathRef`** — composed name + path. The `@Base` portion resolves to a starting element; the `$PathExpression` portion is then evaluated rooted at that starting element. When the base carries no role marker, the starting element defaults to an Object (the most common base for cross-document path addressing).
+- **`NameIdRef`** — composed name + id. The `@Base` portion resolves to a starting element; the `&Id` portion is then looked up within that element's scope. When the base carries no role marker, the starting element defaults to an Object.
 
-Each sigil retains its independent meaning under composition. The `@` operator performs name resolution (with optional role disambiguation); the `$` operator performs structural traversal; the `&` operator performs key lookup. Composition reads left-to-right.
+Each sigil retains its independent meaning under composition. The `@` operator performs name resolution (with optional role disambiguation); the `$` operator performs structural traversal; the `&` operator performs id lookup. Composition reads left-to-right.
 
 ### 5.2 Base Role Markers
 
@@ -261,13 +261,13 @@ The optional `BaseRole` prefix on an `@`-reference makes the role of the resolve
 @PKG:vendor-pack        // explicit Package
 ```
 
-The role marker is most useful in composed references, where the anchor's role differs from the terminal target's role:
+The role marker is most useful in composed references, where the base's role differs from the terminal target's role:
 
 ```
 <%STR description : @REL:my-rel&annotation-3>
 ```
 
-Here the enclosing `%STR` says the terminal target is a string Property. The `@REL:my-rel` portion says the anchor is a REL named `my-rel`. The `&annotation-3` portion looks up an Anchored element within the REL's subtree. Without the role marker, the anchor would default to Object, and the reference would be unresolvable.
+Here the enclosing `%STR` says the terminal target is a string Property. The `@REL:my-rel` portion says the base is a REL named `my-rel`. The `&annotation-3` portion looks up an id-bearing element within the REL's subtree. Without the role marker, the base would default to Object, and the reference would be unresolvable.
 
 **Parse-time validation.** The parser checks that `BaseRole` is one of the keywords in the closed set above. An unknown role keyword (e.g., `@FOO:bar`) is malformed and MUST be rejected.
 
@@ -275,21 +275,21 @@ Here the enclosing `%STR` says the terminal target is a string Property. The `@R
 
 **Marker is optional.** When the role is unambiguous from context — the enclosing prefix on a non-composed reference, or the default-OBJ rule on a composed reference — the marker MAY be omitted. The terse form `@bob` and the explicit form `@OBJ:bob` are equivalent when the inferred role is OBJ.
 
-**Default anchor role in composed references is OBJ.** This default reflects the common case: most cross-document references anchor at an Object boundary and then traverse or look up within. Authors targeting non-Object anchors (RELs, Templates, transport-layer containers) MUST use an explicit role marker.
+**Default base role in composed references is OBJ.** This default reflects the common case: most cross-document references id at an Object boundary and then traverse or look up within. Authors targeting non-Object bases (RELs, Templates, transport-layer containers) MUST use an explicit role marker.
 
 ### 5.3 Whitespace and Boundaries
 
-No whitespace is permitted between `@`, the `Base`, `$`, `&`, the path segments, or the Anchor token. The entire `ReferenceLiteral` is one contiguous token.
+No whitespace is permitted between `@`, the `Base`, `$`, `&`, the path segments, or the Id token. The entire `ReferenceLiteral` is one contiguous token.
 
-In an `NamePathRef`, the `Base` following `@` is consumed up to the first `$`. In an `NameAnchorRef`, the `Base` is consumed up to the first `&`. Because `$` and `&` are not members of `NameContChar`, the boundaries are lexically clean.
+In an `NamePathRef`, the `Base` following `@` is consumed up to the first `$`. In an `NameIdRef`, the `Base` is consumed up to the first `&`. Because `$` and `&` are not members of `NameContChar`, the boundaries are lexically clean.
 
 Within an `Base`, the role marker (if present) extends from `@` up to and including `:`. The identifier portion follows the `:`. If the bareword before `:` is in the `BaseRole` set, the `:` is interpreted as the role separator; if not, the bareword and `:` are part of a CURIE-style identifier (e.g., `gdx:Person`).
 
-The `$` and `&` operators do not combine within a single reference literal. The form `@Base$PathExpression&Anchor` is malformed; pick one of `NamePathRef` or `NameAnchorRef`.
+The `$` and `&` operators do not combine within a single reference literal. The form `@Base$PathExpression&Id` is malformed; pick one of `NamePathRef` or `NameIdRef`.
 
 ### 5.4 Cross-Document Addressing
 
-`NamePathRef` and `NameAnchorRef` are the canonical forms for cross-document addressing. The `@Base` portion may resolve to an element in any scope:
+`NamePathRef` and `NameIdRef` are the canonical forms for cross-document addressing. The `@Base` portion may resolve to an element in any scope:
 
 - Local-document (the identifier matches an element within the same document).
 - Namespace-relative (the identifier matches a name registered in a vocabulary or package scope).
@@ -298,15 +298,15 @@ The `$` and `&` operators do not combine within a single reference literal. The 
 The path or key portion is then evaluated within the resolved element's scope:
 
 ```
-@gdx:bob$/contact/address                       // OBJ anchor (default), path within
-@OBJ:gdx:bob&shippingAddress                    // OBJ anchor (explicit), key within
-@REL:gdx:knows$/range                           // REL anchor, path within
-@DEFOBJ:com.acme.Customer$/firstName            // Template anchor, path to slot
+@gdx:bob$/contact/address                       // OBJ base (default), path within
+@OBJ:gdx:bob&shippingAddress                    // OBJ base (explicit), id within
+@REL:gdx:knows$/range                           // REL base, path within
+@DEFOBJ:com.acme.Customer$/firstName            // Template base, path to slot
 @https://acme.com/people/alice$/photo           // IRI-resolved (OBJ default) + path
-@PKG:vendor-pack&main-product                   // Package anchor + key
+@PKG:vendor-pack&main-product                   // Package base + id
 ```
 
-A `PathRef` or `AnchorRef` with no `@Base` portion is rooted at (or scoped within) the current document. These forms cannot address elements in other documents directly.
+A `PathRef` or `IdRef` with no `@Base` portion is rooted at (or scoped within) the current document. These forms cannot address elements in other documents directly.
 
 ### 5.5 Empty Composition
 
@@ -320,12 +320,12 @@ A `@KIND` reference element (Core Spec §6.16) MAY use any of the five reference
 |------------------------------------------------------------------------------------------------|---------------|
 | Reference to an identifiable Object                                                            | `NameRef`       |
 | Reference to a non-Name-bearing element in this document by structural location                  | `PathRef`     |
-| Reference to an Anchored element anywhere in this document                                         | `AnchorRef`      |
+| Reference to an id-bearing element anywhere in this document                                         | `IdRef`      |
 | Reference to a non-Name-bearing element in another document by structural location                | `NamePathRef`   |
-| Reference to an Anchored element in another document, or to an Anchored element scoped within a named Object | `NameAnchorRef` |
-| Reference to a child of a non-Object anchor (REL, Template, transport container)               | `NamePathRef` or `NameAnchorRef` with explicit `BaseRole` |
+| Reference to an id-bearing element in another document, or to an id-bearing element scoped within a named Object | `NameIdRef` |
+| Reference to a child of a non-Object base (REL, Template, transport container)               | `NamePathRef` or `NameIdRef` with explicit `BaseRole` |
 
-When both an Anchor and a structural path could address the target, prefer the Anchor form. Anchors are location-stable; paths break when intervening structure changes.
+When both an Id and a structural path could address the target, prefer the Id form. Ids are location-stable; paths break when intervening structure changes.
 
 
 ---
@@ -402,7 +402,7 @@ When a Rel-bearing terminal step may have multiple matching siblings, authors SH
 - An `NameSegment` if the target carries an Name.
 - An `OrdinalSegment` if the target is identified by its position among children.
 
-Alternatively, when the target element carries a `Anchor`, switch from a `PathRef`/`NamePathRef` to a `AnchorRef`/`NameAnchorRef` (§5). Anchor-based addressing avoids path traversal entirely and is location-stable.
+Alternatively, when the target element carries an `Id`, switch from a `PathRef`/`NamePathRef` to an `IdRef`/`NameIdRef` (§5). Id-based addressing avoids path traversal entirely and is location-stable.
 
 ### 7.3 Resolution Determinism
 
@@ -436,25 +436,25 @@ The "Path" row of the conventional identifier-forms table is removed. Path-style
 - For local naming, identifiers may continue to embed `/` as a continuation character; only the leading `/` is invalid.
 - For references that were path-like in spirit, use a `PathRef` or `NamePathRef`.
 
-### 8.3 Anchor Field (Core Spec §3.2, §4.4.3, §4.4.5)
+### 8.3 Id Field (Core Spec §3.2, §4.4.3, §4.4.5)
 
-The `Anchor` field is a location-stable document-anchor mechanism, not a Template-slot alignment mechanism:
+The `Id` field is a location-stable in-document id mechanism, not a Template-slot alignment mechanism:
 
-- Anchors are an opt-in named-anchor mechanism providing location-stable reference targets for elements that lack global identifiers. Anchors play no role in Template-instance alignment, and (per Core Spec v0.22.0) the `Anchor` field is excluded from the universal claim rule — a Template MUST NOT declare an Anchor on a slot.
-- Core Spec §4.4.5 defines Anchor uniqueness: Anchors MUST be unique within the enclosing Object's scope. Elements at transport-layer position (direct children of a Package, Group, or document root) MUST have Anchors unique within the document.
-- **The Anchor-token grammar is authored by the core, not by this document.** Core Spec §4.4.3 defines `AnchorToken` as a single grammar — an identifier token whose start set additionally admits a leading digit (`AnchorToken ::= (ALPHA | DIGIT | "_") NameContChar*`), superseding the former `SegmentName | DIGIT+` split. This admits sequential tokens (`&1`), named anchors (`&shippingAddress`), and digit-leading GUID anchors (`&7f3a2b9c-…`) under one rule. Anchor tokens carry no numeric interpretation and compare by ordinal equality (`&01` ≠ `&1`). The grammar blocks in §5 and §8.4 reference the core grammar; this specification no longer originates the `AnchorToken` production.
+- Ids are an opt-in named-id mechanism providing location-stable reference targets for elements that lack global identifiers. Ids play no role in Template-instance alignment, and (per Core Spec v0.22.0) the `Id` field is excluded from the universal claim rule — a Template MUST NOT declare an Id on a slot.
+- Core Spec §4.4.5 defines Id uniqueness: Ids MUST be unique within the enclosing Object's scope. Elements at transport-layer position (direct children of a Package, Group, or document root) MUST have Ids unique within the document.
+- **The Id-token grammar is authored by the core, not by this document.** Core Spec §4.4.3 defines `IdToken` as a single grammar — an identifier token whose start set additionally admits a leading digit (`IdToken ::= (ALPHA | DIGIT | "_") NameContChar*`), superseding the former `SegmentName | DIGIT+` split. This admits sequential tokens (`&1`), named ids (`&shippingAddress`), and digit-leading GUID ids (`&7f3a2b9c-…`) under one rule. Id tokens carry no numeric interpretation and compare by ordinal equality (`&01` ≠ `&1`). The grammar blocks in §5 and §8.4 reference the core grammar; this specification no longer originates the `IdToken` production.
 
 ### 8.4 Reference Literals (Core Spec §4.2.6)
 
 The reference-literal grammar in Core Spec §4.2.6 is replaced by the production from §5 of this specification:
 
 ```ebnf
-ReferenceLiteral ::= NameRef | PathRef | AnchorRef | NamePathRef | NameAnchorRef
+ReferenceLiteral ::= NameRef | PathRef | IdRef | NamePathRef | NameIdRef
 NameRef            ::= "@" Base
 PathRef          ::= "$" PathExpression
-AnchorRef        ::= "&" AnchorToken
+IdRef        ::= "&" IdToken
 NamePathRef        ::= "@" Base "$" PathExpression
-NameAnchorRef      ::= "@" Base "&" AnchorToken
+NameIdRef      ::= "@" Base "&" IdToken
 
 Base             ::= (BaseRole ":")? Identifier
 BaseRole         ::= "OBJ"  | "REL"  | "PKG"  | "GRP"  | "HEAD"
@@ -464,22 +464,22 @@ BaseRole         ::= "OBJ"  | "REL"  | "PKG"  | "GRP"  | "HEAD"
 
 The address-mode singularity requirement (§7 of this specification) is added as a normative paragraph following the production. The "reserved, grammar deferred" language for `$PathExpression` is removed.
 
-The optional `BaseRole` marker disambiguates the role of the resolved element in composed references (`NamePathRef`, `NameAnchorRef`) when the anchor is not an Object. In the absence of a marker, the anchor defaults to OBJ. Parse-time validation rejects unknown role keywords; resolution-time validation ensures the named element matches the claimed role.
+The optional `BaseRole` marker disambiguates the role of the resolved element in composed references (`NamePathRef`, `NameIdRef`) when the base is not an Object. In the absence of a marker, the base defaults to OBJ. Parse-time validation rejects unknown role keywords; resolution-time validation ensures the named element matches the claimed role.
 
 ### 8.5 Template-Instance Alignment (Core Spec §8.2)
 
-Core Spec §8.2 is amended with an explicit alignment rule: an instance child satisfies a Template slot by matching the slot's `Name` field (case-sensitive ordinal comparison). When a Template slot declares a `Rel`, an instance child carrying the same `Rel` MAY align to the slot even if its local `Name` differs; in that case the `Rel` is the alignment key. The `Anchor` field plays no role in Template-instance alignment.
+Core Spec §8.2 is amended with an explicit alignment rule: an instance child satisfies a Template slot by matching the slot's `Name` field (case-sensitive ordinal comparison). When a Template slot declares a `Rel`, an instance child carrying the same `Rel` MAY align to the slot even if its local `Name` differs; in that case the `Rel` is the alignment key. The `Id` field plays no role in Template-instance alignment.
 
 ### 8.6 Composition Matrix (Core Spec §7.1)
 
 `@KIND` reference elements become resolvable against targets that were previously not addressable by the identifier-mode grammar. The composition matrix expands as follows:
 
-- `%REC`, `%BLK` — resolvable when the Resource is a `PathRef`, `AnchorRef`, `NamePathRef`, or `NameAnchorRef` whose terminal element is a Record or Block, respectively.
-- `%.STR`, `%.INT`, `%.FLOAT`, `%.BOOL`, `%.BYTE` — resolvable when the path or key terminal is a Qualifier of the corresponding value-kind.
-- `%_BOOL`, `%_INT`, `%_STR`, `%_FLOAT`, `%_BYTE` — resolvable when the path or key terminal is an Extension of the corresponding value-kind.
-- `%VAL` — resolvable when the path or key terminal is a VAL slot (Core Spec §6.11). Resolution targets the VAL element itself, not its occupant; to address the occupant, the path must include a further segment selecting it.
-- `%STR`, `%INT`, `%FLOAT`, `%BOOL`, `%BYTE` to value Properties — resolvable when the path or key terminal is a value Property of the corresponding value-kind. (Distinct from references to Objects of those names, which is not a legal composition; `%STR` to an Object resolves to "non-matching role" and yields an unresolved reference.)
-- `%@OBJ`, `%@REL` — resolvable when the path or key terminal is an @-edge of the corresponding family. The @-edge MUST carry identity (Core Spec §6.4 axiom E6) to be key-addressable; path-addressable edges are reached by NameSegment/RelSegment/OrdinalSegment traversal from a globally-addressable anchor.
+- `%REC`, `%BLK` — resolvable when the Resource is a `PathRef`, `IdRef`, `NamePathRef`, or `NameIdRef` whose terminal element is a Record or Block, respectively.
+- `%.STR`, `%.INT`, `%.FLOAT`, `%.BOOL`, `%.BYTE` — resolvable when the path or id terminal is a Qualifier of the corresponding value-kind.
+- `%_BOOL`, `%_INT`, `%_STR`, `%_FLOAT`, `%_BYTE` — resolvable when the path or id terminal is an Extension of the corresponding value-kind.
+- `%VAL` — resolvable when the path or id terminal is a VAL slot (Core Spec §6.11). Resolution targets the VAL element itself, not its occupant; to address the occupant, the path must include a further segment selecting it.
+- `%STR`, `%INT`, `%FLOAT`, `%BOOL`, `%BYTE` to value Properties — resolvable when the path or id terminal is a value Property of the corresponding value-kind. (Distinct from references to Objects of those names, which is not a legal composition; `%STR` to an Object resolves to "non-matching role" and yields an unresolved reference.)
+- `%@OBJ`, `%@REL` — resolvable when the path or id terminal is an @-edge of the corresponding family. The @-edge MUST carry identity (Core Spec §6.4 axiom E6) to be id-addressable; path-addressable edges are reached by NameSegment/RelSegment/OrdinalSegment traversal from a globally-addressable element.
 
 Parent-context restrictions on where `@KIND` references may appear (Core Spec §7.1) are unchanged. Only the addressability of the **target** expands; the rules for where a reference element may sit in its parent's children are governed by the existing composition matrix.
 
@@ -510,7 +510,7 @@ The following syntactic forms are reserved by this specification. They MUST NOT 
 | `$./PathExpression`                        | Relative path rooted at the referencing element (future revision).        |
 | `$../PathExpression`                       | Relative path rooted at the parent of the referencing element (future).   |
 | Compound segments — multiple selectors per step | Within-segment combinator (future revision).                         |
-| `&Anchor` as a path segment                   | Anchor-based addressing is provided as a reference-literal form (`AnchorRef`, `NameAnchorRef`; §5), not as a path segment. The `&` sigil is reserved against use inside `PathExpression` so that a future revision MAY reintroduce Anchor matching as a path segment if implementer experience demonstrates a need. |
+| `&Id` as a path segment                   | Id-based addressing is provided as a reference-literal form (`IdRef`, `NameIdRef`; §5), not as a path segment. The `&` sigil is reserved against use inside `PathExpression` so that a future revision MAY reintroduce Id matching as a path segment if implementer experience demonstrates a need. |
 
 A v1 path expression that uses only the three segment kinds defined in §4 with the `/` separator is a strict syntactic subset of any future query-mode or delta-mode extension. Such a path expression will continue to parse and resolve identically when those extensions are introduced.
 
@@ -550,7 +550,7 @@ A path expression's terminal element is always an element, not a Resource value.
 
 ### 10.6 Identifier Normalization
 
-Per Core Spec §A.2, identifier comparison is case-sensitive ordinal. The path expression inherits this comparison rule for `NameSegment` and `RelSegment` matching; the `AnchorRef` and `NameAnchorRef` reference literals inherit the same comparison rule for `AnchorToken` matching. Unicode normalization (NFC, NFD, etc.) is not specified; conforming documents MUST use a single normalization form throughout. A future revision MAY normatively specify a Unicode normalization profile.
+Per Core Spec §A.2, identifier comparison is case-sensitive ordinal. The path expression inherits this comparison rule for `NameSegment` and `RelSegment` matching; the `IdRef` and `NameIdRef` reference literals inherit the same comparison rule for `IdToken` matching. Unicode normalization (NFC, NFD, etc.) is not specified; conforming documents MUST use a single normalization form throughout. A future revision MAY normatively specify a Unicode normalization profile.
 
 
 ---
@@ -559,13 +559,13 @@ Per Core Spec §A.2, identifier comparison is case-sensitive ordinal. The path e
 
 ```ebnf
 // Reference literals (§5; replaces Core Spec §4.2.6)
-ReferenceLiteral ::= NameRef | PathRef | AnchorRef | NamePathRef | NameAnchorRef
+ReferenceLiteral ::= NameRef | PathRef | IdRef | NamePathRef | NameIdRef
 
 NameRef            ::= "@" Base
 PathRef          ::= "$" PathExpression
-AnchorRef        ::= "&" AnchorToken
+IdRef        ::= "&" IdToken
 NamePathRef        ::= "@" Base "$" PathExpression
-NameAnchorRef      ::= "@" Base "&" AnchorToken
+NameIdRef      ::= "@" Base "&" IdToken
 
 Base             ::= (BaseRole ":")? Identifier
 BaseRole         ::= "OBJ"  | "REL"  | "PKG"  | "GRP"  | "HEAD"
@@ -584,8 +584,8 @@ NameSegment        ::= SegmentName
 RelSegment       ::= "#" SegmentName
 OrdinalSegment   ::= "[" Ordinal "]"
 
-AnchorToken      ::= AnchorStartChar NameContChar*   (* Core Spec §4.4.3 — authoritative *)
-AnchorStartChar  ::= ALPHA | DIGIT | "_"
+IdToken      ::= IdStartChar NameContChar*   (* Core Spec §4.4.3 — authoritative *)
+IdStartChar  ::= ALPHA | DIGIT | "_"
 Ordinal          ::= NONZERO_DIGIT DIGIT*
 
 
@@ -717,7 +717,7 @@ The path traverses Object → Property → Qualifier. The terminal element is th
 
 The path resolves to the VAL slot. The `%VAL` prefix matches the role. To reach the occupant Record instead, the path would extend by one more segment selecting the Record (e.g., by ordinal: `$/orders/42/delivery/[1]`).
 
-### B.9 Anchor-Based Reference to a Non-Identified Element
+### B.9 Id-Based Reference to a Non-Identified Element
 
 ```
 <OBJ system/audit-log
@@ -738,11 +738,11 @@ The path resolves to the VAL slot. The `%VAL` prefix matches the role. To reach 
 >
 ```
 
-The reference `@system/audit-log&entry-12345` is an `NameAnchorRef`. The `@system/audit-log` portion name-resolves the audit-log Object; the `&entry-12345` portion then looks up the Anchored element within that Object's scope. The reference resolves to the `<REC &entry-12345>` element regardless of its position within the Object's subtree.
+The reference `@system/audit-log&entry-12345` is an `NameIdRef`. The `@system/audit-log` portion name-resolves the audit-log Object; the `&entry-12345` portion then looks up the id-bearing element within that Object's scope. The reference resolves to the `<REC &entry-12345>` element regardless of its position within the Object's subtree.
 
-The Anchor-based form is location-stable: if the log document is restructured (entries reorganized into nested categories, archived sections moved, etc.), the reference continues to resolve as long as the Anchor is preserved. A path-based equivalent such as `$/system/audit-log/entries/[1]` would break under any such restructuring.
+The Id-based form is location-stable: if the log document is restructured (entries reorganized into nested categories, archived sections moved, etc.), the reference continues to resolve as long as the Id is preserved. A path-based equivalent such as `$/system/audit-log/entries/[1]` would break under any such restructuring.
 
-### B.10 Anchor Lookup Within the Current Document
+### B.10 Id Lookup Within the Current Document
 
 ```
 <OBJ system/audit-log
@@ -758,11 +758,11 @@ The Anchor-based form is location-stable: if the log document is restructured (e
 >
 ```
 
-When the referencing element and the Anchored target share a document, the `@Identifier` portion may be omitted. The bare `&entry-12345` form (a `AnchorRef`) looks up the Anchor within the document, walking scopes per Core Spec §4.4.5. This form is shorter but requires that the consuming context know the document boundary; for cross-document references, use `NameAnchorRef`.
+When the referencing element and the id-bearing target share a document, the `@Identifier` portion may be omitted. The bare `&entry-12345` form (a `IdRef`) looks up the Id within the document, walking scopes per Core Spec §4.4.5. This form is shorter but requires that the consuming context know the document boundary; for cross-document references, use `NameIdRef`.
 
 ### B.11 Reference to a Child of a Non-Object Base
 
-When the anchor of a composed reference is not an Object — for example, a REL declaration with an annotation child — an explicit anchor role marker is required.
+When the base of a composed reference is not an Object — for example, a REL declaration with an annotation child — an explicit base role marker is required.
 
 ```
 <REL my-rel
@@ -774,9 +774,9 @@ When the anchor of a composed reference is not an Object — for example, a REL 
 >
 ```
 
-The reference `@REL:my-rel&description` is an `NameAnchorRef` with an explicit `BaseRole` of `REL`. The `@REL:` marker tells the resolver that `my-rel` should be looked up as a REL, not as an Object (the default for composed references). The `&description` portion then looks up the Anchored STR within the REL's subtree. Without the role marker, the resolver would attempt to resolve `my-rel` as an Object, fail, and the reference would be unresolved.
+The reference `@REL:my-rel&description` is an `NameIdRef` with an explicit `BaseRole` of `REL`. The `@REL:` marker tells the resolver that `my-rel` should be looked up as a REL, not as an Object (the default for composed references). The `&description` portion then looks up the id-bearing STR within the REL's subtree. Without the role marker, the resolver would attempt to resolve `my-rel` as an Object, fail, and the reference would be unresolved.
 
-The same pattern applies when the anchor is a Template, a Package, or a Group:
+The same pattern applies when the base is a Template, a Package, or a Group:
 
 ```
 <%STR slotDoc : @DEFOBJ:com.acme.Customer&firstName-doc>
