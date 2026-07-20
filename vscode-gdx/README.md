@@ -6,7 +6,7 @@ Syntax highlighting for **GDX (Graph Data eXchange)** Standard Form documents (`
 
 - **Prefix vocabulary** — the full closed vocabulary with the composition pattern `%? @? [._N|DEF]? base *?`: bases (`OBJ`, `REC`, `STR`, `INT`, `FLOAT`, `BOOL`, `BYTE`, `VAL`), minified single-letter forms, templates (`DEFOBJ` … `DEFBYTE`), declarations (`REL`, `REM`), organization and transport (`BLK`, `PKG`, `GRP`), refinement modifiers (`.` qualifier, `_` extension, `N` node), the `@` edge sigil, the `%` REF sigil, and the `*` Set suffix. Prefix matching is case-insensitive and positional (first token after `<`), so `<I I : 42>` highlights the prefix and the identifier differently.
 - **Unknown prefixes flagged** — a token in prefix position outside the closed vocabulary (e.g. `<STRangle …>`) is scoped `invalid.illegal`, which most themes render with an error color.
-- **Identity fields** — `&key` (numeric and named), `#rel` (CURIEs and full URIs), and `--type` sigils each get distinct scopes.
+- **Identity fields** — `&key` (numeric and named), `#predicate` (CURIEs and full URIs), and `--type` sigils each get distinct scopes.
 - **Resource literals** — strings with the closed escape set (`\"`, `\\`, `\n`, `\t`, `\r`, `\u{…}`; anything else scoped as illegal), multi-line strings, decimal/binary/octal integers with the closed suffix set, floats with exponents/suffixes/`nan`/`inf`, booleans, and `0x`/`0z` bytes literals.
 - **Reference literals** — `@Anchor`, `@Role:Anchor`, `$/path`, `&key`, and the composed `@Anchor$/path` / `@Anchor&key` forms.
 - **REM as comments** — `REM` annotation elements (GDX's comment mechanism, which lives in the data model) are scoped as `comment.block`, including nested children.

@@ -2,7 +2,7 @@
   "name": "gdx-syntax",
   "displayName": "GDX",
   "description": "Syntax highlighting for GDX (Graph Data eXchange) Standard Form documents",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "jmussi",
   "engines": {
     "vscode": "^1.75.0"

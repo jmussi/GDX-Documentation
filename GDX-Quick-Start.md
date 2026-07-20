@@ -134,7 +134,7 @@ The `$/alice/mailing` traverses the document tree: into `alice`, then into `mail
 
 ## 6. Cross-System Semantic Alignment with Predicates
 
-The `#rel` predicate also works on Properties to identify what concept the property represents:
+The `#predicate` field also works on Properties to identify what concept the property represents:
 
 ```
 <OBJ Person
@@ -204,7 +204,7 @@ Three things GDX gives you that JSON or YAML don't:
 
 **1. Explicit types.** No more "is this a string or a number?" The prefix tells you. `<INT age : 42>` is unambiguously an integer; `<STR version : "1.10">` doesn't accidentally become the float `1.1`.
 
-**2. Semantic alignment.** The `#rel` predicate carries shared meaning across systems. Your `firstName` can be aligned to `schema:givenName` without renaming your fields.
+**2. Semantic alignment.** The `#predicate` field carries shared meaning across systems. Your `firstName` can be aligned to `schema:givenName` without renaming your fields.
 
 **3. Schema is data.** Templates are GDX elements. The same parser reads them. There's no second format to learn for validation; there's no separate schema file to keep in sync with the data.
 

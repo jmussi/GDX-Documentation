@@ -1,7 +1,7 @@
 # GDX — Cookbook of Canonical Patterns
 
-- **Status:** Draft v0.20.0 (companion to GDX Core Specification v0.26.0, working draft, pre-1.0)
-- **Date:** 2026-07-17
+- **Status:** Draft v0.21.0 (companion to GDX Core Specification v0.27.0, working draft, pre-1.0)
+- **Date:** 2026-07-19
 - **Editors:** 
 - **Authors:** Julian Mussi
 
@@ -15,6 +15,10 @@ Section references of the form §3, §5, §7 etc. refer to the GDX Core Specific
 The vocabulary identifiers used in these examples (`gdx:`, `schema:`, `vocab:`, etc.) are illustrative. Specific vocabulary content is defined by the relevant vocabulary specification, not by this document.
 
 ## Status of This Document
+
+This is the v0.21.0 working draft of the Cookbook, companion to the GDX Core Specification v0.27.0. v0.21.0 is a terminology alignment: the `Rel` field is renamed `Predicate` (Core Spec v0.27.0, entry 66), and the lowercase shorthand "rel" becomes "predicate" in prose. The `#` sigil is unchanged, so no example's authored content changes — the predicate *values* in these patterns (`#gdx:knows`, `#schema:author`, and the rest) are byte-identical to v0.20.0. Pattern 5 (Predicate-Aligned Property) and Pattern 17 (Predicate Declaration) already carried the word in their titles.
+
+The paragraphs below describe earlier revisions and are retained as written.
 
 This is the v0.20.0 working draft of the Cookbook, companion to the GDX Core Specification v0.20.0. v0.20.0 adds a capture-first subsection to Pattern 7: an @-edge's `#rel` may be empty (the relationship exists by role, undefined as to nature, refined later on the same edge — Core Spec §6.4.2). v0.19.0 updates Pattern 22 with the value-resolution framing of REF (Core Spec §6.16) and expands the REF-vs-@-Edge choice guidance, which the Core Specification now routes to this document and the Primer as the non-normative home for borderline-case guidance.
 
@@ -111,7 +115,7 @@ Sets may also carry Records as members. Record members within a Set typically ca
 
 ## 5. Predicate-Aligned Property
 
-When a property has a shared semantic identity across documents, attach a `#rel`.
+When a property has a shared semantic identity across documents, attach a `#predicate`.
 
 ```
 <STR #schema:givenName fname : "Alice">
@@ -125,7 +129,7 @@ Two documents using `#schema:givenName` are talking about the same attribute reg
 
 ## 6. Schema-Aligned Slot
 
-A Template declares slots with `Name` fields; an instance satisfies the Template by giving its children the same `Name` values. Cross-vocabulary alignment uses `#Rel` to bridge differing local names.
+A Template declares slots with `Name` fields; an instance satisfies the Template by giving its children the same `Name` values. Cross-vocabulary alignment uses `#Predicate` to bridge differing local names.
 
 ```
 <DEFREC schema:address
@@ -143,7 +147,7 @@ A Template declares slots with `Name` fields; an instance satisfies the Template
 >
 ```
 
-Instance children align to Template slots by `Name` matching. When local names differ from Template slot names (for example, a localized instance using `prenom` where the Template declares `firstName`), the `#Rel` field provides the alignment bridge:
+Instance children align to Template slots by `Name` matching. When local names differ from Template slot names (for example, a localized instance using `prenom` where the Template declares `firstName`), the `#Predicate` field provides the alignment bridge:
 
 ```
 <REC ProfileFR --schema:Person
@@ -152,9 +156,9 @@ Instance children align to Template slots by `Name` matching. When local names d
 >
 ```
 
-Here the instance children have local `Name`s `prenom` and `nom`, which do not match the Template's slot `Name`s. The shared `#Rel` values (`schema:givenName`, `schema:familyName`) align them to the corresponding slots.
+Here the instance children have local `Name`s `prenom` and `nom`, which do not match the Template's slot `Name`s. The shared `#Predicate` values (`schema:givenName`, `schema:familyName`) align them to the corresponding slots.
 
-The `&Id` field is NOT used for Template-instance alignment; the Id is an element's durable machine identity and location-stable reference target, a separate concern from the `Name`-based (and `Rel`-bridged) alignment shown here (see Pattern 22).
+The `&Id` field is NOT used for Template-instance alignment; the Id is an element's durable machine identity and location-stable reference target, a separate concern from the `Name`-based (and `Predicate`-bridged) alignment shown here (see Pattern 22).
 
 ## 7. Edge Between Entities
 
@@ -196,7 +200,7 @@ The identifier `employmentEdge` is the edge's substance (per §7.4 axiom E6); th
 
 An @-edge asserts a graph statement and admits attribute children. When you want value-resolution instead — a slot whose content is sourced from another element, with no relationship assertion — use the Reference family (§22, which also carries the guidance for borderline cases).
 
-**Capture-first: the undefined relationship.** An edge's `#rel` may be omitted entirely. The role asserts that a relationship *exists* (it's an edge); the `#rel` field specifies *what* it is, and may be empty — the relationship is then undefined as to nature (Core Spec §6.4.2). This is the shape for connections captured before their form is known: real-time capture, pending classification, a link observed before its nature is determined.
+**Capture-first: the undefined relationship.** An edge's `#predicate` may be omitted entirely. The role asserts that a relationship *exists* (it's an edge); the `#predicate` field specifies *what* it is, and may be empty — the relationship is then undefined as to nature (Core Spec §6.4.2). This is the shape for connections captured before their form is known: real-time capture, pending classification, a link observed before its nature is determined.
 
 ```
 <OBJ sensor-hub
@@ -212,7 +216,7 @@ An @-edge asserts a graph statement and admits attribute children. When you want
 >
 ```
 
-Same edge, same key, same target — identity and any references to the edge survive the refinement. Keep undefined relationships a visible backlog, not a resting place: they are queryable as a distinct state ("show all edges with an empty rel"), and a Template can forbid them where strictness matters (a vocabulary-defined constraint, Core Spec §8.4) — a capture pipeline allows them, a published ontology rejects them.
+Same edge, same key, same target — identity and any references to the edge survive the refinement. Keep undefined relationships a visible backlog, not a resting place: they are queryable as a distinct state ("show all edges with an empty predicate"), and a Template can forbid them where strictness matters (a vocabulary-defined constraint, Core Spec §8.4) — a capture pipeline allows them, a published ontology rejects them.
 
 ## 8. Refining a Property with Constraints
 
@@ -229,7 +233,7 @@ Qualifiers refine the meaning of their parent and travel with the data. A consum
 
 ## 9. Schema Definition and Materialization
 
-Templates define the shape; instances reference them via `--type`. The Template may declare values for slot metadata (Rel, default Resource) that the instance is silent about; those values are logically present on the instance via §8.2.3 of the Core Specification.
+Templates define the shape; instances reference them via `--type`. The Template may declare values for slot metadata (Predicate, default Resource) that the instance is silent about; those values are logically present on the instance via §8.2.3 of the Core Specification.
 
 ```
 <DEFREC com.acme.Customer
@@ -244,7 +248,7 @@ Templates define the shape; instances reference them via `--type`. The Template 
 >
 ```
 
-The instance is silent about each child's `Rel`, and silent about `locale` entirely. By the universal claim rule (Core Spec §8.2.3): for `firstName` and `lastName`, the Template-supplied `Rel`s are the effective values; for `locale`, the Template's default `Resource` is the effective value. The instance logically carries `Rel`s of `schema:givenName` and `schema:familyName`, and a `locale` of `"en-US"`.
+The instance is silent about each child's `Predicate`, and silent about `locale` entirely. By the universal claim rule (Core Spec §8.2.3): for `firstName` and `lastName`, the Template-supplied `Predicate`s are the effective values; for `locale`, the Template's default `Resource` is the effective value. The instance logically carries `Predicate`s of `schema:givenName` and `schema:familyName`, and a `locale` of `"en-US"`.
 
 When the document is persisted, exchanged, or archived, **materialize** those Template-supplied values into the instance. The materialized form is what readers see when the schema is not available at read time:
 
@@ -256,7 +260,7 @@ When the document is persisted, exchanged, or archived, **materialize** those Te
 >
 ```
 
-The materialized instance is self-describing. A reader that does not load `com.acme.Customer` still sees the predicate alignments; a query for elements with `Rel` `schema:givenName` finds this instance without resolving the Template. Materialization is recommended for persistence; it is optional for in-memory processing where the Template is already available.
+The materialized instance is self-describing. A reader that does not load `com.acme.Customer` still sees the predicate alignments; a query for elements with `Predicate` `schema:givenName` finds this instance without resolving the Template. Materialization is recommended for persistence; it is optional for in-memory processing where the Template is already available.
 
 Materialization does not extrapolate beyond what the Template explicitly declares. Missing slots are not invented; Constraint Extensions on the Template (Core Spec §8.4) remain Template-scoped and are not copied into the instance.
 
@@ -274,7 +278,7 @@ When a structured value must occupy a value-bearing slot, use the VAL role. VAL 
 
 The VAL `details` is the slot in the containing Object; the Record occupant is the structured value the slot holds. The slot stays named in the parent's structure; the occupant carries the structured content with its own role intact.
 
-When the slot itself is semantically aligned (the *slot* corresponds to a vocabulary predicate, distinct from the value's own alignment), put the `#rel` on the VAL:
+When the slot itself is semantically aligned (the *slot* corresponds to a vocabulary predicate, distinct from the value's own alignment), put the `#predicate` on the VAL:
 
 ```
 <OBJ employee
@@ -630,7 +634,7 @@ The `@people/alice` portion resolves the Object by name (per the resolver's scop
 Path segments select by different fields depending on the segment's first character:
 
 - A bareword (`shipping`, `addresses`) matches by `Name`.
-- A `#`-prefixed token (`#gdx:knows`) matches by `Rel`.
+- A `#`-prefixed token (`#gdx:knows`) matches by `Predicate`.
 - A bracketed numeral (`[1]`, `[3]`) matches the *N*-th child in document order, 1-based.
 
 A path used as a reference Resource MUST resolve to exactly one element of the matching role; zero matches, multiple matches, and matches of the wrong role all yield an unresolved reference. The GDX Path Expressions Specification (`GDX-Path.md`) gives the full grammar and resolution rules.
@@ -777,7 +781,7 @@ This vocabulary document defines:
 
 - **Three concept Objects** (`acme:Concept`, `acme:Person`, `acme:Organization`), each addressable by other vocabularies and instances. The `acme:Concept` Object plays the role a Class or top-of-hierarchy would in OWL; `rdfs:subClassOf` links subordinate concepts to it.
 - **Three REL declarations** (`acme:knows`, `acme:employs`, `acme:employedBy`) carrying a mix of metadata kinds: Properties for human-facing labels and descriptions (`<STR rdfs:label …>`, `<STR rdfs:comment …>`), @-edges for predicate-axiom statements (`<@OBJ #acme:domain …>`, `<@REL #acme:inverse …>`), and Extensions for primitive-valued semantic axioms (`<_BOOL acme:symmetric …>`). The choice between Property and Extension follows the "data vs axiom" rule (Pattern 17).
-- **Two Templates** (`acme:Person`, `acme:Organization`) that bind instance shape to the concepts. The Template slots carry `#rel` references aligning slot semantics to the vocabulary's predicates.
+- **Two Templates** (`acme:Person`, `acme:Organization`) that bind instance shape to the concepts. The Template slots carry `#predicate` references aligning slot semantics to the vocabulary's predicates.
 
 The document is one GDX file. A consumer reading it gets the predicates, the concept taxonomy, the schemas, and the alignment between them in a single parse. An instance document satisfying `acme:Person` can be validated against the Template, traversed through `acme:knows` edges, and aligned to other vocabularies through `#rdfs:subClassOf` and similar cross-references.
 
@@ -813,7 +817,7 @@ The same mechanism works for marking deprecation:
 >
 ```
 
-**Note on the conceptual shift.** Template version chains are expressed as REFs (`%DEFOBJ`), not as @-edges. Under the GDX partition, the @-Edge family is restricted to targets that are independent graph-entities — Objects and REL declarations. Templates are vocabulary-layer artifacts; pointing at a Template is slot-filling (a slot whose value is a handle to a Template), not graph-statement-making. Authors who think of version chains as "relationships between Templates" should read the structure as "slots holding handles to predecessor/successor Templates, semantically aligned via `#rel` to the vocabulary's version predicates." The semantic interpretation is up to the consumer (migration tools, schema registries); GDX records the slot bindings, not graph statements about Templates.
+**Note on the conceptual shift.** Template version chains are expressed as REFs (`%DEFOBJ`), not as @-edges. Under the GDX partition, the @-Edge family is restricted to targets that are independent graph-entities — Objects and REL declarations. Templates are vocabulary-layer artifacts; pointing at a Template is slot-filling (a slot whose value is a handle to a Template), not graph-statement-making. Authors who think of version chains as "relationships between Templates" should read the structure as "slots holding handles to predecessor/successor Templates, semantically aligned via `#predicate` to the vocabulary's version predicates." The semantic interpretation is up to the consumer (migration tools, schema registries); GDX records the slot bindings, not graph statements about Templates.
 
 These are vocabulary patterns — the specific predicates (`gdx:supersedes`, `gdx:supersededBy`) are defined by the GDX Common Vocabulary or application-specific vocabularies, not by the core specification. What the core specification provides is the `%DEFOBJ` mechanism for typed Template handles; the vocabulary provides the predicates that align the slots to shared meaning.
 
@@ -1015,7 +1019,7 @@ This level uses Objects, Records, and Sets but nothing beyond the structural dat
 
 ## 34. Use as Semantically-Aligned Interchange
 
-Adding `#rel` predicates to Properties enables cross-system semantic alignment without committing to a triple model.
+Adding `#predicate` fields to Properties enables cross-system semantic alignment without committing to a triple model.
 
 ```
 <OBJ Server

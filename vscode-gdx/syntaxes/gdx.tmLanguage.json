@@ -82,7 +82,7 @@
         { "include": "#unknown-element" },
         { "include": "#string" },
         { "include": "#key-field" },
-        { "include": "#rel-field" },
+        { "include": "#predicate-field" },
         { "include": "#type-field" },
         { "include": "#reference" },
         { "include": "#path-reference" },
@@ -125,12 +125,12 @@
         "2": { "name": "constant.other.key.gdx" }
       }
     },
-    "rel-field": {
-      "comment": "Rel field: #curie or #scheme://uri (§4.2)",
+    "predicate-field": {
+      "comment": "Predicate field: #curie or #scheme://uri (§4.2)",
       "match": "(#)((?:[A-Za-z][A-Za-z0-9+\\-.]*://[A-Za-z0-9_\\-./:?#\\[\\]@!$&'()*+,;=%~]+)|[A-Za-z_][A-Za-z0-9_\\-./:]*(?<!:))",
       "captures": {
-        "1": { "name": "keyword.operator.sigil.rel.gdx" },
-        "2": { "name": "entity.other.attribute-name.rel.gdx" }
+        "1": { "name": "keyword.operator.sigil.predicate.gdx" },
+        "2": { "name": "entity.other.attribute-name.predicate.gdx" }
       }
     },
     "type-field": {

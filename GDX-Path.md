@@ -1,8 +1,8 @@
 # GDX Path Expressions — Specification
 
-- **Status:** Draft v0.8 (companion to GDX Core Specification v0.26.0, working draft)
-- **Date:** 2026-07-17
-- **Companion to:** GDX Core Specification v0.26.0
+- **Status:** Draft v0.9 (companion to GDX Core Specification v0.27.0, working draft)
+- **Date:** 2026-07-19
+- **Companion to:** GDX Core Specification v0.27.0
 - **Authors:** Julian Mussi
 
 
@@ -103,24 +103,24 @@ The leading slash of the `PathExpression` is the path-mode marker, not a segment
 Each segment is exactly one of three selector forms:
 
 ```ebnf
-Segment ::= NameSegment | RelSegment | OrdinalSegment
+Segment ::= NameSegment | PredicateSegment | OrdinalSegment
 ```
 
 Segment kind is determined by the segment's first character:
 
 | First character    | Segment kind     |
 |--------------------|------------------|
-| `#`                | `RelSegment`     |
+| `#`                | `PredicateSegment`     |
 | `[`                | `OrdinalSegment` |
 | otherwise (letter or `_`) | `NameSegment` |
 
-A v1 segment carries exactly one selector. Compound segments — those combining more than one selector form within a single step (for example, an Name combined with a Rel constraint) — are reserved for a future revision (§9).
+A v1 segment carries exactly one selector. Compound segments — those combining more than one selector form within a single step (for example, an Name combined with a Predicate constraint) — are reserved for a future revision (§9).
 
-Id-based addressing does not appear as a path segment. The `Id` field is a in-document id mechanism (Core Spec §3.2, §5.4.3) and is addressed via the `&Id` reference literal forms (§5) rather than by path traversal. A path expression that walks structurally to an id-bearing element is permissible (matching the element by Name, Rel, or position) but inefficient compared to the direct Id reference; the path syntax intentionally does not provide an Id-matching segment kind.
+Id-based addressing does not appear as a path segment. The `Id` field is a in-document id mechanism (Core Spec §3.2, §5.4.3) and is addressed via the `&Id` reference literal forms (§5) rather than by path traversal. A path expression that walks structurally to an id-bearing element is permissible (matching the element by Name, Predicate, or position) but inefficient compared to the direct Id reference; the path syntax intentionally does not provide an Id-matching segment kind.
 
 ### 3.3 Lexical Alphabet
 
-The character set within an `NameSegment` and a `RelSegment` is governed by the `SegmentName` production (§4.1). The `SegContChar` alphabet is a narrowing of the Core Spec §4.4.1 `NameContChar` alphabet: within a path segment, the `/` character is **not** a valid continuation character. This narrowing applies only inside a path expression; in other identifier-bearing positions, identifiers continue to admit `/` as a continuation character so that IRIs remain valid identifiers.
+The character set within an `NameSegment` and a `PredicateSegment` is governed by the `SegmentName` production (§4.1). The `SegContChar` alphabet is a narrowing of the Core Spec §4.4.1 `NameContChar` alphabet: within a path segment, the `/` character is **not** a valid continuation character. This narrowing applies only inside a path expression; in other identifier-bearing positions, identifiers continue to admit `/` as a continuation character so that IRIs remain valid identifiers.
 
 A `PathExpression` terminates when the lexer encounters a character outside the segment-internal alphabet. In practice, this is typically a whitespace character, a `>` closing-bracket, or another sigil character.
 
@@ -161,22 +161,22 @@ Examples:
 
 The `SegContChar` alphabet excludes `/` (cf. Core Spec §4.4.1 `NameContChar`). To address an element whose `Name` itself contains `/`, give the element an Id (Core Spec §3.2, §5.4.3) and reference it via the `&Id` reference literal (§5.1), or address the element directly via an identifier-mode reference (`@Identifier`).
 
-### 4.2 RelSegment
+### 4.2 PredicateSegment
 
 ```ebnf
-RelSegment ::= "#" SegmentName
+PredicateSegment ::= "#" SegmentName
 ```
 
-A `RelSegment` matches a child element whose `Rel` field is string-equal to `SegmentName`. CURIEs and other identifier forms admitted by `SegmentName` are valid as the Rel value. An element whose Rel field is empty — for example, an @-edge whose relationship is undefined as to nature (Core Spec §6.4.2, added in Core v0.20.0) — is matched by no `RelSegment`; only a named Rel can be selected by `#SegmentName`. To address such an element, use an `OrdinalSegment` or, when it carries an `Id`, the `&Id` reference literal.
+A `PredicateSegment` matches a child element whose `Predicate` field is string-equal to `SegmentName`. CURIEs and other identifier forms admitted by `SegmentName` are valid as the Predicate value. An element whose Predicate field is empty — for example, an @-edge whose relationship is undefined as to nature (Core Spec §6.4.2, added in Core v0.20.0) — is matched by no `PredicateSegment`; only a named Predicate can be selected by `#SegmentName`. To address such an element, use an `OrdinalSegment` or, when it carries an `Id`, the `&Id` reference literal.
 
 Examples:
 
-- `#gdx:knows` matches a child with `Rel` `gdx:knows`.
-- `#schema:givenName` matches a child with that Rel.
+- `#gdx:knows` matches a child with `Predicate` `gdx:knows`.
+- `#schema:givenName` matches a child with that Predicate.
 
-The Rel field is not constrained to be unique among the children of an element. Multiple Properties, Edges, or other elements MAY share the same Rel value (Core Spec §6.4 explicitly allows multiple Edges of the same Rel between the same source/target pair). A `RelSegment` therefore may match zero, one, or many child elements at the data layer.
+The Predicate field is not constrained to be unique among the children of an element. Multiple Properties, Edges, or other elements MAY share the same Predicate value (Core Spec §6.4 explicitly allows multiple Edges of the same Predicate between the same source/target pair). A `PredicateSegment` therefore may match zero, one, or many child elements at the data layer.
 
-Address-mode consumers (§7) require exactly one match. Authors writing paths in address-mode contexts SHOULD select segments such that the terminal step matches a single child; this typically means using an `NameSegment` or `OrdinalSegment` at any step where multiple siblings could share a Rel. Alternatively, when the target element carries an `Id`, the `&Id` reference literal (§5.1) addresses it directly without requiring path traversal at all.
+Address-mode consumers (§7) require exactly one match. Authors writing paths in address-mode contexts SHOULD select segments such that the terminal step matches a single child; this typically means using an `NameSegment` or `OrdinalSegment` at any step where multiple siblings could share a Predicate. Alternatively, when the target element carries an `Id`, the `&Id` reference literal (§5.1) addresses it directly without requiring path traversal at all.
 
 ### 4.3 OrdinalSegment
 
@@ -205,12 +205,12 @@ The contents of `[ ]` are restricted to a base-10 numeral in v1. Wildcards (`[*]
 | Selector              | Matches against         | Uniqueness guarantee at data layer                                  |
 |-----------------------|-------------------------|---------------------------------------------------------------------|
 | `NameSegment` (bareword)| `Name` field              | Unique within parent scope (Core Spec §3.2: collisions are malformed) |
-| `RelSegment` (`#R`)   | `Rel` field             | Not unique — multiple siblings may share a Rel                       |
+| `PredicateSegment` (`#R`)   | `Predicate` field             | Not unique — multiple siblings may share a Predicate                       |
 | `OrdinalSegment` (`[N]`) | Position in document order | Unique by construction                                          |
 
 The uniqueness column indicates the data-layer guarantee per Core Specification. The grammar does not require an `NameSegment` to match exactly one child if the data is malformed; resolution behavior in the presence of duplicate Names is implementation-defined. Conforming documents do not produce such collisions (Core Spec §3.2).
 
-Id-based addressing — matching an element by its `Id` field — is not a path segment kind in v1. Ids are addressed directly via the `&Id` and `@Identifier&Id` reference literal forms (§5). The rationale is that Ids provide location-stable reference targets (Core Spec §3.2); folding Id matching into path segments would couple Ids to the very location they are designed to be independent of. A path expression that matches by Name, Rel, or ordinal at each step composes naturally with an Id reference at the start; a path that uses Id matching mid-way is redundant with the direct reference form.
+Id-based addressing — matching an element by its `Id` field — is not a path segment kind in v1. Ids are addressed directly via the `&Id` and `@Identifier&Id` reference literal forms (§5). The rationale is that Ids provide location-stable reference targets (Core Spec §3.2); folding Id matching into path segments would couple Ids to the very location they are designed to be independent of. A path expression that matches by Name, Predicate, or ordinal at each step composes naturally with an Id reference at the start; a path that uses Id matching mid-way is redundant with the direct reference form.
 
 
 ---
@@ -345,7 +345,7 @@ For each segment in order, the resolver computes the **match set** — the set o
 | Segment kind             | Matches                                                                                       |
 |--------------------------|-----------------------------------------------------------------------------------------------|
 | `NameSegment(name)`        | Each child whose `Name` field is string-equal to `name` (case-sensitive ordinal comparison).   |
-| `RelSegment(rel)`        | Each child whose `Rel` field is string-equal to `rel`.                                       |
+| `PredicateSegment(predicate)`        | Each child whose `Predicate` field is string-equal to `predicate`.                                       |
 | `OrdinalSegment(n)`      | The *n*-th child by document order (1-based). Match set is empty if the parent has fewer than *n* children. |
 
 A segment match operates only on the **direct children** of the current element. Path expressions in v1 provide no descendant-axis operator; descendant traversal is reserved (§9).
@@ -358,7 +358,7 @@ After each segment, the match set may have any cardinality:
 
 - **Zero elements.** No child of the current element satisfies the selector. Resolution halts at this segment; the path resolves to no element.
 - **One element.** The single matched element becomes the current element for the next segment, or is the resolution result if no further segments remain.
-- **Multiple elements.** A `RelSegment` may produce a multi-element match set when multiple siblings share the same Rel. (In v1, only `RelSegment` can produce multi-match; in future query-mode extensions, wildcards and filters will introduce additional multi-match possibilities.)
+- **Multiple elements.** A `PredicateSegment` may produce a multi-element match set when multiple siblings share the same Predicate. (In v1, only `PredicateSegment` can produce multi-match; in future query-mode extensions, wildcards and filters will introduce additional multi-match possibilities.)
 
 In multi-match cases, the resolver does **not** select among the matches. The match set is passed to the consuming context; the cardinality contract of that context (§7 for address mode) determines whether the multi-match is acceptable.
 
@@ -395,9 +395,9 @@ In address mode, a resolver MUST NOT silently select a first match (or any other
 
 ### 7.2 Author Responsibility for Specificity
 
-The grammar admits paths that may resolve ambiguously against some data shapes (typically paths ending in a `RelSegment` where multiple siblings share that Rel). Authors writing paths in address-mode contexts are responsible for making paths specific enough to resolve to exactly one element of the expected role.
+The grammar admits paths that may resolve ambiguously against some data shapes (typically paths ending in a `PredicateSegment` where multiple siblings share that Predicate). Authors writing paths in address-mode contexts are responsible for making paths specific enough to resolve to exactly one element of the expected role.
 
-When a Rel-bearing terminal step may have multiple matching siblings, authors SHOULD use a more specific terminal selector:
+When a Predicate-bearing terminal step may have multiple matching siblings, authors SHOULD use a more specific terminal selector:
 
 - An `NameSegment` if the target carries an Name.
 - An `OrdinalSegment` if the target is identified by its position among children.
@@ -468,7 +468,7 @@ The optional `BaseRole` marker disambiguates the role of the resolved element in
 
 ### 8.5 Template-Instance Alignment (Core Spec §8.2)
 
-Core Spec §8.2 is amended with an explicit alignment rule: an instance child satisfies a Template slot by matching the slot's `Name` field (case-sensitive ordinal comparison). When a Template slot declares a `Rel`, an instance child carrying the same `Rel` MAY align to the slot even if its local `Name` differs; in that case the `Rel` is the alignment key. The `Id` field plays no role in Template-instance alignment.
+Core Spec §8.2 is amended with an explicit alignment rule: an instance child satisfies a Template slot by matching the slot's `Name` field (case-sensitive ordinal comparison). When a Template slot declares a `Predicate`, an instance child carrying the same `Predicate` MAY align to the slot even if its local `Name` differs; in that case the `Predicate` is the alignment key. The `Id` field plays no role in Template-instance alignment.
 
 ### 8.6 Composition Matrix (Core Spec §7.1)
 
@@ -479,7 +479,7 @@ Core Spec §8.2 is amended with an explicit alignment rule: an instance child sa
 - `%_BOOL`, `%_INT`, `%_STR`, `%_FLOAT`, `%_BYTE` — resolvable when the path or id terminal is an Extension of the corresponding value-kind.
 - `%VAL` — resolvable when the path or id terminal is a VAL slot (Core Spec §6.11). Resolution targets the VAL element itself, not its occupant; to address the occupant, the path must include a further segment selecting it.
 - `%STR`, `%INT`, `%FLOAT`, `%BOOL`, `%BYTE` to value Properties — resolvable when the path or id terminal is a value Property of the corresponding value-kind. (Distinct from references to Objects of those names, which is not a legal composition; `%STR` to an Object resolves to "non-matching role" and yields an unresolved reference.)
-- `%@OBJ`, `%@REL` — resolvable when the path or id terminal is an @-edge of the corresponding family. The @-edge MUST carry identity (Core Spec §6.4 axiom E6) to be id-addressable; path-addressable edges are reached by NameSegment/RelSegment/OrdinalSegment traversal from a globally-addressable element.
+- `%@OBJ`, `%@REL` — resolvable when the path or id terminal is an @-edge of the corresponding family. The @-edge MUST carry identity (Core Spec §6.4 axiom E6) to be id-addressable; path-addressable edges are reached by NameSegment/PredicateSegment/OrdinalSegment traversal from a globally-addressable element.
 
 Parent-context restrictions on where `@KIND` references may appear (Core Spec §7.1) are unchanged. Only the addressability of the **target** expands; the rules for where a reference element may sit in its parent's children are governed by the existing composition matrix.
 
@@ -550,7 +550,7 @@ A path expression's terminal element is always an element, not a Resource value.
 
 ### 10.6 Identifier Normalization
 
-Per Core Spec §A.2, identifier comparison is case-sensitive ordinal. The path expression inherits this comparison rule for `NameSegment` and `RelSegment` matching; the `IdRef` and `NameIdRef` reference literals inherit the same comparison rule for `IdToken` matching. Unicode normalization (NFC, NFD, etc.) is not specified; conforming documents MUST use a single normalization form throughout. A future revision MAY normatively specify a Unicode normalization profile.
+Per Core Spec §A.2, identifier comparison is case-sensitive ordinal. The path expression inherits this comparison rule for `NameSegment` and `PredicateSegment` matching; the `IdRef` and `NameIdRef` reference literals inherit the same comparison rule for `IdToken` matching. Unicode normalization (NFC, NFD, etc.) is not specified; conforming documents MUST use a single normalization form throughout. A future revision MAY normatively specify a Unicode normalization profile.
 
 
 ---
@@ -577,11 +577,11 @@ BaseRole         ::= "OBJ"  | "REL"  | "PKG"  | "GRP"  | "HEAD"
 PathExpression   ::= "/" Segment ("/" Segment)*
 
 Segment          ::= NameSegment
-                   | RelSegment
+                   | PredicateSegment
                    | OrdinalSegment
 
 NameSegment        ::= SegmentName
-RelSegment       ::= "#" SegmentName
+PredicateSegment       ::= "#" SegmentName
 OrdinalSegment   ::= "[" Ordinal "]"
 
 IdToken      ::= IdStartChar NameContChar*   (* Core Spec §4.4.3 — authoritative *)
@@ -643,7 +643,7 @@ The `@gdx:bob` portion resolves the Object whose Name is `gdx:bob` by scope walk
 
 The IRI `https://acme.com/people/alice` resolves (if the implementation supports network resolution) to a remote Object. The path `/address/[2]` traverses from that Object to its `address` child (by Name), and then to the second child of `address` by document order. The reference resolves to a string Qualifier, satisfying the `%.STR` prefix.
 
-### B.4 Rel-Based Selection Within Current Document
+### B.4 Predicate-Based Selection Within Current Document
 
 ```
 <OBJ people/alice
@@ -653,9 +653,9 @@ The IRI `https://acme.com/people/alice` resolves (if the implementation supports
 <%STR alignedName : $/people/alice/#gdx:givenName>
 ```
 
-The path resolves through two `NameSegment` selectors to `<OBJ people/alice>`, then selects its child by Rel field. The reference resolves to the string Property.
+The path resolves through two `NameSegment` selectors to `<OBJ people/alice>`, then selects its child by Predicate field. The reference resolves to the string Property.
 
-This example assumes only one child of `<OBJ people/alice>` carries `Rel` `gdx:givenName`. If multiple Properties shared that Rel, the path would match multiple elements and the address-mode resolver would treat the reference as unresolved (§7).
+This example assumes only one child of `<OBJ people/alice>` carries `Predicate` `gdx:givenName`. If multiple Properties shared that Predicate, the path would match multiple elements and the address-mode resolver would treat the reference as unresolved (§7).
 
 ### B.5 Mixed Selectors
 
@@ -667,7 +667,7 @@ The `@gdx:bob` portion name-resolves the Object. The path then applies, in order
 
 - `/contacts` — `NameSegment`, selecting by Name.
 - `/[1]` — `OrdinalSegment`, selecting the first child of `contacts`.
-- `/#gdx:postalAddress` — `RelSegment`, selecting the child whose Rel field is `gdx:postalAddress`.
+- `/#gdx:postalAddress` — `PredicateSegment`, selecting the child whose Predicate field is `gdx:postalAddress`.
 
 Each segment uses exactly one selector kind, as required by the one-selector-per-segment rule (§3.2).
 
@@ -682,7 +682,7 @@ Each segment uses exactly one selector kind, as required by the one-selector-per
 <%STR x : $/people/alice/#gdx:nickname>     // unresolved: terminal match set has cardinality 2
 ```
 
-The path is syntactically well-formed and parses correctly. However, the terminal `RelSegment` matches two Properties. In address mode (§7), the resolver MUST NOT pick a first match; the reference is unresolved. To resolve to a specific Property, the author must refine the path — for example by Ordinal:
+The path is syntactically well-formed and parses correctly. However, the terminal `PredicateSegment` matches two Properties. In address mode (§7), the resolver MUST NOT pick a first match; the reference is unresolved. To resolve to a specific Property, the author must refine the path — for example by Ordinal:
 
 ```
 <%STR first  : $/people/alice/[1]>   // first child by order
