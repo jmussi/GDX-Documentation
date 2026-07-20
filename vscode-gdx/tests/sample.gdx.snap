@@ -57,8 +57,8 @@
 #    ^ source.gdx punctuation.definition.element.begin.gdx
 #     ^^^ source.gdx storage.type.prefix.gdx
 #        ^ source.gdx
-#         ^ source.gdx keyword.operator.sigil.rel.gdx
-#          ^^^^^^^^^^^^^^^^^^^^^^^^ source.gdx entity.other.attribute-name.rel.gdx
+#         ^ source.gdx keyword.operator.sigil.predicate.gdx
+#          ^^^^^^^^^^^^^^^^^^^^^^^^ source.gdx entity.other.attribute-name.predicate.gdx
 #                                  ^ source.gdx
 #                                   ^^^^^ source.gdx variable.other.identifier.gdx
 #                                        ^ source.gdx punctuation.definition.element.end.gdx
@@ -74,8 +74,8 @@
 #        ^ source.gdx punctuation.definition.element.begin.gdx
 #         ^^^ source.gdx storage.type.prefix.gdx
 #            ^ source.gdx
-#             ^ source.gdx keyword.operator.sigil.rel.gdx
-#              ^^^^^^^^^^^^^^^^ source.gdx entity.other.attribute-name.rel.gdx
+#             ^ source.gdx keyword.operator.sigil.predicate.gdx
+#              ^^^^^^^^^^^^^^^^ source.gdx entity.other.attribute-name.predicate.gdx
 #                              ^ source.gdx
 #                               ^^^^^^^^^ source.gdx variable.other.identifier.gdx
 #                                        ^ source.gdx
@@ -304,8 +304,8 @@
 #         ^ source.gdx keyword.operator.edge.gdx
 #          ^^^ source.gdx storage.type.prefix.gdx
 #             ^ source.gdx
-#              ^ source.gdx keyword.operator.sigil.rel.gdx
-#               ^^^^^ source.gdx entity.other.attribute-name.rel.gdx
+#              ^ source.gdx keyword.operator.sigil.predicate.gdx
+#               ^^^^^ source.gdx entity.other.attribute-name.predicate.gdx
 #                    ^ source.gdx
 #                     ^ source.gdx punctuation.separator.resource.gdx
 #                      ^ source.gdx
@@ -318,8 +318,8 @@
 #         ^ source.gdx keyword.operator.edge.gdx
 #          ^^^ source.gdx storage.type.prefix.gdx
 #             ^ source.gdx
-#              ^ source.gdx keyword.operator.sigil.rel.gdx
-#               ^^^^^^^^ source.gdx entity.other.attribute-name.rel.gdx
+#              ^ source.gdx keyword.operator.sigil.predicate.gdx
+#               ^^^^^^^^ source.gdx entity.other.attribute-name.predicate.gdx
 #                       ^ source.gdx
 #                        ^ source.gdx punctuation.separator.resource.gdx
 #                         ^ source.gdx
