@@ -1,8 +1,8 @@
 # GDX Compact Form — Grammar Specification
 
-- **Status:** Draft v0.11 (companion to GDX Core Specification v0.26.0, working draft)
-- **Date:** 2026-07-17
-- **Companion to:** GDX Core Specification v0.26.0, GDX Standard Grammar v0.14, GDX Path Expressions v0.8
+- **Status:** Draft v0.12 (companion to GDX Core Specification v0.27.0, working draft)
+- **Date:** 2026-07-19
+- **Companion to:** GDX Core Specification v0.27.0, GDX Standard Grammar v0.15, GDX Path Expressions v0.9
 - **Authors:** Julian Mussi
 
 
@@ -18,6 +18,8 @@ This document does not address the Standard Form, the Binary Form, semantic vali
 ## Status of This Document
 
 This is the v0.3 working draft. The grammar, indentation model, and Standard Form mapping are stable. The conversion algorithm in §6 is sketched at the structural level; a future revision may include a more detailed algorithmic treatment if implementer experience reveals ambiguities.
+
+Changes from v0.11 to v0.12: conformance with Core Specification v0.27.0. **Terminology rename; no grammar-shape change.** The `Rel` field is renamed `Predicate` (Core Spec v0.27.0, entry 66), adopting the word the Core Specification already used for the field's content in prose and removing the case-only collision with the `REL` role. The `#` sigil is unchanged and continues to introduce the field; a bare `#` remains malformed and an empty field is still expressed by omitting it. The Appendix A grammar production is updated (`Rel`→`Predicate`, `RelContent`→`PredicateContent`), as is the §3.3 field-order bullet. No abbreviated form is introduced. The Compact Form's `#` line-comment feature is unaffected — comments are whole-line, the field sigil is inline. Companion-version line updated to Core v0.27.0, Standard Grammar v0.15, and Path v0.9.
 
 Changes from v0.10 to v0.11: conformance with Core Specification v0.26.0. **Terminology rename; no grammar-shape change.** The `Anchor` field is renamed `Id` (Core Spec v0.26.0, entry 60), completing the identity/naming split begun in v0.25.0 (in which the former descriptive `Id` field became `Name`). The `&` sigil is unchanged and continues to introduce the field and the id-mode reference literal. The Appendix A grammar production is updated (`Anchor`→`Id`, and its inherited content token to `IdToken`); the metadata block's keys keep the word *key* (a metadata key is not an id). Companion-version line updated to Core v0.26.0, Standard Grammar v0.14, and Path v0.8.
 
@@ -195,7 +197,7 @@ L active : true
 
 The line content uses the same lexical rules as the corresponding Standard Form element body, with the `<` and `>` brackets implicit at the line boundaries.
 
-Field write order on a line is the same as in Standard Form: **Prefix · Id · Rel · Name · Resource · Type**.
+Field write order on a line is the same as in Standard Form: **Prefix · Id · Predicate · Name · Resource · Type**.
 
 ```
 S &1 #schema:givenName firstName : "Alice" --gdx:string
@@ -255,8 +257,8 @@ The field order, sigils, and lexical rules are identical to Standard Form (Core 
 
 - The prefix is first.
 - The Id field, if present, follows the prefix and uses the `&` sigil.
-- The Rel field, if present, follows the Id (or prefix) and uses the `#` sigil.
-- The Name field, if present, follows the Rel (or prior fields) with no sigil.
+- The Predicate field, if present, follows the Id (or prefix) and uses the `#` sigil.
+- The Name field, if present, follows the Predicate (or prior fields) with no sigil.
 - The Resource section, if present, follows the Name and uses `:` as separator.
 - The Type field, if present, follows the Resource (or Name) and uses the `--` sigil.
 - The metadata block, if present, is written last on the line — after the Type — as a brace-delimited `{...}` sequence (Core Spec §4.8; §3.5 below). It is out-of-model carriage annotation, not a model field.
@@ -387,7 +389,7 @@ O alice
   @OBJ #knows : @bob
 ```
 
-An @-edge MAY omit `#rel` entirely: the relationship exists by virtue of the role, but is undefined as to nature, pending later refinement (Core Spec §6.4.2). The empty Rel is expressed by omitting the field — there is no bare-`#` form:
+An @-edge MAY omit `#predicate` entirely: the relationship exists by virtue of the role, but is undefined as to nature, pending later refinement (Core Spec §6.4.2). The empty Predicate is expressed by omitting the field — there is no bare-`#` form:
 
 ```
 O sensor-hub
@@ -554,7 +556,7 @@ O Customer
   S firstName : "Alice"
 ```
 
-The `#` character appears elsewhere in the grammar — it is the Rel sigil. Disambiguation: the Rel sigil `#` is followed immediately by an identifier (no whitespace) and appears within an element line, while a comment `#` appears as the first non-whitespace character on a line. The distinction is unambiguous because comment-position `#` and Rel-position `#` cannot occur in the same lexical context.
+The `#` character appears elsewhere in the grammar — it is the Predicate sigil. Disambiguation: the Predicate sigil `#` is followed immediately by an identifier (no whitespace) and appears within an element line, while a comment `#` appears as the first non-whitespace character on a line. The distinction is unambiguous because comment-position `#` and Predicate-position `#` cannot occur in the same lexical context.
 
 ---
 
@@ -640,7 +642,7 @@ The conversion is deterministic: a given data-model state produces a single cano
 A document that round-trips Compact → Standard → Compact (or Standard → Compact → Standard) preserves the data model exactly. The properties preserved are the same as the Core Spec's round-trip contract (§A.2):
 
 - Element prefixes
-- Identity fields (Name, Id, Rel, Type)
+- Identity fields (Name, Id, Predicate, Type)
 - Resource value-kinds and values, including representation tags
 - Child element order
 - Annotations (REM elements)
@@ -985,7 +987,7 @@ ChildBlock      ::= (Element | MultiLineContinuation)+
 
 ElementBody     ::= Prefix
                     (SPACE Id)?
-                    (SPACE Rel)?
+                    (SPACE Predicate)?
                     (SPACE Name)?
                     (ResourceSection)?
 
@@ -1026,11 +1028,11 @@ SetSuffix       ::= "*"
 // only the surrounding delimiters and indentation rules differ.
 
 Id             ::= "&" IdToken
-Rel             ::= "#" RelContent
+Predicate             ::= "#" PredicateContent
 Name              ::= NameStartChar NameContChar*
 Type            ::= "--" TypeContent
 
-// IdToken, RelContent, TypeContent, NameStartChar, NameContChar
+// IdToken, PredicateContent, TypeContent, NameStartChar, NameContChar
 // are inherited from the Standard Grammar.
 
 

@@ -1,8 +1,8 @@
 # GDX Standard Form — Grammar Specification
 
-- **Status:** Draft v0.14 (companion to GDX Core Specification v0.26.0, working draft)
-- **Date:** 2026-07-17
-- **Companion to:** GDX Core Specification v0.26.0
+- **Status:** Draft v0.15 (companion to GDX Core Specification v0.27.0, working draft)
+- **Date:** 2026-07-19
+- **Companion to:** GDX Core Specification v0.27.0
 - **Authors:** Julian Mussi
 
 
@@ -22,6 +22,8 @@ Changes from v0.5 (revision v0.6): conformance with Core Specification v0.10.0. 
 
 Changes from v0.6 (this revision, v0.7): conformance with Core Specification v0.11.0. (1) **§5.6 reference literal grammar normatively specifies path-mode and key-mode.** The placeholder `PathExpression ::= (* reserved; grammar deferred *)` is replaced by a forward reference to the companion GDX Path Expressions Specification (`GDX-Path.md`). Five `ReferenceLiteral` productions are recognized: `NameReference` (`@Base`), `PathReference` (`$PathExpression`), `AnchorReference` (`&AnchorToken`), `NamePathReference` (`@Base$PathExpression`), and `NameAnchorReference` (`@Base&AnchorToken`). The `AnchorReference` and `NameAnchorReference` forms address an element by its location-stable `Anchor` anchor, scoped per Core Specification §4.4.5. The `Base` production extends the identifier portion of `@`-references with an optional `BaseRole` keyword drawn from the closed prefix vocabulary (`OBJ`, `REL`, `DEFOBJ`, `PKG`, etc.) followed by `:`, disambiguating the role of the resolved element. Default anchor role in composed references is `OBJ`. (2) **§6 identifier grammar narrows.** `NameStartChar` no longer admits `/`. Identifiers may continue to contain `/` (`NameContChar` unchanged); only the leading-`/` form is removed. This change is a breaking change for documents conforming to v0.6 or earlier; the migration is mechanical (drop the leading `/` or move to a path-mode reference). (3) Appendix A updated to reflect the new reference-literal productions, the `Base` production, and the narrowed identifier grammar. (4) Cross-references to Core Specification updated to v0.11.0.
 
+
+Changes from v0.14 (this revision, v0.15): conformance with Core Specification v0.27.0. **Terminology rename; no semantic or structural change.** The `Rel` field is renamed `Predicate` (Core Spec v0.27.0, entry 66): productions `Rel`→`Predicate` and `RelContent`→`PredicateContent`, and the `IdentitySection` production now reads `(WS Id)? (WS Predicate)? (WS Name)?`. The `#` sigil is unchanged and continues to introduce the field; the production shape is unchanged and still requires content after the sigil (a bare `#` remains malformed, an empty field is expressed by omitting it). No abbreviated form is introduced — `Predicate` is spelled out in every production. **The `REL` role productions are NOT renamed:** `RelPrefix ::= "REL"`, `RelElement`, and `RelDeclaration` name the Relation Declaration role, not this field, and the rename exists partly to make that distinction lexical rather than case-only.
 
 Changes from v0.13 (this revision, v0.14): conformance with Core Specification v0.26.0. **Terminology rename; no semantic or structural change.** The `Anchor` field is renamed `Id` (Core Spec v0.26.0, entry 60), completing the identity/naming split begun in v0.25.0 (in which the former descriptive `Id` field became `Name`): productions `Anchor`→`Id`, `AnchorToken`→`IdToken`, `AnchorStartChar`→`IdStartChar`, `AnchorReference`→`IdReference`, `NameAnchorReference`→`NameIdReference`. The `&` sigil is unchanged and continues to introduce the field and the `IdReference` reference literal; the reference-base production `Base` (and `BaseRole`) are unaffected. The metadata `MetaKey` production is NOT renamed (a KVP key is not an id).
 
@@ -111,7 +113,7 @@ Element         ::= "<" WS? Prefix ElementBody WS? ">"
 
 ElementBody     ::= IdentitySection? ResourceSection? MetadataSection? Children?
 
-IdentitySection ::= (WS Id)? (WS Rel)? (WS Name)?
+IdentitySection ::= (WS Id)? (WS Predicate)? (WS Name)?
 
 ResourceSection ::= WS? ":" WS? Resource? (WS "--" Type)?
                   | WS "--" Type
@@ -194,16 +196,16 @@ IdStartChar ::= ALPHA | DIGIT | "_"
 
 The `&` sigil MUST be immediately followed by the Id token with no intervening whitespace. An Id token is an identifier token whose start set additionally admits a leading digit (Core Spec §4.4.3); this admits sequential tokens (`&1`, `&2`) and digit-leading GUID/UUID ids (`&7f3a2b9c-…`) alongside named ids. The relaxation is unambiguous because an Id token is always `&`-introduced. Id tokens carry no numeric interpretation and compare by ordinal equality (`&01` ≠ `&1`). This grammar is identical to the `IdToken` used in the reference-literal forms (§5.6); authority is Core Spec §4.4.3.
 
-### 4.2 Rel Field
+### 4.2 Predicate Field
 
 ```ebnf
-Rel        ::= "#" RelContent
+Predicate        ::= "#" PredicateContent
 
-RelContent ::= UriReference
+PredicateContent ::= UriReference
              | Name
 ```
 
-The `#` sigil MUST be immediately followed by the rel content with no intervening whitespace. A Rel content is either a full URI reference (recognized by the `://` sequence) or an identifier (typically a CURIE). A bare `#` — the sigil with no following content — is malformed; an empty Rel field is expressed by omitting the field entirely. The Rel field is lexically optional on every element (`IdentitySection`, §3); on @-Edge elements an omitted `#rel` is semantically well-formed and denotes a relationship undefined as to nature (Core Spec §6.4.2, added in Core v0.20.0).
+The `#` sigil MUST be immediately followed by the predicate content with no intervening whitespace. A Predicate content is either a full URI reference (recognized by the `://` sequence) or an identifier (typically a CURIE). A bare `#` — the sigil with no following content — is malformed; an empty Predicate field is expressed by omitting the field entirely. The Predicate field is lexically optional on every element (`IdentitySection`, §3); on @-Edge elements an omitted `#predicate` is semantically well-formed and denotes a relationship undefined as to nature (Core Spec §6.4.2, added in Core v0.20.0).
 
 ```ebnf
 UriReference ::= UriScheme "://" UriChars
@@ -218,7 +220,7 @@ UriChar      ::= ALPHA | DIGIT | "_" | "-" | "." | "/" | ":"
                | ";" | "=" | "%" | "~"
 ```
 
-The UriChar set follows RFC 3986. URI references are permitted in Rel position. URI references are also permitted in any other identifier position; they fall under the general Name grammar (§6) when they begin with an alphabetic character followed by `://`.
+The UriChar set follows RFC 3986. URI references are permitted in Predicate position. URI references are also permitted in any other identifier position; they fall under the general Name grammar (§6) when they begin with an alphabetic character followed by `://`.
 
 ### 4.3 Type Field
 
@@ -443,7 +445,7 @@ When a reference literal appears as the Resource of a `@KIND` reference element 
 
 ## 6. Identifiers
 
-A single identifier grammar applies to all identifier-bearing positions: the `Name` field, the contents of named keys (§4.1), the contents of Rel field when not a URI (§4.2), the contents of Type field (§4.3), and the target of reference literals (§5.6).
+A single identifier grammar applies to all identifier-bearing positions: the `Name` field, the contents of named keys (§4.1), the contents of Predicate field when not a URI (§4.2), the contents of Type field (§4.3), and the target of reference literals (§5.6).
 
 ```ebnf
 Name          ::= NameStartChar NameContChar*
@@ -467,9 +469,9 @@ An identifier that starts with a letter or underscore is unambiguously an identi
 
 Identifiers beginning with `/` (path-style identifiers) are also unambiguous because `/` does not appear at the start of any literal form.
 
-### 6.2 Disambiguation from URI References (in Rel position)
+### 6.2 Disambiguation from URI References (in Predicate position)
 
-In Rel position only (§4.2), a content beginning with an alphabetic sequence followed by `://` is parsed as a URI reference rather than an identifier. The lexer SHOULD recognize this prefix pattern and switch to URI parsing. In all other identifier positions, the same input is parsed as a maximal identifier (which incidentally captures the URI-like form because all its characters are valid NameContChars).
+In Predicate position only (§4.2), a content beginning with an alphabetic sequence followed by `://` is parsed as a URI reference rather than an identifier. The lexer SHOULD recognize this prefix pattern and switch to URI parsing. In all other identifier positions, the same input is parsed as a maximal identifier (which incidentally captures the URI-like form because all its characters are valid NameContChars).
 
 ### 6.3 Single-Character Identifiers
 
@@ -511,7 +513,7 @@ Where (layer 2):
 
 Three composition prohibitions: `@@KIND` (no @-edge to @-edge), `@OBJ*`/`@REL*`/`@HEAD*` (no Set of @-edges, per E5), `%%KIND` (no REF to REF, per R6), `@%KIND` (no @-edge to REF, per E5).
 
-Prefix recognition is case-insensitive. The grammar productions below show prefixes in their uppercase canonical case for clarity; conforming parsers MUST accept the same tokens in any combination of upper and lower case (`STR`, `Str`, `str`, `sTR` are all valid). Identifiers (Name, Id, Rel) remain case-sensitive (§6).
+Prefix recognition is case-insensitive. The grammar productions below show prefixes in their uppercase canonical case for clarity; conforming parsers MUST accept the same tokens in any combination of upper and lower case (`STR`, `Str`, `str`, `sTR` are all valid). Identifiers (Name, Id, Predicate) remain case-sensitive (§6).
 
 ```ebnf
 Prefix               ::= RefSigil? RolePrefix
@@ -1009,8 +1011,8 @@ IdToken          ::= IdStartChar NameContChar*
 IdStartChar      ::= ALPHA | DIGIT | "_"
 Id               ::= "&" IdToken
 
-RelContent           ::= UriReference | Name
-Rel                  ::= "#" RelContent
+PredicateContent           ::= UriReference | Name
+Predicate                  ::= "#" PredicateContent
 
 TypeContent          ::= Name
 Type                 ::= "--" TypeContent
@@ -1018,7 +1020,7 @@ Type                 ::= "--" TypeContent
 
 // ===== Element Structure =====
 
-IdentitySection      ::= (WS Id)? (WS Rel)? (WS Name)?
+IdentitySection      ::= (WS Id)? (WS Predicate)? (WS Name)?
 
 ResourceSection      ::= WS? ":" WS? Resource? (WS "--" TypeContent)?
                        | WS "--" TypeContent
