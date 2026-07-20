@@ -1,7 +1,7 @@
 # GDX — Graph Data eXchange Specification
 
-- **Status:** Draft v0.26.0 (working draft, pre-1.0)
-- **Date:** 2026-07-17
+- **Status:** Draft v0.27.0 (working draft, pre-1.0)
+- **Date:** 2026-07-19
 - **Editors:** 
 - **Authors:** Julian Mussi
 
@@ -18,6 +18,7 @@ This is a pre-1.0 working draft. The specification is under active refinement; r
 
 | Version | Date       |
 |---------|------------|
+| v0.27.0 | 2026-07-19 |
 | v0.26.0 | 2026-07-17 |
 | v0.25.0 | 2026-07-16 |
 | v0.24.0 | 2026-07-11 |
@@ -127,7 +128,7 @@ This section defines the terms used throughout the specification. The key words 
 
 - **Value-Kind** — the type category of a Resource. Distinct from Role (which describes structural position). A Property of prefix `STR` carries a Resource of value-kind `string`.
 
-- **Identifier** — any of the three identity fields (`Name`, `Id`, `Rel`) that name or link an element. Some roles require at least one (§3.2).
+- **Identifier** — any of the three identity fields (`Name`, `Id`, `Predicate`) that name or link an element. Some roles require at least one (§3.2).
 
 - **Document** — a single rooted GDX tree, or a sequence of root-eligible elements treated as a unit of serialization. Which roles may root a document is fixed normatively by the root rule (§7.2); informally, the root(s) are Objects, HEADs, Templates, REL declarations, or Packages.
 
@@ -137,7 +138,7 @@ This section defines the terms used throughout the specification. The key words 
 
 - **Core** — the structural and semantic content normatively defined by this specification: the prefix vocabulary, the element model, the identifier and literal grammars, the composition axioms, the Template structure and instance-alignment mechanism, the universal claim rule, and the primitive value-kind axioms. The core is what GDX *is*; it is fixed by this specification and does not change when extensions are added. (Distinguish "the core" — the concept — from "the Core Specification" — the document name. The latter is this document.)
 
-- **Extension** — vocabulary-defined material that rides on top of the core through GDX's extension-point mechanisms. Extensions include: predicate identifiers in the `Rel` field, Template Ids in the `Type` field (the durable identity a `--type` reference resolves to, §8.5.2), and Constraint Extension elements (§8.4) carrying constraint identifiers from external vocabularies. The core records extensions structurally and validates their well-formedness; their *semantic content* is interpreted externally by consumers that understand the vocabulary in question. The core/extension distinction is the **interpretation** boundary between what GDX knows and what GDX merely carries.
+- **Extension** — vocabulary-defined material that rides on top of the core through GDX's extension-point mechanisms. Extensions include: predicate identifiers in the `Predicate` field, Template Ids in the `Type` field (the durable identity a `--type` reference resolves to, §8.5.2), and Constraint Extension elements (§8.4) carrying constraint identifiers from external vocabularies. The core records extensions structurally and validates their well-formedness; their *semantic content* is interpreted externally by consumers that understand the vocabulary in question. The core/extension distinction is the **interpretation** boundary between what GDX knows and what GDX merely carries.
 
 - **Core layer / Extension layer** — when a discussion needs to distinguish what GDX understands from what GDX hosts, the terms *core layer* and *extension layer* refer to those two sides of the interpretation boundary. The core layer is owned by this specification; the extension layer is owned by external vocabularies and their consumers.
 
@@ -148,7 +149,7 @@ GDX defines a layered conformance model: each layer is independent, evaluated by
 In outline, there are three rungs with three owners:
 
 - **Layer 1 — Representation Conformance** — how a value is encoded (prefix-to-value-kind matching, literal grammar, representation tags, round-trip text equivalence). Owned by GDX; evaluable at parse time; errors are *malformed document* errors and are absolute.
-- **Layer 2 — Structural Conformance** — whether references resolve and instances align to declared shapes: @-Edge and REF reference resolution (§6.4.1, §6.15), `--type`/`#rel` resolution to a Template/REL by **Id** (§8.5.2), and whether an instance's children align to a referenced Template's declared slots by **Name** (§8.1–§8.3). Owned by GDX; evaluable by any consumer that can resolve Templates and references, without external vocabulary knowledge.
+- **Layer 2 — Structural Conformance** — whether references resolve and instances align to declared shapes: @-Edge and REF reference resolution (§6.4.1, §6.15), `--type`/`#predicate` resolution to a Template/REL by **Id** (§8.5.2), and whether an instance's children align to a referenced Template's declared slots by **Name** (§8.1–§8.3). Owned by GDX; evaluable by any consumer that can resolve Templates and references, without external vocabulary knowledge.
 - **Layer 3 — Constraint Conformance** — whether values satisfy a particular constraint vocabulary's constraints (`xsd:`, `json:`, a domain vocabulary). Owned by the constraint vocabulary, not GDX; evaluable only by a consumer that understands that vocabulary. GDX records Constraint Extension elements (§8.4) but renders no verdict on them.
 
 The layers are independent and the verdicts are vocabulary-relative above the primitive floor; Appendix A.1 states the conformance combinations and the reporting requirement normatively.
@@ -184,7 +185,7 @@ The data model defined here is the single authoritative content that every concr
 A GDX element is the tuple
 
 ```
-(Prefix, Id?, Rel?, Name?, Resource?, Type?, Children*, Metadata?)
+(Prefix, Id?, Predicate?, Name?, Resource?, Type?, Children*, Metadata?)
 ```
 
 All fields except Prefix are optional at the data-model level. Whether a given role requires a particular field is governed by §6 (Element Roles) and §7 (Composition Axioms). `Metadata` is set apart from the other fields: it is realization-layer carriage annotation, explicitly **not** part of the model content, and is defined in §4.8.
@@ -197,25 +198,25 @@ An element has six model fields plus an out-of-model metadata channel. The Prefi
 |------------|---------|
 | `Prefix`   | Declares the element's role. Required. Drawn from the closed vocabulary in §5. |
 | `Id`      | The element's **durable machine identity** — a position-independent token, scoped per §4.4.5, that persistence and durable graph references bind to. It is the target of `&Id` reference literals (§4.2.6) and the identity an @-edge resolves to when it addresses a root element by id (§6.4). Changing an element's Id **re-identifies** it. |
-| `Rel`      | A predicate-style label naming the relationship between this element and its parent. |
+| `Predicate`      | A predicate-style label naming the relationship between this element and its parent. |
 | `Name`       | The element's **descriptive name** — a local or resource name used for Template slot alignment (§8.2), path and `@name` resolution (§4.2.6), and structural reference. Names are **not durable**: renaming an element does not change its machine identity. |
 | `Resource` | The element's typed scalar value. |
 | `Type`     | A reference to a Template the element claims to satisfy. The reference resolves to the Template by the Template's **Id** (§8.5.2), not its descriptive Name. |
 | `Metadata` | *(Out-of-model.)* Realization-layer carriage annotation — flat key/value pairs about how the element is stored or transmitted, not about what it means. Not model content; see §4.8. |
 
-All identity fields (`Name`, `Id`, `Rel`) use case-sensitive ordinal comparison.
+All identity fields (`Name`, `Id`, `Predicate`) use case-sensitive ordinal comparison.
 
-On an @-Edge element (§6.4), an existence/specification split applies to the `Rel` field: the *role* asserts that a relationship exists (an @-edge is, by its role, a relationship), while the `Rel` field specifies *what* the relationship is — and MAY be empty. An empty Rel parses to null and means the relationship is **undefined as to nature**: it exists (the role settled that), but its form is not yet specified (§6.4.2). The empty Rel is the field's ordinary null/absent state — no special syntax and no distinct construct are involved.
+On an @-Edge element (§6.4), an existence/specification split applies to the `Predicate` field: the *role* asserts that a relationship exists (an @-edge is, by its role, a relationship), while the `Predicate` field specifies *what* the relationship is — and MAY be empty. An empty Predicate parses to null and means the relationship is **undefined as to nature**: it exists (the role settled that), but its form is not yet specified (§6.4.2). The empty Predicate is the field's ordinary null/absent state — no special syntax and no distinct construct are involved.
 
 Implementations MUST represent these fields as distinct elements of an element's runtime structure. The order in which fields are stored or accessed is implementation-defined; only the children list has a normative order (§3.4).
 
-**Decision: every element divides into an identity portion and a value portion.** The six fields partition into identity (`Prefix`, `Id`, `Rel`, `Name`) and value (`Resource`, `Type`), with the `:` separator marking the boundary in the text form (§4). *Alternatives considered:* JSON-style bare key-value pairs (identity and content on one syntactic level, with no way to distinguish "this element claims to be of type X" from "this element has value X"); XML-style attribute-versus-element placement (where either can carry identity or content by convention); RDF-style separate triples that must be reassembled to recover an element's full meaning. *Rejected because:* collapsing identity and value forces every richer claim — type, predicate alignment, stable id — to be bolted on by external convention rather than stated on the element itself. The explicit split is what makes an element self-describing (the self-describing-element concept; see the GDX Primer): a consumer can read the identity portion and know the element's role, type, and alignment, then read the value portion for its content, with no external schema. This is the structural basis for the typed-elements and inline-semantic-alignment goals (§1.2). The split is introduced conceptually in the GDX Primer; this is its authoritative basis in the data model.
+**Decision: every element divides into an identity portion and a value portion.** The six fields partition into identity (`Prefix`, `Id`, `Predicate`, `Name`) and value (`Resource`, `Type`), with the `:` separator marking the boundary in the text form (§4). *Alternatives considered:* JSON-style bare key-value pairs (identity and content on one syntactic level, with no way to distinguish "this element claims to be of type X" from "this element has value X"); XML-style attribute-versus-element placement (where either can carry identity or content by convention); RDF-style separate triples that must be reassembled to recover an element's full meaning. *Rejected because:* collapsing identity and value forces every richer claim — type, predicate alignment, stable id — to be bolted on by external convention rather than stated on the element itself. The explicit split is what makes an element self-describing (the self-describing-element concept; see the GDX Primer): a consumer can read the identity portion and know the element's role, type, and alignment, then read the value portion for its content, with no external schema. This is the structural basis for the typed-elements and inline-semantic-alignment goals (§1.2). The split is introduced conceptually in the GDX Primer; this is its authoritative basis in the data model.
 
 ### 3.2 Identifier Requirements
 
 Identifier requirements apply to elements in *named-attribute positions* — positions where the element represents a distinct named property of its parent.
 
-The following roles, when in named-attribute position, MUST carry at least one of `Name`, `Id`, or `Rel`:
+The following roles, when in named-attribute position, MUST carry at least one of `Name`, `Id`, or `Predicate`:
 
 - Object (`OBJ`/`O`, `DEFOBJ`)
 - Record (`REC`/`R`, `DEFREC`, `NREC`/`NR`) when not in Set member position
@@ -223,11 +224,11 @@ The following roles, when in named-attribute position, MUST carry at least one o
 - Template (any `DEF…`)
 - VAL (`VAL`/`V`) when not in Set member position (rare; VAL is typically a named slot)
 
-A **Template (`DEF…`) and a REL** at declaration position MUST additionally carry an `Id` (not merely a Name or Rel): the `Id` is the token that `--type` and `#rel` references resolve to (§8.5.2), so a Template or REL without one cannot be a resolution target. A descriptive `Name` MAY accompany the `Id` but does not satisfy the resolvability requirement. (Migration note: a pre-existing Template or REL whose sole identifier was previously written in Name position is read under this model as carrying that identifier as its `Id`; see Appendix B, v0.26.0.)
+A **Template (`DEF…`) and a REL** at declaration position MUST additionally carry an `Id` (not merely a Name or Predicate): the `Id` is the token that `--type` and `#predicate` references resolve to (§8.5.2), so a Template or REL without one cannot be a resolution target. A descriptive `Name` MAY accompany the `Id` but does not satisfy the resolvability requirement. (Migration note: a pre-existing Template or REL whose sole identifier was previously written in Name position is read under this model as carrying that identifier as its `Id`; see Appendix B, v0.26.0.)
 
 Elements appearing as members of a Set (§6.13) are in *positional* rather than named-attribute position. They are not required to carry identifiers; they identify themselves by position and value within the Set. Identifiers on Set members are valid and MAY be used when meaningful (for example, to identify individual Records within a Record Set).
 
-An element appearing as the **occupant of a VAL slot** (§6.11) is similarly in a positional rather than named-attribute position with respect to the VAL: the slot is the named-attribute position, and the occupant fills it. The occupant MAY carry its own `Name`, `Id`, or `Rel` for its own purposes (occupant-level identity, addressable from references), but it is NOT required to carry an identifier merely because its role would otherwise require one in a named-attribute position. The two identity levels (slot-level on the VAL, occupant-level on the child) are independent; this separation is what distinguishes VAL from a plain Property whose Resource is the value.
+An element appearing as the **occupant of a VAL slot** (§6.11) is similarly in a positional rather than named-attribute position with respect to the VAL: the slot is the named-attribute position, and the occupant fills it. The occupant MAY carry its own `Name`, `Id`, or `Predicate` for its own purposes (occupant-level identity, addressable from references), but it is NOT required to carry an identifier merely because its role would otherwise require one in a named-attribute position. The two identity levels (slot-level on the VAL, occupant-level on the child) are independent; this separation is what distinguishes VAL from a plain Property whose Resource is the value.
 
 A Prefix is REQUIRED on every element regardless of position. Set members MUST carry their prefix even when their identifier is omitted, because the prefix distinguishes Set members from Qualifiers, Annotations, Extensions, and other elements that may appear within a Set's children.
 
@@ -237,9 +238,9 @@ The lexical grammar for identifiers is uniform across all identifier-bearing pos
 
 - Identifiers on Property and Record elements name a relationship within the document — a slot within the parent's shape. They are functionally equivalent to a field name, label, or variable name in a programming language, and are the key an instance child aligns to a Template slot by (§8.2.1). The relevant field for this role is `Name`.
 
-- Identifiers on Object, HEAD, Template (`DEF…`), and REL elements **identify an entity** and are used to resolve references to it. An Object identifier resolves `@OBJ` edges and `%`-REFs; a Template's identifier resolves `--type` references; a REL's identifier resolves `#rel` references and `@REL` edges. Because these identifiers are durable reference targets, the field that carries the resolvable identity is the `Id` (§3.1, §4.4.5), and resolution keys on the Id, never on the descriptive Name (§8.5.2). The specification places no constraint on the identifier scheme; paths (`/people/alice`), CURIEs (`gdx:Person`), GUIDs, and IRIs (`https://acme.com/people/alice`) are all valid Id forms, and a namespace-qualified form (`ns:localname`) is idiomatic for published, cross-document entities.
+- Identifiers on Object, HEAD, Template (`DEF…`), and REL elements **identify an entity** and are used to resolve references to it. An Object identifier resolves `@OBJ` edges and `%`-REFs; a Template's identifier resolves `--type` references; a REL's identifier resolves `#predicate` references and `@REL` edges. Because these identifiers are durable reference targets, the field that carries the resolvable identity is the `Id` (§3.1, §4.4.5), and resolution keys on the Id, never on the descriptive Name (§8.5.2). The specification places no constraint on the identifier scheme; paths (`/people/alice`), CURIEs (`gdx:Person`), GUIDs, and IRIs (`https://acme.com/people/alice`) are all valid Id forms, and a namespace-qualified form (`ns:localname`) is idiomatic for published, cross-document entities.
 
-This semantic distinction is not reflected in the grammar. A property identifier and an entity identifier draw from the same lexical production (§4.4); they differ only in which field carries them and how consumers interpret them. In particular, a Template or REL MAY carry a descriptive `Name` in addition to its `Id` — the `Id` is what `--type`/`#rel` resolve on; the `Name`, if present, is a human-facing label free to change without breaking references (§8.5.2).
+This semantic distinction is not reflected in the grammar. A property identifier and an entity identifier draw from the same lexical production (§4.4); they differ only in which field carries them and how consumers interpret them. In particular, a Template or REL MAY carry a descriptive `Name` in addition to its `Id` — the `Id` is what `--type`/`#predicate` resolve on; the `Name`, if present, is a human-facing label free to change without breaking references (§8.5.2).
 
 ### 3.3 Resource Value Kinds
 
@@ -268,7 +269,7 @@ A `reference` resource is a directional pointer to another addressable element b
 
 The resolution scheme is system-defined. Common approaches include local-document resolution (the reference targets an Object within the same document), namespace-relative resolution (the reference targets an Object within a known scope), and global resolution (the reference is a fully qualified URI). The specification does not mandate any particular scheme; resolvers SHOULD attempt local resolution before broader scopes.
 
-For the special case of @-Edge elements (`@OBJ`, `@REL`, §6.4), the Resource is always a reference value-kind, and the `#rel` field names the edge type.
+For the special case of @-Edge elements (`@OBJ`, `@REL`, §6.4), the Resource is always a reference value-kind, and the `#predicate` field names the edge type.
 
 #### 3.3.3 Absence and Null Values
 
@@ -318,12 +319,12 @@ Other text forms (compact, binary, alternative tab-indented) MAY be defined else
 An element is written as a bracketed token sequence between `<` and `>`. The general form is:
 
 ```
-<Prefix [&Id] [#Rel] [Name] [: Resource] [--Type] [{Metadata}]>
+<Prefix [&Id] [#Predicate] [Name] [: Resource] [--Type] [{Metadata}]>
     [child elements ...]
 >
 ```
 
-Field write order is **Prefix · Id · Rel · Name · Resource · Type · Metadata**. The Prefix is required; all other fields are optional. The metadata block, when present, is written last — after the Type — so that a reader (or a stripping tool) consumes the element's entire model content before reaching the out-of-model annotation; see §4.8.
+Field write order is **Prefix · Id · Predicate · Name · Resource · Type · Metadata**. The Prefix is required; all other fields are optional. The metadata block, when present, is written last — after the Type — so that a reader (or a stripping tool) consumes the element's entire model content before reaching the out-of-model annotation; see §4.8.
 
 A leaf element MAY be written on a single line:
 
@@ -347,15 +348,15 @@ A *sigil* is a single non-alphabetic character (or short character sequence) tha
 | Sigil | Purpose |
 |-------|---------|
 | `&`   | Introduces the Id field |
-| `#`   | Introduces the Rel field |
+| `#`   | Introduces the Predicate field |
 | `--`  | Introduces the Type field |
 | `{ }` | Delimit the metadata block (§4.8) — out-of-model carriage annotation |
 | `@`   | Introduces an identifier-mode reference literal (§4.2.6) |
 | `$`   | Introduces a path-mode reference literal (§4.2.6); grammar specified in `GDX-Path.md` |
 
-The character `:` is a *separator*, not a sigil. It divides an element into an identity portion (Prefix, Id, Rel, Name) and a value portion (Resource, Type). The Resource itself has no sigil; it is identified by appearing on the value side of `:`.
+The character `:` is a *separator*, not a sigil. It divides an element into an identity portion (Prefix, Id, Predicate, Name) and a value portion (Resource, Type). The Resource itself has no sigil; it is identified by appearing on the value side of `:`.
 
-The sigils `&`, `#`, and `--` MUST be immediately followed by their field content with no intervening whitespace. Whitespace MAY appear before a sigil to separate it from the preceding token. Whitespace MAY appear on either side of `:`. A bare sigil — `&`, `#`, or `--` followed by anything other than its field content — is malformed; an empty field is expressed by omitting the sigil entirely (for the significance of an omitted `#rel` on an @-Edge element, see §6.4.2).
+The sigils `&`, `#`, and `--` MUST be immediately followed by their field content with no intervening whitespace. Whitespace MAY appear before a sigil to separate it from the preceding token. Whitespace MAY appear on either side of `:`. A bare sigil — `&`, `#`, or `--` followed by anything other than its field content — is malformed; an empty field is expressed by omitting the sigil entirely (for the significance of an omitted `#predicate` on an @-Edge element, see §6.4.2).
 
 When the `:` separator appears with no identity field on the left in a context where an identifier is required, the element is malformed; conforming parsers MUST reject it. When the `--` sigil appears without a type identifier following, the element is malformed.
 
@@ -572,7 +573,7 @@ BaseRole         ::= "OBJ"  | "REL"  | "PKG"  | "GRP"  | "HEAD"
 Two consequences worth making explicit, because they are easy to misread as inconsistencies:
 
 - **The `@` in an @-Edge *prefix* is not the `@` of name-resolution.** `@OBJ` is a prefix-position marker declaring the edge family (§4.1.1, §5.3.2); the `@` in an @-Edge's *Resource* (`@bob`) is the resolution sigil selecting name-mode. They are different roles of the same character in different positions, and an @-Edge may equally carry an id-mode Resource (`&bob`) — the edge family is fixed by the prefix, while the target's resolution mode is chosen per-reference by the Resource's sigil.
-- **`--type` and `#rel` carry a *bare* identity token, not a sigilled reference literal.** The token after `--` or `#` is not introduced by a resolution sigil; it is a bare identifier, and a bare identity token in these fields is resolved **by Id** (§4.4.2, §8.5.2). This is not `@` "meaning Id there" — there is no `@`; it is the field-level rule that these two fields resolve on identity. The sigilled reference literals above and the bare-token fields are two separate mechanisms that happen to draw identifiers from the same lexical space (§4.4).
+- **`--type` and `#predicate` carry a *bare* identity token, not a sigilled reference literal.** The token after `--` or `#` is not introduced by a resolution sigil; it is a bare identifier, and a bare identity token in these fields is resolved **by Id** (§4.4.2, §8.5.2). This is not `@` "meaning Id there" — there is no `@`; it is the field-level rule that these two fields resolve on identity. The sigilled reference literals above and the bare-token fields are two separate mechanisms that happen to draw identifiers from the same lexical space (§4.4).
 
 The `Base` production carries an optional role marker — a closed-vocabulary keyword drawn from §5.2 followed by `:` — that disambiguates the role of the resolved element. The marker is most useful in composed references where the id's role differs from the terminal target's role; in plain `@id` references and in composed references with Object ids, the marker is optional. When omitted in a composed reference, the id defaults to an Object (the most common case).
 
@@ -668,7 +669,7 @@ A Type reference asserts that the element's contents satisfy the named Template.
 
 ### 4.4 Identifier Lexical Rules
 
-A single identifier grammar applies to all identifier-bearing positions: the `Name` field, the contents of the `Id` field (which additionally permits a leading digit — §4.4.3), the contents of the `Rel` field, and the contents of the `Type` field.
+A single identifier grammar applies to all identifier-bearing positions: the `Name` field, the contents of the `Id` field (which additionally permits a leading digit — §4.4.3), the contents of the `Predicate` field, and the contents of the `Type` field.
 
 #### 4.4.1 Identifier Grammar
 
@@ -701,12 +702,12 @@ The grammar is uniform but admits several conventional forms. The following are 
 | Local name         | `name`, `firstName`, `customer_id`     | Property and Record identifiers             |
 | Single letter      | `r`, `g`, `b`, `x`, `y`                | Mathematical or abbreviated conventions     |
 | Hierarchical local | `people/alice`, `orders/123`           | Object identifiers within a hierarchy (no leading `/`) |
-| CURIE              | `gdx:Person`, `schema:givenName`       | Entity Ids, Type refs, Rel refs             |
+| CURIE              | `gdx:Person`, `schema:givenName`       | Entity Ids, Type refs, Predicate refs             |
 | Dotted CURIE local | `gdx:com.acme.Person`                  | Namespace-qualified types                   |
 | GUID / opaque      | `7f3a2b9c-4e21-4f88-91d5-abcdef012345` | System-generated identifiers                |
 | IRI                | `https://acme.com/people/alice`        | Globally resolvable identifiers             |
 
-All forms work in any identifier position because the grammar accepts the union of their characters. An identifier `gdx:Person` may appear as a Property identifier (unusual but valid), an entity Id, a Type reference, or a Rel reference. Consumers interpret the identifier in context. A Type reference (`--gdx:Person`) and a Rel reference (`#gdx:knows`) resolve to the target's **Id** (§8.5.2), not its descriptive Name; the CURIE the author writes after `--` or `#` is read as an Id token. This is a field-level rule for the two bare-token fields, distinct from the sigil-selected resolution modes of reference literals (`@`=name, `&`=id, `$`=path); the two mechanisms and their relationship are stated in §4.2.6.
+All forms work in any identifier position because the grammar accepts the union of their characters. An identifier `gdx:Person` may appear as a Property identifier (unusual but valid), an entity Id, a Type reference, or a Predicate reference. Consumers interpret the identifier in context. A Type reference (`--gdx:Person`) and a Predicate reference (`#gdx:knows`) resolve to the target's **Id** (§8.5.2), not its descriptive Name; the CURIE the author writes after `--` or `#` is read as an Id token. This is a field-level rule for the two bare-token fields, distinct from the sigil-selected resolution modes of reference literals (`@`=name, `&`=id, `$`=path); the two mechanisms and their relationship are stated in §4.2.6.
 
 CURIEs are typically expanded to full IRIs by the resolver. The choice between IRI and CURIE is a tradeoff between explicitness (IRI) and compactness (CURIE):
 
@@ -715,7 +716,7 @@ CURIEs are typically expanded to full IRIs by the resolver. The choice between I
 
 This identity model parallels RDF's: globally resolvable identifiers are the canonical scheme; CURIEs and other syntactic forms (paths, local names, GUIDs) are conveniences for specific use cases. The schemes in this section describe the lexical space a `Name` may occupy for descriptive naming and reference resolution; the same schemes are available to the `Id` field (§4.4.3), which carries the element's **durable** machine identity. When an element must be durably identified — for persistence or for durable graph relationships — the globally-resolvable identity belongs on its Id, not on its Name.
 
-When an IRI appears in `Rel` position, the lexer recognizes it by the `://` scheme separator and parses it as a URI reference following RFC 3986 syntax. In other identifier positions, the same input is parsed as a maximal identifier (which incidentally captures the URI-like form because all its characters are valid NameContChars). Either way, the value carried is the same identifier; the distinction is lexical.
+When an IRI appears in `Predicate` position, the lexer recognizes it by the `://` scheme separator and parses it as a URI reference following RFC 3986 syntax. In other identifier positions, the same input is parsed as a maximal identifier (which incidentally captures the URI-like form because all its characters are valid NameContChars). Either way, the value carried is the same identifier; the distinction is lexical.
 
 #### 4.4.3 Id Field Values
 
@@ -894,7 +895,7 @@ Both forms are equivalent at the data-model level. Conversion is deterministic; 
 - Implementations MUST recognize both canonical and minified forms on input.
 - Prefix tokens are case-insensitive. `STR`, `Str`, `str`, and `sTR` are all recognized; the canonical case for output is uppercase.
 - Mixed forms within a document are accepted on input. The serializer normalizes to the configured output style.
-- Identifiers (Name, Id, Rel) remain case-sensitive (§4.4). The case-insensitive rule applies only to prefix tokens at prefix position.
+- Identifiers (Name, Id, Predicate) remain case-sensitive (§4.4). The case-insensitive rule applies only to prefix tokens at prefix position.
 
 **Form is style, not data.** Round-trip preserves data and configured output style, not authorial form choices. Tools serializing in canonical form produce uppercase three-letter prefixes regardless of input case or form.
 
@@ -989,13 +990,13 @@ Detailed treatment of Sets, including empty-vs-absent semantics, is in §6.13.
 
 #### 5.3.2 The Sigil `@` — @-Edge Family
 
-The `@` prefix marks an element as a member of the **@-Edge family** (§6.4) — a first-class graph-statement element whose Resource is a reference to an independent graph-entity and whose `#rel` predicate asserts a relationship the parent has to that target. The family has exactly three members:
+The `@` prefix marks an element as a member of the **@-Edge family** (§6.4) — a first-class graph-statement element whose Resource is a reference to an independent graph-entity and whose `#predicate` field asserts a relationship the parent has to that target. The family has exactly three members:
 
 - `@OBJ` — @-edge to an Object (data-Objects, including concept-Objects per §6.15)
 - `@REL` — @-edge to a REL declaration (predicate-to-predicate or REL-to-concept-Object)
 - `@HEAD` — @-edge to a HEAD (a persistent aggregate head, §6.17)
 
-@-edges carry an associative `#rel` specifying the relationship's nature — the field MAY be empty, leaving the relationship undefined pending refinement (§6.4 axiom E4, §6.4.2) — and MAY carry attribute children, identity (`Name`/`Id`), Qualifiers, Extensions, and Annotations.
+@-edges carry an associative `#predicate` specifying the relationship's nature — the field MAY be empty, leaving the relationship undefined pending refinement (§6.4 axiom E4, §6.4.2) — and MAY carry attribute children, identity (`Name`/`Id`), Qualifiers, Extensions, and Annotations.
 
 ```
 <@OBJ #knows : @bob>                  ← @-edge: alice knows bob
@@ -1034,7 +1035,7 @@ where the layer-1 role-prefix follows the established pattern `[@?][refinement-m
 - `%PKG`, `%GRP` — REF to a transport wrapper (meaningful within the transport context that carries it; see §6.16)
 - `%STR*`, `%REC*`, `%.STR*`, and the other Set forms — REF to a Set element. Valid only where the wrapped Set prefix itself exists (value primitives, REC, and modifier Sets per §5.3.1/rule 13); `%DEF…*`, `%REL*`, `%OBJ*`, and `%@OBJ*` are malformed — their target Sets cannot exist (rules 13, 14a; Templates and RELs are root-level declarations, a Set of them does not make sense)
 
-REFs MAY carry a `#rel` (compositional — aligns the slot to a vocabulary predicate; see §6.16 axiom R4), Qualifiers, Extensions, an `Name` (slot name), and Annotations. They MUST NOT carry structural children — that would make a REF a substance rather than a handle.
+REFs MAY carry a `#predicate` (compositional — aligns the slot to a vocabulary predicate; see §6.16 axiom R4), Qualifiers, Extensions, an `Name` (slot name), and Annotations. They MUST NOT carry structural children — that would make a REF a substance rather than a handle.
 
 ```
 <%OBJ database : @primary-db>                ← REF: handle to an Object
@@ -1048,7 +1049,7 @@ Two compositions are malformed:
 - **`%%KIND`** — no REF-to-REF. A REF is not a reference target (§6.16 axiom R6); to point at what a REF points at, write the address of the target directly.
 - **`@%KIND`** — no @-edge-to-REF, as noted in §5.3.2.
 
-The `@` and `%` sigils mark distinct genera and are never synonyms: `@` asserts a relationship (associative `#rel`); `%` fills a slot (compositional `#rel`). See §6.16 axiom R4 for the genus split and the proof-by-collapse.
+The `@` and `%` sigils mark distinct genera and are never synonyms: `@` asserts a relationship (associative `#predicate`); `%` fills a slot (compositional `#predicate`). See §6.16 axiom R4 for the genus split and the proof-by-collapse.
 
 Detailed treatment of the REF family is in §6.16.
 
@@ -1158,11 +1159,11 @@ Properties require an identifier when in named-attribute position and may carry 
 
 | Canonical | Minified | Resource value-kind | Identifier |
 |-----------|----------|---------------------|------------|
-| `@OBJ`    | —        | `reference` (target: Object) | `#rel` OPTIONAL (empty = undefined nature, §6.4.2); `Name`/`Id` OPTIONAL |
-| `@REL`    | —        | `reference` (target: REL)    | `#rel` OPTIONAL (empty = undefined nature, §6.4.2); `Name`/`Id` OPTIONAL |
-| `@HEAD`   | —        | `reference` (target: HEAD)   | `#rel` OPTIONAL (empty = undefined nature, §6.4.2); `Name`/`Id` OPTIONAL |
+| `@OBJ`    | —        | `reference` (target: Object) | `#predicate` OPTIONAL (empty = undefined nature, §6.4.2); `Name`/`Id` OPTIONAL |
+| `@REL`    | —        | `reference` (target: REL)    | `#predicate` OPTIONAL (empty = undefined nature, §6.4.2); `Name`/`Id` OPTIONAL |
+| `@HEAD`   | —        | `reference` (target: HEAD)   | `#predicate` OPTIONAL (empty = undefined nature, §6.4.2); `Name`/`Id` OPTIONAL |
 
-An **@-edge** is a **first-class but dependent relationship** — a persistent entity owned by and serialized within its source element, asserting a directed link to an independent graph-entity that exists elsewhere. The prefix asserts the *target's role*; the Resource asserts the *target's identity*; the `#rel` predicate, when specified, asserts what the relationship currently means (an empty rel leaves the relationship undefined as to nature — §6.4.2); an optional `Name` or `Id` makes the relationship itself a trackable, reference-able substance; optional attribute children describe that substance.
+An **@-edge** is a **first-class but dependent relationship** — a persistent entity owned by and serialized within its source element, asserting a directed link to an independent graph-entity that exists elsewhere. The prefix asserts the *target's role*; the Resource asserts the *target's identity*; the `#predicate` field, when specified, asserts what the relationship currently means (an empty predicate leaves the relationship undefined as to nature — §6.4.2); an optional `Name` or `Id` makes the relationship itself a trackable, reference-able substance; optional attribute children describe that substance.
 
 @-edges are GDX's labeled-property-graph mechanism. They are how a document carries the assertion that one graph-entity stands in some named relation to another, optionally with attributes refining the relation.
 
@@ -1192,13 +1193,13 @@ An **@-edge** is a **first-class but dependent relationship** — a persistent e
 
 **E2′ — First-class but dependent.** An @-edge is its own entity in the data model — it can carry identity, predicate, and attribute children — but it does not exist independently of its source: it is owned by and serialized within the source element. The edge *relates* its source to its target; it does NOT contain either. An edge dies with its source (delete the source and the edge is gone; relational projections SHOULD model this with `ON DELETE CASCADE` on the source side). An edge dangles if its target is removed (the edge persists as a structurally well-formed element with an unresolved reference; the consumer decides how to handle dangling). This distinguishes @-edges from VAL: VAL *contains* its value as an occupant; an @-edge *points at* its target.
 
-**E3 — Attribute children describe the relationship-entity.** Children of an @-edge — Properties (`STR`, `INT`, …), Qualifiers, and other adjunct elements — describe the edge itself: when it started, its confidence, who recorded it, and so on. When the edge carries identity (per E6), those attributes belong to the persistent edge-entity, not to any single predication; an edge whose `#rel` is rewritten retains its attribute children unless those attributes are also rewritten. Attributes are properties of the edge-as-substance, not of the current predication.
+**E3 — Attribute children describe the relationship-entity.** Children of an @-edge — Properties (`STR`, `INT`, …), Qualifiers, and other adjunct elements — describe the edge itself: when it started, its confidence, who recorded it, and so on. When the edge carries identity (per E6), those attributes belong to the persistent edge-entity, not to any single predication; an edge whose `#predicate` is rewritten retains its attribute children unless those attributes are also rewritten. Attributes are properties of the edge-as-substance, not of the current predication.
 
-**E4 — The role asserts existence; the `#rel` field specifies nature and MAY be empty.** An @-edge is, by its role, the assertion that a relationship *exists* between its source and its target. The `#rel` field specifies *what* that relationship is; when present, it is associative (it asserts the parent-to-target meaning), and it MAY be empty. An edge with no `#rel` parses to a null Rel, is well-formed, and denotes a relationship **undefined as to nature** — to be refined later by filling the field on the same edge (§6.4.2). An empty rel is therefore never ambiguous about whether a relationship exists; the role settled that. Since the v0.13 sigil partition, the construct discrimination this field once carried lives in the sigil itself: `@`-prefixed elements are @-edges and `%`-prefixed elements are REFs, with or without a `#rel`. The empty rel is not an idiom for *permanent* type-free adjacency — empty means "not yet specified," and a relationship whose intended meaning is bare adjacency is expressed with a designated predicate value (e.g., `<@OBJ #gdx:adjacent : @target>`).
+**E4 — The role asserts existence; the `#predicate` field specifies nature and MAY be empty.** An @-edge is, by its role, the assertion that a relationship *exists* between its source and its target. The `#predicate` field specifies *what* that relationship is; when present, it is associative (it asserts the parent-to-target meaning), and it MAY be empty. An edge with no `#predicate` parses to a null Predicate, is well-formed, and denotes a relationship **undefined as to nature** — to be refined later by filling the field on the same edge (§6.4.2). An empty predicate is therefore never ambiguous about whether a relationship exists; the role settled that. Since the v0.13 sigil partition, the construct discrimination this field once carried lives in the sigil itself: `@`-prefixed elements are @-edges and `%`-prefixed elements are REFs, with or without a `#predicate`. The empty predicate is not an idiom for *permanent* type-free adjacency — empty means "not yet specified," and a relationship whose intended meaning is bare adjacency is expressed with a designated predicate value (e.g., `<@OBJ #gdx:adjacent : @target>`).
 
 **E5 — Family is enumerated by target role and restricted to independent graph-entities.** The family consists of exactly `@OBJ`, `@REL`, and `@HEAD`. The restriction is principled: only Objects (including concept-Objects, since GDX uses concept-as-Object for ontology layering — see §6.15), REL declarations, and HEAD aggregates (§6.17) are independent graph-entities. An @-edge resolves only to such an entity at **root-level position** (a document-root element, or an element promoted to root — §7.2); it never resolves to an interior element. A target may be addressed by its `Name` (`@identifier`) or, when it carries a root id, by its durable identity (`&id`); interior ids and structural paths are Reference territory, never edge targets (see Resolution, below). Source role is orthogonal to membership: any role admitted as a parent of an @-edge by the composition matrix (§7.1) may carry @-edges; the family enumeration is over targets only. The Set forms `@OBJ*`, `@REL*`, and `@HEAD*` are **malformed** — each @-edge is a single graph statement (per E2′); multiple edges from one source are expressed as siblings, not as Set members. To address multiple edges as a collection (e.g., for iteration or query), the parent Object's children are filtered by prefix — the structure is implicit in the document, not collected into a Set.
 
-**E6 — Identity is optional and orthogonal to predicate; the Id is the substance, the Name names it.** An @-edge MAY carry an `Id` (its durable machine identity) and/or a `Name` (a descriptive name). The **Id** is the edge's *substance* — the persistent entity (per E2′) that endures across changes to predicate, attributes, target, or Name, and that disambiguates multiple edges between the same endpoints. The substance/predication distinction is the spine of the model: the `Id` is what the edge *is* (the enduring thing); the `#rel` is what it currently *asserts*; the `Name` is a descriptive label for alignment or symbolic reference; attribute children ride on the substance. Changing an edge's predicate, target, or Name does not change its identity; changing its Id does. An id-bearing edge with an empty rel is well-formed and is the canonical capture-first pattern (§6.4.2 — the substance exists, the predication is pending); predicate-without-identity is the common case (most edges are content with anonymous substance). Two @-edges that share the same source, predicate, and target ARE distinct edges if they carry different Ids; uniqueness is by identity, not by the (source, predicate, target) triple.
+**E6 — Identity is optional and orthogonal to predicate; the Id is the substance, the Name names it.** An @-edge MAY carry an `Id` (its durable machine identity) and/or a `Name` (a descriptive name). The **Id** is the edge's *substance* — the persistent entity (per E2′) that endures across changes to predicate, attributes, target, or Name, and that disambiguates multiple edges between the same endpoints. The substance/predication distinction is the spine of the model: the `Id` is what the edge *is* (the enduring thing); the `#predicate` is what it currently *asserts*; the `Name` is a descriptive label for alignment or symbolic reference; attribute children ride on the substance. Changing an edge's predicate, target, or Name does not change its identity; changing its Id does. An id-bearing edge with an empty predicate is well-formed and is the canonical capture-first pattern (§6.4.2 — the substance exists, the predication is pending); predicate-without-identity is the common case (most edges are content with anonymous substance). Two @-edges that share the same source, predicate, and target ARE distinct edges if they carry different Ids; uniqueness is by identity, not by the (source, predicate, target) triple.
 
 **Resolution.** An @-edge's Resource addresses a single root-level entity, in one of two forms: by name (`NameRef`, `@identifier` per §4.2.6) or by durable identity (`IdRef`, `&id`) when the id is a **root id** resolving to an independent graph entity of the declared role (§4.4.5, E5). A bare `&id` naming a globally-resolvable durable identity (an IRI, or a CURIE expanding to one) resolves across documents via the global tier of §4.4.5. Everything else is Reference territory, never an edge target: a `$path`, an `&id` resolving to an **interior** element, and the composed `@Base$PathExpression` and `@Base&Id` forms all address interior locations and are handled by the Reference family (§6.16). An @-edge resolves to a single whole entity; interior-reaching is by definition not an @-edge concern.
 
@@ -1206,7 +1207,7 @@ An **@-edge** is a **first-class but dependent relationship** — a persistent e
 
 **Composition.** Per §7.1, @-edges are admitted as children of Object, Record, Block, Edge (recursion: an edge's attribute children may themselves be edges), VAL (when the slot's value is an edge-shaped element), Template (declaring an edge slot), and REL (carrying vocabulary metadata about the predicate). Sources of @-edges are determined by where they are admitted; targets are determined by the prefix.
 
-**The substance/predication split as the spine.** Identity is the substance; `#rel` is the predication; attributes ride on the substance. This pattern keeps GDX out of RDF-style reification machinery (no `rdf:Statement` indirection, no quadruple-form rewriting) while delivering everything reification provides: named edges, predicate mutation over stable identity, attribute attachment to the edge rather than to the predication, and multi-edge disambiguation between the same endpoints. All of this follows from E2′ (first-class but dependent) with no new structural machinery.
+**The substance/predication split as the spine.** Identity is the substance; `#predicate` is the predication; attributes ride on the substance. This pattern keeps GDX out of RDF-style reification machinery (no `rdf:Statement` indirection, no quadruple-form rewriting) while delivering everything reification provides: named edges, predicate mutation over stable identity, attribute attachment to the edge rather than to the predication, and multi-edge disambiguation between the same endpoints. All of this follows from E2′ (first-class but dependent) with no new structural machinery.
 
 #### 6.4.1 @-Edge Reference Resolution
 
@@ -1235,28 +1236,28 @@ A resolution failure means the named target does not exist in any resolvable sco
 
 Implementations MAY support modes where unresolved references are treated as warnings rather than errors, useful for ingesting partial data sets or for documents that intentionally reference targets in other systems. When such modes are supported, the strict mode (errors on unresolved references) SHOULD remain the default.
 
-#### 6.4.2 Undefined Relationships — the Empty Rel
+#### 6.4.2 Undefined Relationships — the Empty Predicate
 
-An @-edge's `#rel` field MAY be empty. An edge with no `#rel` parses to a null Rel and round-trips as empty — no special syntax, no distinct construct. The interpretation follows from the **existence/specification split**:
+An @-edge's `#predicate` field MAY be empty. An edge with no `#predicate` parses to a null Predicate and round-trips as empty — no special syntax, no distinct construct. The interpretation follows from the **existence/specification split**:
 
 - **Role** (`@OBJ`, `@REL`) — asserts that a relationship *exists*. An @-edge is, by its role, a relationship (E1, E2′); its presence in the document is the existence assertion.
-- **Rel field** — specifies *what* the relationship is. It MAY be empty, in which case the relationship is **undefined as to nature**.
+- **Predicate field** — specifies *what* the relationship is. It MAY be empty, in which case the relationship is **undefined as to nature**.
 
-An empty rel is therefore never ambiguous about whether a relationship exists — the role settled that. Emptiness speaks only to the relationship's nature, which is not yet specified.
+An empty predicate is therefore never ambiguous about whether a relationship exists — the role settled that. Emptiness speaks only to the relationship's nature, which is not yet specified.
 
-**Motivation.** Sometimes an edge must be created before the form of the relationship is known — real-time capture, pending classification, a connection observed before its nature is determined. Forcing a fully-specified rel at creation time would mean either inventing a placeholder predicate or failing to capture the connection; both are worse than recording "connected, nature to be determined."
+**Motivation.** Sometimes an edge must be created before the form of the relationship is known — real-time capture, pending classification, a connection observed before its nature is determined. Forcing a fully-specified predicate at creation time would mean either inventing a placeholder predicate or failing to capture the connection; both are worse than recording "connected, nature to be determined."
 
-**Position in the model.** The empty rel is the natural limit of the identity-present / meaning-deferred principle that runs through GDX — not merely "meaning needs the schema" but "meaning not yet assigned at all." The edge is a declared-but-unbound relationship: well-formed and *undefined-pending*, never malformed. This is consistent with the well-formed-but-undefined posture GDX takes elsewhere (predicates need no REL declaration to be used; constraint identifiers are recorded without interpretation).
+**Position in the model.** The empty predicate is the natural limit of the identity-present / meaning-deferred principle that runs through GDX — not merely "meaning needs the schema" but "meaning not yet assigned at all." The edge is a declared-but-unbound relationship: well-formed and *undefined-pending*, never malformed. This is consistent with the well-formed-but-undefined posture GDX takes elsewhere (predicates need no REL declaration to be used; constraint identifiers are recorded without interpretation).
 
-**Refinement.** Later refinement fills the `#rel` field on the same edge. Edges are first-class identifiable entities (E6): the edge's identity persists across refinement — nothing is created or replaced; an open field is filled. This is the open-slot refinement pattern of the universal claim rule (§8.2.3): narrowing what was left open, never mutating a prior claim. Because refinement addresses the edge after the fact, an edge with an empty rel SHOULD carry an `Name` or `Id` so it remains addressable; an unidentified one can be refined only by structural position, which is fragile under restructuring.
+**Refinement.** Later refinement fills the `#predicate` field on the same edge. Edges are first-class identifiable entities (E6): the edge's identity persists across refinement — nothing is created or replaced; an open field is filled. This is the open-slot refinement pattern of the universal claim rule (§8.2.3): narrowing what was left open, never mutating a prior claim. Because refinement addresses the edge after the fact, an edge with an empty predicate SHOULD carry an `Name` or `Id` so it remains addressable; an unidentified one can be refined only by structural position, which is fragile under restructuring.
 
 **Required disciplines.** Three disciplines keep undefined relationships from becoming invisible debt:
 
-- **Queryable as undefined.** "Show all undefined relationships" MUST be answerable by any consumer that can enumerate edges — an edge with a null Rel is a distinct, selectable state. Undefined relationships are a visible backlog, not hidden debt.
-- **Schema can require specification.** A Template or vocabulary MAY declare empty rels unacceptable for a given slot or document class (a vocabulary-defined constraint, §8.4), so the permissiveness is opt-out-able where strictness matters — a real-time capture context allows them; a published ontology forbids them. See §8.2.3 for how empty rels reconcile with Template-declared predicates.
+- **Queryable as undefined.** "Show all undefined relationships" MUST be answerable by any consumer that can enumerate edges — an edge with a null Predicate is a distinct, selectable state. Undefined relationships are a visible backlog, not hidden debt.
+- **Schema can require specification.** A Template or vocabulary MAY declare empty predicates unacceptable for a given slot or document class (a vocabulary-defined constraint, §8.4), so the permissiveness is opt-out-able where strictness matters — a real-time capture context allows them; a published ontology forbids them. See §8.2.3 for how empty predicates reconcile with Template-declared predicates.
 - **Staleness is a tooling concern.** Long-lived undefined relationships are a data-quality signal for tooling to surface; the core takes no position on edge age.
 
-The empty rel is a legitimate *transitional* state, not a permanent resting place: easy to create when needed, easy to find, and easy to require resolution of where appropriate.
+The empty predicate is a legitimate *transitional* state, not a permanent resting place: easy to create when needed, easy to find, and easy to require resolution of where appropriate.
 
 ```
 <OBJ sensor-hub
@@ -1382,7 +1383,7 @@ Qualifier is best understood by contrast with Extension (§6.10): a **Qualifier*
 
 ### 6.10 Extension — `_`
 
-An Extension is an **adjunct statement** — a vocabulary-defined assertion attached to an element that a consumer may interpret and act upon, but on which the element does not depend for its identity, value, or validity. Unlike `--type` and `Rel`, which are *constitutive* (claims the element makes about what it is and how it relates), an Extension is *adjunct*: offered alongside the element rather than part of it. The element is complete without the Extension; a consumer that understands the Extension's vocabulary may act on the statement, while one that does not ignores it harmlessly. This adjunct property is what allows multiple vocabularies to coexist on the same element — each consumer reads its own slice and ignores the rest.
+An Extension is an **adjunct statement** — a vocabulary-defined assertion attached to an element that a consumer may interpret and act upon, but on which the element does not depend for its identity, value, or validity. Unlike `--type` and `Predicate`, which are *constitutive* (claims the element makes about what it is and how it relates), an Extension is *adjunct*: offered alongside the element rather than part of it. The element is complete without the Extension; a consumer that understands the Extension's vocabulary may act on the statement, while one that does not ignores it harmlessly. This adjunct property is what allows multiple vocabularies to coexist on the same element — each consumer reads its own slice and ignores the rest.
 
 Extensions range broadly. Schema-validation rules on Templates (numeric bounds, string patterns — §8.4) are one application. Predicate semantics on RELs (domain, range, inverse, cardinality — §6.15) are another. Provenance metadata, presentation hints, migration directives, ontology axioms, and any other vocabulary-defined assertion attachable to an element all share the same adjunct shape — offered alongside the element rather than constituting it. The Extension is uniformly opaque to GDX-core; the world around it (validator, renderer, migration tool, ontology reasoner) decides how much weight to give it.
 
@@ -1392,8 +1393,8 @@ Structurally, the `_` modifier marks an element as an Extension. Extensions MAY 
 
 **Extensions carry primitive value-kinds only.** The closed Extension prefix vocabulary admits string, int, float, bool, and bytes (the table below). To express an adjunct statement whose value is a *reference* to another element, the construct depends on whether the assertion is a graph statement or a slot binding:
 
-- For **graph statements between graph-entities** (Objects, RELs) — e.g., "this predicate has `gdx:Person` as domain," "this REL is the inverse of `gdx:knownBy`" — use an @-edge (`@OBJ` or `@REL`, §6.4) with an associative `#rel`: `<@OBJ #gdx:domain : @gdx:Person>`, `<@REL #gdx:inverse : @gdx:knownBy>`.
-- For **handle slots pointing at non-graph-entities** (Templates, Records, value-Properties, Qualifiers, etc.) — e.g., "this slot holds a handle to the schema that types the range" — use a REF (`%KIND`, §6.16) with optional compositional `#rel`: `<%DEFOBJ #gdx:rangeSchema : &PersonTemplate>`, `<%REC defaultMailing : @global-defaults$/mailing>`.
+- For **graph statements between graph-entities** (Objects, RELs) — e.g., "this predicate has `gdx:Person` as domain," "this REL is the inverse of `gdx:knownBy`" — use an @-edge (`@OBJ` or `@REL`, §6.4) with an associative `#predicate`: `<@OBJ #gdx:domain : @gdx:Person>`, `<@REL #gdx:inverse : @gdx:knownBy>`.
+- For **handle slots pointing at non-graph-entities** (Templates, Records, value-Properties, Qualifiers, etc.) — e.g., "this slot holds a handle to the schema that types the range" — use a REF (`%KIND`, §6.16) with optional compositional `#predicate`: `<%DEFOBJ #gdx:rangeSchema : &PersonTemplate>`, `<%REC defaultMailing : @global-defaults$/mailing>`.
 
 Extensions, @-edges, and REFs together cover the adjunct-statement surface: Extensions for primitive-valued assertions, @-edges for graph-statement assertions, REFs for handle-valued assertions. All three attach to elements as vocabulary-keyed children; the choice follows the value-kind and genus (slot-filling vs relationship-asserting) of the assertion.
 
@@ -1501,7 +1502,7 @@ Here the VAL `nameSlot` carries `#gdx:legalName` — the slot's alignment in `pe
 
 3. **Occupant role.** The occupant may be a Property (any value-kind), Record, Object, Block, Set, Edge (as a graph-statement value), or Reference (as a typed-pointer value). The occupant MUST NOT be a VAL (no double-wrapping), a Template or REL (vocabulary-layer roles are not embeddable as values), a Qualifier, Extension, or Annotation (refinement and adjunct roles are not values), a Node-zone element (Node isolation per §7.2 rule 5), or a transport-layer role (Package/Group).
 
-4. **Two-level identity.** The occupant's identity fields (`Name`, `Id`, `Rel`) are part of the embedded value and describe the value itself. The VAL's own identity fields name the slot the value fills and describe the slot's role in the parent. The occupant is in *positional* context within the VAL (the slot name comes from the VAL, not the occupant); the §3.2 identifier requirements that apply to Properties and Records in named-attribute position are accordingly relaxed for VAL occupants. The occupant MAY be anonymous (slot-named only) or identified (when its own identity carries information — for example, a `Rel` alignment for the value's semantic content).
+4. **Two-level identity.** The occupant's identity fields (`Name`, `Id`, `Predicate`) are part of the embedded value and describe the value itself. The VAL's own identity fields name the slot the value fills and describe the slot's role in the parent. The occupant is in *positional* context within the VAL (the slot name comes from the VAL, not the occupant); the §3.2 identifier requirements that apply to Properties and Records in named-attribute position are accordingly relaxed for VAL occupants. The occupant MAY be anonymous (slot-named only) or identified (when its own identity carries information — for example, a `Predicate` alignment for the value's semantic content).
 
 5. **Object licensing.** VAL is the data-layer licensing point for an Object in non-root position. The §7.2 rule-2 Object-exclusion exception that historically permitted `%O` is provided by VAL: a VAL whose occupant is an Object is the only data-layer form (besides transport-layer Package and Group payload) that may contain an Object as a non-root element.
 
@@ -1689,9 +1690,9 @@ A Template's *fields* are described using regular prefixes (not `DEF…` prefixe
 |-----------|----------|-----------|------------|
 | `REL`     | —        | —         | `Id` required (the predicate identity) |
 
-A Relation Declaration is a **predicate as a first-class entity** — the published counterpart to the `#rel` predicates that @-edges and other elements carry. Conceptually, a REL says "this predicate has its own identity, and the metadata describing it lives here": its domain and range, its inverse, whether it is symmetric or transitive, what vocabulary it participates in, what concepts it connects, what humans should read about it. Without RELs, predicates would be opaque identifiers used inline; with RELs, the predicate vocabulary itself becomes part of the data model.
+A Relation Declaration is a **predicate as a first-class entity** — the published counterpart to the `#predicate` fields that @-edges and other elements carry. Conceptually, a REL says "this predicate has its own identity, and the metadata describing it lives here": its domain and range, its inverse, whether it is symmetric or transitive, what vocabulary it participates in, what concepts it connects, what humans should read about it. Without RELs, predicates would be opaque identifiers used inline; with RELs, the predicate vocabulary itself becomes part of the data model.
 
-Structurally, a `REL` element declares a predicate as a first-class entity. The `REL` element's `Id` is the predicate identity itself (typically a CURIE such as `gdx:knows` or `schema:givenName`) — the token that `#rel` references and `@REL` edges resolve to (§6.4.1, §8.5.2). A REL MAY additionally carry a descriptive `Name` (a human label); the `Name` is never what `#rel` resolves on. REL has no minified form.
+Structurally, a `REL` element declares a predicate as a first-class entity. The `REL` element's `Id` is the predicate identity itself (typically a CURIE such as `gdx:knows` or `schema:givenName`) — the token that `#predicate` references and `@REL` edges resolve to (§6.4.1, §8.5.2). A REL MAY additionally carry a descriptive `Name` (a human label); the `Name` is never what `#predicate` resolves on. REL has no minified form.
 
 **Defined by purpose, not by structure.** A REL's function — naming a first-class predicate — is fully discharged by its identifier. It needs no particular children to be well-formed; the predicate-as-named-entity exists once the REL is declared. Children, when present, supply metadata *about* the predicate: data carriers (labels, descriptions, version info), graph-statement axioms about how the predicate relates to concepts and other predicates, primitive-valued semantic claims (symmetry, cardinality), and handles to vocabulary-layer artifacts. None is required; each contributes only what its consumer interprets. A REL is held to no stricter standard than any other element — Properties stand on a REL exactly as they stand on any Object, with meaning conferred by interpreting consumers and meaninglessness never disqualifying.
 
@@ -1738,11 +1739,11 @@ The mechanical version: would a validator or reasoner act on it? → Extension. 
 
 The interplay among the three vocabulary-related constructs is:
 
-- The `#rel` field on any element names a predicate by identifier (§6.15). The reference is lightweight — it asserts "this element represents this predicate" without requiring the predicate to be declared anywhere. An undeclared `#rel` is well-formed and simply does not resolve (there is no REL to resolve to); this is the well-formed-but-undefined posture GDX takes throughout.
+- The `#predicate` field on any element names a predicate by identifier (§6.15). The reference is lightweight — it asserts "this element represents this predicate" without requiring the predicate to be declared anywhere. An undeclared `#predicate` is well-formed and simply does not resolve (there is no REL to resolve to); this is the well-formed-but-undefined posture GDX takes throughout.
 - A `REL` element declares the predicate with its metadata, making the predicate's semantics part of the data model. The REL's `Id` is the predicate identity.
 - An `@REL` @-edge from one REL declaration to another expresses a first-class predicate-to-predicate axiom (inverse, subPropertyOf, etc.).
 
-The three are coordinated by identity: **when** a `#rel` token matches the `Id` of a REL declaration in scope, that REL's metadata applies to the predicate. When an `@REL` @-edge's target matches a REL's `Id`, the edge resolves to that declaration as a graph-statement-level link between two predicates. Resolution keys on the REL's `Id`, not its descriptive Name — so a `#rel` reference survives a REL being relabeled, and a predicate versioned `acme:pref.v1` → `acme:pref.v2` is a new identity (new Id), not a rename of the old one. A `#rel` token that matches no REL Id in scope remains a valid, unresolved predicate reference; declaration is what enables resolution, not what `#rel` requires.
+The three are coordinated by identity: **when** a `#predicate` token matches the `Id` of a REL declaration in scope, that REL's metadata applies to the predicate. When an `@REL` @-edge's target matches a REL's `Id`, the edge resolves to that declaration as a graph-statement-level link between two predicates. Resolution keys on the REL's `Id`, not its descriptive Name — so a `#predicate` reference survives a REL being relabeled, and a predicate versioned `acme:pref.v1` → `acme:pref.v2` is a new identity (new Id), not a rename of the old one. A `#predicate` token that matches no REL Id in scope remains a valid, unresolved predicate reference; declaration is what enables resolution, not what `#predicate` requires.
 
 **Concept-as-Object.** GDX deliberately has no separate Class or Concept role. When a vocabulary needs to name a concept (a type of entity, an enumeration value, a category), an Object with a conceptual identifier serves that role. RELs reference concepts as Objects (`@gdx:Person`, `@gdx:Organization`), and concept Objects may carry their own properties, labels, and relationships like any other Object. This keeps the data model uniform — vocabulary, schema, and data all use the same element form.
 
@@ -1787,7 +1788,7 @@ The three are coordinated by identity: **when** a `#rel` token matches the `Id` 
 
 This document defines a small vocabulary: two concept Objects (`gdx:Person`, `gdx:Organization`), three predicates with declared domain/range, inverse relationships, and human-facing labels, and one Template binding instance shape to the Person concept. The entire vocabulary is GDX; consumers parse it with the same parser they use for instances. The labels on each REL are Properties (data carried for downstream consumers like documentation tools); the domain/range/inverse are @-edges (graph statements); the symmetry flag is an Extension (a vocabulary-defined axiom a reasoner may act on).
 
-A REL declaration MAY appear at the document root (alongside or instead of primary Objects) or within a vocabulary document. Resolution of `#rel` references follows the same Id-based mechanism as Type reference resolution (§8.5.2): the `#rel` token is matched against REL `Id`s across the same scope sequence (local document, loaded vocabularies, globally-resolvable IRIs).
+A REL declaration MAY appear at the document root (alongside or instead of primary Objects) or within a vocabulary document. Resolution of `#predicate` references follows the same Id-based mechanism as Type reference resolution (§8.5.2): the `#predicate` token is matched against REL `Id`s across the same scope sequence (local document, loaded vocabularies, globally-resolvable IRIs).
 
 ### 6.16 The %-Reference Family — `%KIND`
 
@@ -1835,7 +1836,7 @@ The prefix is a *role-to-dereference* (`%OBJ` → resolves to an Object element)
 **R2 — A REF fills a slot; it asserts nothing about its parent.** The REF's only assertion is "this slot holds a handle to that element." No relationship (vs. @-Edge), no containment (vs. VAL). Removing a REF removes a slot's content — not a relationship, not a contained thing, and never the target (which exists independently and is unaffected by the REF).
 
 **R3 — A REF is Property-shaped.** It carries Property elaboration and nothing more. It MAY carry:
-- a `#rel` field (compositional alignment — see R4),
+- a `#predicate` field (compositional alignment — see R4),
 - Qualifiers (refining the slot's binding, exactly as on any Property),
 - Extensions (adjunct vocabulary-keyed assertions about the slot or its binding — e.g., provenance about how the handle was selected, audit info about the binding),
 - an `Name` (the slot name within its parent's scope),
@@ -1843,7 +1844,7 @@ The prefix is a *role-to-dereference* (`%OBJ` → resolves to an Object element)
 
 It MUST NOT carry structural children (Properties, @-edges, Sets, Records, Objects, Blocks, VAL, REL, Template). Structural children would make the REF a substance rather than a handle, collapsing the genus distinction with VAL and Edge.
 
-**R4 — A REF MAY carry a `#rel`; on a REF the `#rel` is always *compositional alignment*.** The `#rel` aligns the slot to a vocabulary predicate (§6.15); it does NOT assert a relationship the parent has. An associative predicate (a relationship a parent has) is the exclusive province of @-Edge. The same `#rel` token aligns-a-slot on `%` and asserts-a-relationship on `@`; this role-parameterization of `#rel` (§6.4, §6.15) is what keeps the two sigils from collapsing into synonyms.
+**R4 — A REF MAY carry a `#predicate`; on a REF the `#predicate` is always *compositional alignment*.** The `#predicate` aligns the slot to a vocabulary predicate (§6.15); it does NOT assert a relationship the parent has. An associative predicate (a relationship a parent has) is the exclusive province of @-Edge. The same `#predicate` token aligns-a-slot on `%` and asserts-a-relationship on `@`; this role-parameterization of `#predicate` (§6.4, §6.15) is what keeps the two sigils from collapsing into synonyms.
 
 The structural test (proof by collapse): if `<%OBJ #X x : @T>` and `<@OBJ #X : @T>` could both assert "parent X T," the sigils would be interchangeable spellings and the partition would dissolve. They do not assert the same thing, by R4 — the `%` form is "slot named `x` holds a handle to `T`, slot semantically aligned with `#X`"; the `@` form is "parent stands in relation `#X` to `T`."
 
@@ -1939,7 +1940,7 @@ A REF whose Resource is any non-`NameRef` literal MUST resolve to exactly one el
 
 #### Summary
 
-A %-reference is GDX's value-resolution construct: structurally, a slot-filler whose Resource is a typed handle — the slot stores the resolved address of an independently-existing target whose role the prefix asserts, and dereferencing yields that target as the slot's effective content. The prefix declares the target's role; the Resource gives its address by name, path, or key; resolution dereferences and verifies the role. A REF asserts no relationship about its parent (its `#rel`, if present, aligns the slot — it never associates), does not contain its target (vs. VAL), and is inert toward the target while elaborated toward its own slot, exactly as any Property is.
+A %-reference is GDX's value-resolution construct: structurally, a slot-filler whose Resource is a typed handle — the slot stores the resolved address of an independently-existing target whose role the prefix asserts, and dereferencing yields that target as the slot's effective content. The prefix declares the target's role; the Resource gives its address by name, path, or key; resolution dereferences and verifies the role. A REF asserts no relationship about its parent (its `#predicate`, if present, aligns the slot — it never associates), does not contain its target (vs. VAL), and is inert toward the target while elaborated toward its own slot, exactly as any Property is.
 
 ### 6.17 HEAD — `HEAD` (persistent aggregate head)
 
@@ -2110,17 +2111,17 @@ The following rules are consequences of the matrix and are repeated here for cla
     - `%%KIND` — no REF whose target is itself a REF (§6.16 axiom R6). A REF is not a reference target; to point at what a REF points at, address the target directly.
     - `@%KIND` — no @-edge whose target is a REF. @-edges target independent graph-entities (§6.4 axiom E5); REFs are slot-contents, not graph-entities.
 
-16. **REF is Property-shaped; @-Edge is statement-shaped.** A REF element (any `%KIND`, §6.16) MAY carry a `#rel` (compositional alignment per R4), Qualifiers, Extensions, and Annotations as children, but MUST NOT carry structural children (Properties, @-edges, Sets, Records, Objects, Blocks, VAL, REL, Template). Its Resource is a reference literal; the target lives elsewhere. An @-Edge element (`@OBJ`, `@REL`, §6.4) carries an associative `#rel` specifying the relationship's nature — the field MAY be empty, leaving the relationship undefined pending refinement (E4, §6.4.2) — and MAY carry attribute children describing the edge-as-substance (per E3). The REF and @-Edge composition rows in §7.1 reflect this structural split. See §6.16 axiom R4 for the genus distinction and the proof-by-collapse that establishes the sigil partition.
+16. **REF is Property-shaped; @-Edge is statement-shaped.** A REF element (any `%KIND`, §6.16) MAY carry a `#predicate` (compositional alignment per R4), Qualifiers, Extensions, and Annotations as children, but MUST NOT carry structural children (Properties, @-edges, Sets, Records, Objects, Blocks, VAL, REL, Template). Its Resource is a reference literal; the target lives elsewhere. An @-Edge element (`@OBJ`, `@REL`, §6.4) carries an associative `#predicate` specifying the relationship's nature — the field MAY be empty, leaving the relationship undefined pending refinement (E4, §6.4.2) — and MAY carry attribute children describing the edge-as-substance (per E3). The REF and @-Edge composition rows in §7.1 reflect this structural split. See §6.16 axiom R4 for the genus distinction and the proof-by-collapse that establishes the sigil partition.
 
 ### 7.3 Identifier Rules
 
-Per §3.2, the following roles MUST carry at least one identifier (`Name`, `Id`, or `Rel`) when in named-attribute position:
+Per §3.2, the following roles MUST carry at least one identifier (`Name`, `Id`, or `Predicate`) when in named-attribute position:
 
 - Object (`OBJ`/`O`, `DEFOBJ`)
 - Record (`REC`/`R`, `DEFREC`, `NREC`/`NR`) when not in Set member position
 - Property (`STR`/`S`, `INT`/`I`, `FLOAT`/`F`, `BOOL`/`L`, `BYTE`/`B` and their variants) when not in Set member position
 - Template (any `DEF…`) — MUST carry an `Id` specifically (the resolution target for `--type`, §8.5.2); a Name alone does not satisfy this
-- REL (`REL`) — MUST carry an `Id` specifically (the resolution target for `#rel` and `@REL`, §6.15, §8.5.2); a Name alone does not satisfy this
+- REL (`REL`) — MUST carry an `Id` specifically (the resolution target for `#predicate` and `@REL`, §6.15, §8.5.2); a Name alone does not satisfy this
 - VAL (`VAL`/`V`) when not in Set member position and when used as a named slot
 - Block (`BLK`) — Blocks always require an identifier; the identifier names the partition
 - Group (`GRP`) — Groups always require an identifier; the identifier names the partition within a Package
@@ -2166,7 +2167,7 @@ A conforming parser MUST reject any document containing:
 - A Block missing its required identifier.
 - A Group missing its required identifier.
 
-A conforming parser MUST accept any element with an identifier but no Resource section. Such elements are well-formed and represent null values (instance context) or slot declarations (Template context). A conforming parser MUST likewise accept an @-Edge element with no `#rel` field: the empty rel parses to null and denotes a relationship that exists but is undefined as to nature (§6.4.2).
+A conforming parser MUST accept any element with an identifier but no Resource section. Such elements are well-formed and represent null values (instance context) or slot declarations (Template context). A conforming parser MUST likewise accept an @-Edge element with no `#predicate` field: the empty predicate parses to null and denotes a relationship that exists but is undefined as to nature (§6.4.2).
 
 The above are the *primitive axioms* of GDX validity — Layer 1 (§2.2). They are owned by GDX, evaluated at parse time, and absolute. Constraint validity beyond these axioms (numeric bounds, string patterns, regex matches, semantic types) is vocabulary-defined and evaluated externally; GDX hosts those constraints as Extension elements but does not interpret them. See §6.4.1 and §8 for the structural validation model (Layer 2 — Structural Conformance, covering both reference resolution and Template-instance alignment) and Constraint Extensions (Layer 3 — Constraint Conformance).
 
@@ -2178,9 +2179,9 @@ The above are the *primitive axioms* of GDX validity — Layer 1 (§2.2). They a
 
 Schemas in GDX are themselves GDX documents. This section defines the schema mechanism in three layers, mirroring the conformance model of §2.2.
 
-- **Template structure (§8.1, §8.3).** Templates are GDX elements with `DEF…` prefixes. They declare the structural shape an instance is expected to satisfy: which child slots exist, what role each carries, what Rel each aligns to, what Type each claims. Templates are GDX-native: this specification defines their grammar, their composition rules, and how they are resolved.
+- **Template structure (§8.1, §8.3).** Templates are GDX elements with `DEF…` prefixes. They declare the structural shape an instance is expected to satisfy: which child slots exist, what role each carries, what Predicate each aligns to, what Type each claims. Templates are GDX-native: this specification defines their grammar, their composition rules, and how they are resolved.
 
-- **Template-instance alignment (§8.2).** An instance carrying a `--type` reference asserts that its structure aligns to the referenced Template. Conformance is two steps: the `--type` reference is first resolved to a Template by the Template's `Id` (§8.5.2), then the instance's children are aligned to that Template's slots by `Name`, with `Rel` as a cross-vocabulary bridge. The universal claim rule (§8.2.3) governs how Template-declared and instance-declared values reconcile on aligned slots; materialization (§8.2.4) is the recommended persistence form. Both steps are part of Layer 2 — Structural Conformance (§2.2).
+- **Template-instance alignment (§8.2).** An instance carrying a `--type` reference asserts that its structure aligns to the referenced Template. Conformance is two steps: the `--type` reference is first resolved to a Template by the Template's `Id` (§8.5.2), then the instance's children are aligned to that Template's slots by `Name`, with `Predicate` as a cross-vocabulary bridge. The universal claim rule (§8.2.3) governs how Template-declared and instance-declared values reconcile on aligned slots; materialization (§8.2.4) is the recommended persistence form. Both steps are part of Layer 2 — Structural Conformance (§2.2).
 
 - **Constraint Extensions (§8.4).** Constraint vocabularies — XSD, JSON Schema, OWL profiles, bespoke domain vocabularies — are expressed as Extension elements on Template slots. The Extension carriers (`_STR`, `_INT`, etc.) are GDX-native. The constraint identifiers they carry (`xsd:minInclusive`, `json:pattern`, etc.) are vocabulary-defined and opaque to GDX. This is Layer 3 — Constraint Conformance (§2.2). Multiple constraint vocabularies MAY coexist on the same Template; each is interpreted independently by consumers that understand its identifiers.
 
@@ -2227,7 +2228,7 @@ The `--type` reference is a Layer 2 (structural) assertion (§2.2). Resolving th
 
 Slot alignment is the second step of Template conformance: it applies *after* the `--type` reference has been resolved to a Template by Id (§8.5.2). Resolution answers "which Template"; alignment answers "do this instance's children fill that Template's slots." The two steps use different keys — resolution keys on the Template's Id, alignment keys on `Name`.
 
-An instance child satisfies a Template slot by matching the slot's `Name` field, using case-sensitive ordinal comparison (§3.2). When a Template slot declares a `Rel`, an instance child carrying the same `Rel` MAY align to the slot even if its local `Name` differs; in that case the `Rel` is the alignment key, supporting cross-vocabulary instances whose local names differ from the Template's slot names.
+An instance child satisfies a Template slot by matching the slot's `Name` field, using case-sensitive ordinal comparison (§3.2). When a Template slot declares a `Predicate`, an instance child carrying the same `Predicate` MAY align to the slot even if its local `Name` differs; in that case the `Predicate` is the alignment key, supporting cross-vocabulary instances whose local names differ from the Template's slot names.
 
 When an element is untyped, its `Name`s are free identifiers — they carry semantic weight on their own, because there is no Template to resolve them against. When an element claims a `--type`, resolution (by Id, §8.5.2) locates the Template, and the type then declares a set of expected slot names to which the instance's `Name`s bind — the name's role shifts from carrying meaning to aligning with the meaning the type defines. The name must still be carried by the instance because alignment is an instance-to-template match: which filler claims which slot is irreducible instance information the type cannot supply. `Name` and `--type` therefore operate at different levels — `--type` resolves the Template by Id; `Name` aligns the instance's children to that Template's slots — and reinforce rather than duplicate, with the child-naming responsibility migrating to slot-alignment on type-claim.
 
@@ -2251,7 +2252,7 @@ Transport-layer roles (Package, Group) are not subjects of Templates in the core
 
 #### 8.2.3 The Universal Claim Rule
 
-A Template MAY declare values for fields that the instance can also carry: the `Rel` field, the `--type` field (in nested slots), and a default `Resource` value. When both the Template and the instance carry a value for the same field on the same aligned slot, the values are reconciled by a uniform rule that applies independently to each claim-bearing field.
+A Template MAY declare values for fields that the instance can also carry: the `Predicate` field, the `--type` field (in nested slots), and a default `Resource` value. When both the Template and the instance carry a value for the same field on the same aligned slot, the values are reconciled by a uniform rule that applies independently to each claim-bearing field.
 
 | Template state | Instance state | Effective value | Disposition |
 |---|---|---|---|
@@ -2261,13 +2262,13 @@ A Template MAY declare values for fields that the instance can also carry: the `
 | claimed | claimed (matching) | confirmed | Both sides agree. The claim is affirmed. |
 | claimed | claimed (differing) | — | **Conflict.** The instance is Layer 2 non-conforming. |
 
-The rule applies independently to each field. An instance MAY satisfy the rule for `Rel` (case 3 — Template-supplied) while freely supplying its own `Resource` value where the Template declares no default (case 2 — free instance claim), with both outcomes being valid.
+The rule applies independently to each field. An instance MAY satisfy the rule for `Predicate` (case 3 — Template-supplied) while freely supplying its own `Resource` value where the Template declares no default (case 2 — free instance claim), with both outcomes being valid.
 
 **The `Id` field is excluded from the claim rule.** An Id is an instance-level addressing decision, never a Template claim. The exclusion is structural, not stylistic: Ids are scope-unique (§4.4.5) while a Template is a reusable shape, so a Template-declared Id would stamp a scope-unique value onto every instance of the shape — two instances of the same Template within one Object scope would materialize (§8.2.4) colliding Ids, producing a malformed document from conforming inputs. Templates MUST NOT declare an `Id` on a slot; instances freely carry Ids, which are invisible to schema validation (§8.2.1).
 
 The differing-claims case (the conflict row) MUST be reported as a Layer 2 non-conformance. Implementations MUST NOT silently prefer one side over the other.
 
-**Empty rels under the claim rule.** An @-edge with an empty rel (§6.4.2) is *silent* on the `Rel` field: the relationship's existence is asserted by the role, but the field carries no claim about its nature. The standard matrix applies — when the aligned Template slot declares a predicate, the Template's name is the effective value (case 3), and materialization (§8.2.4) fills the field on the same edge: refinement of what was left open, never mutation of a prior claim. A Template MAY instead declare, through a vocabulary-defined constraint (§8.4), that undefined relationships are unacceptable for a slot or document class; an instance edge with an empty rel is then Layer 3 non-conforming with respect to that vocabulary.
+**Empty predicates under the claim rule.** An @-edge with an empty predicate (§6.4.2) is *silent* on the `Predicate` field: the relationship's existence is asserted by the role, but the field carries no claim about its nature. The standard matrix applies — when the aligned Template slot declares a predicate, the Template's name is the effective value (case 3), and materialization (§8.2.4) fills the field on the same edge: refinement of what was left open, never mutation of a prior claim. A Template MAY instead declare, through a vocabulary-defined constraint (§8.4), that undefined relationships are unacceptable for a slot or document class; an instance edge with an empty predicate is then Layer 3 non-conforming with respect to that vocabulary.
 
 **Scope of "default."** Templates declaring a default `Resource` value declare the value as a fallback: when the instance is silent, the default applies; when the instance carries a value, the instance's value is the effective value. This is case 3 of the rule. A future revision MAY define a "fixed" claim scope, in which a Template's value is required (and a differing instance is a conflict) rather than a default; the distinction is one of claim scope, but the four-case matrix above is unchanged.
 
@@ -2275,7 +2276,7 @@ The differing-claims case (the conflict row) MUST be reported as a Layer 2 non-c
 
 Per §8.2.3 case 3, a Template-supplied value is an implicit claim of the instance. The value is logically present, but it is not visibly written in the instance's text. An instance read in isolation — without resolving the Template — does not show that claim.
 
-This creates a real difference between the instance's logical content and its persisted form. A query "find all elements with Rel `schema:givenName`" returns the instance only if the resolver has loaded the Template. Without the Template, the same data is invisible to the query. The instance's identity drifts depending on whether the schema is available.
+This creates a real difference between the instance's logical content and its persisted form. A query "find all elements with Predicate `schema:givenName`" returns the instance only if the resolver has loaded the Template. Without the Template, the same data is invisible to the query. The instance's identity drifts depending on whether the schema is available.
 
 **Materialization** is the build-time operation that resolves §8.2.3 case 3 in the persisted form: it writes the Template-supplied values into the instance as explicit fields. The materialized instance carries its full identity without needing the Template at read time.
 
@@ -2294,12 +2295,12 @@ This creates a real difference between the instance's logical content and its pe
 
 # Materialized instance (Template values are explicit):
 <REC alice --com.acme.Customer
-    <STR firstName #schema:givenName : "Alice">    # Rel materialized from Template
+    <STR firstName #schema:givenName : "Alice">    # Predicate materialized from Template
     <STR locale : "en-US">                          # default Resource materialized
 >
 ```
 
-Materialization applies to the claim-bearing fields named in §8.2.3: `Rel`, `Resource` defaults, and nested `--type` claims. It does NOT extrapolate beyond what the Template explicitly declares; missing slots are not added — including slots for which the Template declares a default Resource — and Constraint Extensions (§8.4) are not copied from Template to instance (constraints are vocabulary-defined and remain Template-scoped). The absent-slot rule is deliberate: the instance is the reality, and a slot's absence may itself be meaningful (the slot may have been deliberately removed); materialization refines what is present, it never resurrects what is not. A default Resource therefore materializes only into a *present-but-null* slot. Imparting Template defaults into a brand-new instance — filling in every defaulted slot at creation time — is an *instantiation* operation performed by authoring tooling, not part of materialization; once instantiated, the materialized representation is authoritative.
+Materialization applies to the claim-bearing fields named in §8.2.3: `Predicate`, `Resource` defaults, and nested `--type` claims. It does NOT extrapolate beyond what the Template explicitly declares; missing slots are not added — including slots for which the Template declares a default Resource — and Constraint Extensions (§8.4) are not copied from Template to instance (constraints are vocabulary-defined and remain Template-scoped). The absent-slot rule is deliberate: the instance is the reality, and a slot's absence may itself be meaningful (the slot may have been deliberately removed); materialization refines what is present, it never resurrects what is not. A default Resource therefore materializes only into a *present-but-null* slot. Imparting Template defaults into a brand-new instance — filling in every defaulted slot at creation time — is an *instantiation* operation performed by authoring tooling, not part of materialization; once instantiated, the materialized representation is authoritative.
 
 **Materialization is RECOMMENDED for persistence and exchange.** Documents that will be persisted, transmitted, archived, or signed SHOULD be materialized before they are written. This preserves the search and self-description properties of the data when the Template is not accessible at read time. Materialization is OPTIONAL for in-memory processing; tools MAY apply the §8.2.3 claim rule on-the-fly during processing without rewriting the document.
 
@@ -2599,7 +2600,7 @@ A single table can store an arbitrary GDX document with the following column str
 | `NextSiblingId`| The RowId of the next sibling, for ordered child traversal         |
 | `Prefix`       | The element's prefix token                                         |
 | `Id`          | The element's Id field (NULL if not present)                      |
-| `Rel`          | The element's Rel field (NULL if not present)                      |
+| `Predicate`          | The element's Predicate field (NULL if not present)                      |
 | `Name`           | The element's Name field (NULL if not present)                       |
 | `ValueKind`    | The value-kind of the Resource (NULL if not present)               |
 | `ResourceValue`| The Resource value, encoded per the value-kind                     |
@@ -2659,7 +2660,7 @@ The introduction of distinct absent/null/present states implies three independen
 
 Path-mode reference resolution is normatively specified by the companion GDX Path Expressions Specification (`GDX-Path.md`). All sub-items previously open under this issue are addressed:
 
-- **The path expression grammar.** Specified in `GDX-Path.md` §3 and §3. Three segment kinds — `NameSegment`, `RelSegment`, `OrdinalSegment` — separated by `/`. Id-based addressing is provided through the `IdRef` and `NameIdRef` reference-literal forms rather than as a path segment.
+- **The path expression grammar.** Specified in `GDX-Path.md` §3 and §3. Three segment kinds — `NameSegment`, `PredicateSegment`, `OrdinalSegment` — separated by `/`. Id-based addressing is provided through the `IdRef` and `NameIdRef` reference-literal forms rather than as a path segment.
 - **The resolution algorithm.** Specified in `GDX-Path.md` §5. Left-to-right segment traversal from a defined starting element, with per-segment match semantics and explicit handling of zero, one, and multi-match outcomes.
 - **The composition matrix expansion.** Specified in `GDX-Path.md` §8.5 (changes required of this specification). `%REC`, `%BLK`, `%.STR`, `%_INT`, `%VAL`, value-Property targets, and other interior elements become resolvable when the resource is a `PathRef` or `NamePathRef`. Parent-context restrictions are unchanged; only target-addressability expands. (Under v0.13.0, these targets are addressed via the REF family `%KIND`; prior to v0.13.0 they were addressed via leaf-like `@KIND` references, now migrated.)
 - **Modifier-stacking interaction.** The `%`-with-modifier-bases pattern (`%.STR`, `%_INT`) resolves through path-mode references.
@@ -2678,7 +2679,7 @@ This subsection is the authoritative normative statement of GDX's layered confor
 
 **Layer 1 — Representation Conformance** addresses how data is encoded. It covers the structural rules of §3 through §7: prefix vocabulary, identifier grammar, literal forms, composition rules, and resource value-kind matching. Owned by GDX. Decidable at parse time without external context.
 
-**Layer 2 — Structural Conformance** addresses whether references resolve and whether data aligns to declared shapes. It covers: @-Edge and REF reference resolution (§6.4.1, §6.15) — including role-mismatch detection; `--type` and `#rel` resolution to a Template or REL by that declaration's **Id** (§8.5.2); and Template-based alignment (§8.1, §8.2, §8.3) — instance children align to Template slots by **Name** (with `Rel` as cross-vocabulary bridge). Resolution (by Id) and alignment (by Name) are distinct steps: resolution answers "which Template," alignment answers "do the instance's children fill its slots." Owned by GDX. Decidable by any consumer that can resolve Templates and references, without external vocabulary knowledge.
+**Layer 2 — Structural Conformance** addresses whether references resolve and whether data aligns to declared shapes. It covers: @-Edge and REF reference resolution (§6.4.1, §6.15) — including role-mismatch detection; `--type` and `#predicate` resolution to a Template or REL by that declaration's **Id** (§8.5.2); and Template-based alignment (§8.1, §8.2, §8.3) — instance children align to Template slots by **Name** (with `Predicate` as cross-vocabulary bridge). Resolution (by Id) and alignment (by Name) are distinct steps: resolution answers "which Template," alignment answers "do the instance's children fill its slots." Owned by GDX. Decidable by any consumer that can resolve Templates and references, without external vocabulary knowledge.
 
 **Layer 3 — Constraint Conformance** addresses whether instance values satisfy the constraints expressed by a particular constraint vocabulary. Covers the Constraint Extensions of §8.4 (XSD, JSON Schema, the GDX Common Vocabulary, or any other). Owned by the constraint vocabulary, not by GDX. Decidable only by a consumer that understands the vocabulary's constraint identifiers. A document MAY be Layer 3-conforming with respect to one vocabulary and Layer 3-non-conforming with respect to another; the verdicts are independent and vocabulary-relative.
 
@@ -2693,7 +2694,7 @@ The layers are independent: a document may be Layer 1-conforming but Layer 2-non
 A serialization is **representation-conforming** if and only if a round-trip through it preserves, for every element in the document:
 
 1. The Prefix.
-2. The presence and value of `Id`, `Rel`, `Name`, and `Type` (string-equal, ordinal comparison). An @-edge's empty Rel (§6.4.2) round-trips as empty — the field is not invented, defaulted, or dropped.
+2. The presence and value of `Id`, `Predicate`, `Name`, and `Type` (string-equal, ordinal comparison). An @-edge's empty Predicate (§6.4.2) round-trips as empty — the field is not invented, defaulted, or dropped.
 3. The Resource — including:
    - The null state (an element with no Resource value MUST round-trip as a null-state element).
    - The value-kind of the Resource (per §3.3).
@@ -2738,7 +2739,7 @@ A document is **structurally conforming** (Layer 2) with respect to a set of Tem
 
 A document MAY separately claim **constraint conformance** (Layer 3) with respect to one or more constraint vocabularies. A document is constraint-conforming with respect to vocabulary V if a V-aware consumer finds no violations of V's Constraint Extensions (§8.4) on the document. This claim is always vocabulary-qualified, per A.1: a bare "constraint-conforming" claim naming no vocabulary is not well-formed, since a document may be constraint-conforming for one vocabulary and non-conforming for another.
 
-A document MAY claim conformance to one or more vocabularies (§8.6). A document is **vocabulary-conforming** to a vocabulary if its use of that vocabulary's identifiers (in `Rel`, `Type`, and Extension positions) is consistent with the vocabulary's specification. This is distinct from constraint conformance: constraint conformance asks whether *values* satisfy the vocabulary's declared constraints; vocabulary conformance asks whether *identifiers* are used as the vocabulary intends. A document may use `xsd:` identifiers correctly (vocabulary-conforming) while still failing the constraints those identifiers declare (not constraint-conforming), and vice versa is not possible — a value cannot be evaluated against a constraint identifier that is itself misused — so vocabulary conformance is a precondition a V-aware consumer checks before it can render a constraint-conformance verdict.
+A document MAY claim conformance to one or more vocabularies (§8.6). A document is **vocabulary-conforming** to a vocabulary if its use of that vocabulary's identifiers (in `Predicate`, `Type`, and Extension positions) is consistent with the vocabulary's specification. This is distinct from constraint conformance: constraint conformance asks whether *values* satisfy the vocabulary's declared constraints; vocabulary conformance asks whether *identifiers* are used as the vocabulary intends. A document may use `xsd:` identifiers correctly (vocabulary-conforming) while still failing the constraints those identifiers declare (not constraint-conforming), and vice versa is not possible — a value cannot be evaluated against a constraint identifier that is itself misused — so vocabulary conformance is a precondition a V-aware consumer checks before it can render a constraint-conformance verdict.
 
 The four conformance claims (representation, structural, constraint, vocabulary) are independent in the sense that none implies another, though constraint conformance for V presupposes vocabulary conformance for V as just described. A document may be representation-conforming without being structurally conforming, and either without being constraint-conforming or vocabulary-conforming for any given vocabulary.
 
@@ -2758,7 +2759,7 @@ For applications requiring byte-for-byte stability (content-addressable storage,
 8. Hex digits in bytes literals appear in lowercase.
 9. Boolean values appear as `true` or `false` (lowercase spelled-out form). The single-letter forms (`t`, `f`) and uppercase variants are NOT used in canonical output.
 10. Null Properties appear in the bare form (`<STR name>`), not the empty-value form (`<STR name : >`). The empty-value form is accepted on input but normalized to the bare form on canonical output.
-11. Field write order is exactly Prefix · Id · Rel · Name · Resource · Type.
+11. Field write order is exactly Prefix · Id · Predicate · Name · Resource · Type.
 12. Prefixes appear in **canonical form** — three-letter (or longer where natural) names in uppercase: `STR`, `INT`, `BOOL`, `FLOAT`, `BYTE`, `REC`, `OBJ`, `GRP`, `STR*`, `INT*`, `.STR`, `_STR`, `VAL`, `NSTR`, `NINT`, `NBOOL`, `NFLOAT`, `NBYTE`, `NREC`, `DEFSTR`, `DEFINT`, `DEFBOOL`, `DEFFLOAT`, `DEFBYTE`, `DEFREC`, `DEFOBJ`, `REL`, `REM`, `PKG`, `BLK`, the @-Edge family (`@OBJ`, `@REL`), and the REF family (every `%KIND` form generated by `%` wrapping a layer-1 role-prefix). The minified single-letter forms (`S`, `I`, `L`, `F`, `B`, `R`, `O`, `G`, `S*`, `.S`, `_S`, `V`, `NS`, etc.) are valid GDX but do not produce strict canonical bytes; conversion to canonical form is required before content addressing. The `E` minified slot is unassigned (formerly the minified form of `EDGE`, now removed in v0.12.0; see changelog entry 41).
 
 Two strict-canonical-form documents that represent the same data model produce byte-identical serializations. This property allows the strict canonical form to serve as the input to content-addressing functions.
@@ -2788,7 +2789,7 @@ A conforming implementation SHOULD verify its behavior against a test suite cove
 - Identifier forms: local names, single letters, paths, CURIEs, GUIDs, IRIs (one positive test per form per applicable position).
 - Literal forms: each value-kind including representation suffixes (`i8` through `u64`, `bigint`, `f32`/`f64`, the `d`/`d32`/`d64`/`d128` decimal family), boolean variants (`true`/`false`/`t`/`f` and case variants), bytes (`0x` and `0z` forms), null forms (bare and empty-value).
 - Sigil tightness: positive tests for valid `&`, `#`, `--`, `@` usage; negative tests for whitespace violations.
-- Empty rels on edges: an @-Edge element with no `#rel` accepted (positive); bare `#` rejected everywhere (negative); round-trip preserves the empty Rel without inventing or defaulting a predicate (§6.4.2); Template-declared predicate fills the empty field under the claim rule and materialization (§8.2.3, §8.2.4).
+- Empty predicates on edges: an @-Edge element with no `#predicate` accepted (positive); bare `#` rejected everywhere (negative); round-trip preserves the empty Predicate without inventing or defaulting a predicate (§6.4.2); Template-declared predicate fills the empty field under the claim rule and materialization (§8.2.3, §8.2.4).
 - Whitespace handling: documents with various legal whitespace patterns; round-trip equivalence to canonical form.
 - Comments: file-level `#` comments in Compact Form (positive); rejection of comment-position `#` in Standard Form (negative).
 
@@ -2808,7 +2809,7 @@ A conforming implementation SHOULD verify its behavior against a test suite cove
 **Structural conformance tests (Layer 2):**
 
 - Template alignment: instances claiming `--type` references that resolve (by Template Id) and satisfy / fail the Template's declared slot structure (aligned by Name).
-- Resolution keys on Id: a `--type` reference resolves against Template Ids, not Names — positive test (reference matches a Template Id) and negative test (reference matches only a Template's descriptive Name, which MUST NOT resolve). Same for `#rel` against REL Ids.
+- Resolution keys on Id: a `--type` reference resolves against Template Ids, not Names — positive test (reference matches a Template Id) and negative test (reference matches only a Template's descriptive Name, which MUST NOT resolve). Same for `#predicate` against REL Ids.
 - Rename stability: a Template/REL whose descriptive Name changes while its Id is held fixed continues to resolve; a reference does not break under a Name change.
 - Resolution order: tests confirming the §8.5.2 default order is followed (local document first, then loaded vocabularies, then global IRI).
 - Resolution failure: tests confirming unresolved type references produce Layer 2 errors per §8.5.3.
@@ -2854,6 +2855,22 @@ The test suite is exhaustive in concept and bounded in practice. Each category a
 ## Appendix B — Detailed Revision History
 
 This appendix records the per-revision change descriptions accumulated during the pre-1.0 working-draft phase. The Revision History table at the top of this document gives the version + date summary; this appendix carries the prose detail. Once the specification reaches v1.0, this appendix will be archived and subsequent revisions will use a leaner change-log format.
+
+### v0.27.0 — Relationship field renamed `Rel` → `Predicate`
+
+This revision renames the field that names an element's relationship to its parent. It is a terminology change: no semantics, no grammar shape, and no document content changes. The `#` sigil is unchanged. (Terminology note: entries prior to this one use the field's former name `Rel`, and the lowercase shorthand "rel", as originally written; they are not retroactively edited, consistent with this appendix's role as a historical record.)
+
+**(66) The relationship field is renamed `Rel` → `Predicate` (full sweep).** The field defined in §3.1 as "a predicate-style label naming the relationship between this element and its parent" is renamed to the word the specification already used for it in prose. *Rationale.* Three reasons, in order of weight. (a) **The name follows the field's essence, and the prose had already arrived there.** Every substantive discussion of this field in the specification calls its content a predicate — axiom E4 ("the role asserts existence; the field specifies nature"), E6's substance/predication split ("the `Id` is what the edge *is*; the `#rel` is what it currently *asserts*"), §6.15's Relation Declaration, and entry (64)'s "lightweight-undeclared-predicate" property. `Rel` was an abbreviation of *relation* that named the field's neighbourhood rather than its content; the field does not carry a relation, it carries the predicate that specifies one. (b) **The rename resolves a standing name collision.** The `Rel` *field* and the `REL` *role* (§6.15) differed only in case, so grammar productions for the two were separated by nothing but capitalization — `Rel`/`RelContent` for the field against `RelPrefix`/`RelElement`/`RelDeclaration` for the role. After this revision the two are lexically distinct and the relationship between them is legible in the names themselves: a **REL** declares a relation as a first-class entity; a **Predicate** field references one. (c) **Pre-1.0 is the cheap window**, and the field's name never appears in a serialized document, so the cost is confined to prose and production names.
+
+**The dual role is deliberate and is not a defect of the name.** The field serves two contexts: on an @-Edge it is *associative*, asserting the parent-to-target meaning (§6.4), and on a REF it is *compositional*, aligning a slot to a vocabulary predicate (§6.16 axiom R4, §8.2). Only the first is predication in the RDF sense, and the name is chosen with the second in view rather than in spite of it: in both cases the field names *the relationship this element bears to its parent*, which on an edge is a graph predicate and on a slot is a structural one. The `%`/`@` sigil partition (§6.5) already carries the associative/compositional distinction, and it carries it better than a field name could; duplicating that split in the field's name — or splitting one mechanism across two names — would be a regression. Readers importing a strict RDF reading of "predicate" should take §6.16 R4 as the governing statement for REF contexts.
+
+**No abbreviated form is introduced.** `Predicate` is spelled out in every position, including grammar productions (`PredicateContent`, `PredicateSegment`). The canonical/minified system of §5.1 applies to *prefix tokens*, which appear in documents; field names are addressed by sigil (`&`, `#`, `--`) and never appear in a serialized document, so an abbreviation would buy nothing at the wire level while adding a second spelling to keep synchronized across the specification family. `REL` remains canonical-only (§5.1), and the single-stem discipline makes cross-document consistency a mechanical check.
+
+**Token renames.** Field `Rel` → `Predicate`; grammar production `Rel ::= "#" RelContent` → `Predicate ::= "#" PredicateContent`; `RelContent` → `PredicateContent`; path segment `RelSegment` → `PredicateSegment` (Path §4.2, and the "Rel-Based Selection" appendix heading → "Predicate-Based Selection"); the §6.4.2 heading "Undefined Relationships — the Empty Rel" → "— the Empty Predicate"; the data-model/API field row (§10) `Rel` → `Predicate`. The lowercase prose shorthand "rel" (as in "an empty rel") becomes "predicate" throughout. **Not renamed:** the `REL` role and every `REL`-family production (`RelPrefix`, `RelElement`, `RelDeclaration`), the `@REL` and `%REL` prefixes, and ordinary English uses of *relation* and *relationship*. The `#` sigil is unchanged and continues to introduce the field.
+
+**Sections touched.** §3.1 (element tuple, field table, existence/specification split), §3.2 (identifier requirements), §4.1/§4.1.1 (general form, field write order, sigil table), §4.4 (identifier grammar), §5.1 (case sensitivity), §6.4 and axioms E3/E4/E6 (@-Edge), §6.4.2 (the empty predicate), §6.15 (REL), §6.16 axiom R4 (REF compositional alignment), §7.2 (composition rules, incl. rule 16), §8.2–§8.2.4 (Template alignment, the universal claim rule, materialization), §10 (data model / API), and Appendix A (round-trip equality, write order rule 11, conformance test outline).
+
+**Migration:** mechanical and total. The `#` sigil is unchanged, so **no GDX document requires any edit** — every serialized predicate value is byte-identical before and after, and no parser's accept/reject behavior changes. Only artifacts that name the field need updating: an object model's `Rel` property → `Predicate`; a parser's `RelContent` production → `PredicateContent`; a path implementation's `RelSegment` → `PredicateSegment`; syntax-highlighting grammars targeting the `*.rel.gdx` TextMate scopes → `*.predicate.gdx`. Companion documents are updated in lockstep: Standard Grammar v0.15, Path Expressions v0.9, Compact Form v0.12, Cookbook v0.21.0.
 
 ### v0.26.0 — Durable identity field renamed `Anchor` → `Id`
 
