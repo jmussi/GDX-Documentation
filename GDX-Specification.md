@@ -1,7 +1,7 @@
 # GDX — Graph Data eXchange Specification
 
-- **Status:** Draft v0.27.0 (working draft, pre-1.0)
-- **Date:** 2026-07-19
+- **Status:** Draft v0.28.0 (working draft, pre-1.0)
+- **Date:** 2026-08-12
 - **Editors:** 
 - **Authors:** Julian Mussi
 
@@ -18,6 +18,7 @@ This is a pre-1.0 working draft. The specification is under active refinement; r
 
 | Version | Date       |
 |---------|------------|
+| v0.28.0 | 2026-08-12 |
 | v0.27.0 | 2026-07-19 |
 | v0.26.0 | 2026-07-17 |
 | v0.25.0 | 2026-07-16 |
@@ -855,7 +856,7 @@ A metadata block MAY appear on any element in any position, including leaf Prope
 >
 ```
 
-Because metadata is out-of-model, a realization is not required to carry it in order to be model-faithful (§1.1): a conversion that drops the block still preserves the model. Realizations SHOULD carry the channel and conversions SHOULD preserve it, but neither is required for model conformance. A pipeline that depends on metadata surviving — delta streaming, for instance — selects realizations that carry it; it does not rely on the model-conformance contract to guarantee preservation. The signing consequence follows directly: the canonical form (§A.5) excludes metadata, so a signature over canonical content covers model content only. An application that must sign carriage information signs the realization octets (the stored row, the stream frame), not the canonical form.
+Because metadata is out-of-model, a realization is not required to carry it in order to be model-faithful (§1.1): a conversion that drops the block still preserves the model. Realizations SHOULD carry the channel and conversions SHOULD preserve it, but neither is required for model conformance. A pipeline that depends on metadata surviving — delta streaming, for instance — selects realizations that carry it; it does not rely on the model-conformance contract to guarantee preservation. The signing consequence follows directly: the canonical form (§A.5) excludes metadata, so a signature over canonical content covers model content only. An application that must sign carriage information signs the realization octets (the stored row, the stream frame), not the canonical form. The same boundary governs the per-element canonical hash (§A.5.1): the metadata channel is excluded there too, so an element's content address is stable across changes to its metadata. This is what lets a writer-assigned axis — a row version, a transaction timestamp — live in metadata without perturbing content identity; §10.5 develops that placement for bitemporal data.
 
 ---
 
@@ -2614,7 +2615,7 @@ A single table can store an arbitrary GDX document with the following column str
 
 This single-schema approach allows GDX storage without per-document schema migration. Adding a new Object role, Property, or Template requires no schema changes — just additional rows.
 
-Store-native columns beyond those above (a persistence identifier, a row version, delta-handling state) are the at-rest form of an element's metadata channel (§4.8): they annotate how the element is stored, not what it means, and they are the natural source and sink for the `{...}` block when the element is serialized out or parsed in. Because metadata is out-of-model, these columns are outside the round-trip contract (§A.2) — a backend MAY carry, add, or drop them without affecting model-conforming round-trip.
+Store-native columns beyond those above (a persistence identifier, a row version, delta-handling state) are the at-rest form of an element's metadata channel (§4.8): they annotate how the element is stored, not what it means, and they are the natural source and sink for the `{...}` block when the element is serialized out or parsed in. Because metadata is out-of-model, these columns are outside the round-trip contract (§A.2) — a backend MAY carry, add, or drop them without affecting model-conforming round-trip. A row version in this position is the natural home for a *transaction-time* axis — when the system recorded the element, as opposed to when the recorded fact is true — because it must not perturb the element's content identity; §10.5 develops this into the full bitemporal mapping.
 
 @-Edge and Reference targets stored as `ResourceValue` strings can be resolved at query time by joining against the `Name` column. For systems where the reference target is known at write time, the reference can be denormalized to a `TargetRowId` column for direct lookup. The resolution strategy is implementation choice; both approaches are conforming. Per §6.4 axiom E2′, @-edges are owned by their source element and SHOULD be modeled with `ON DELETE CASCADE` on the source foreign key so that deleting a source removes its edges.
 
@@ -2633,6 +2634,18 @@ A persistence layer is *round-trip conforming* if a document parsed, stored, and
 What persistence adds over plain serialization is only that the round-trip passes *through storage* rather than directly between two serializations. A relational backend (§10.2) satisfies A.2 by giving each preserved field (prefix, the identity fields, resource value-kind and value with its representation tag, type reference, child order, and REM annotations) a faithful column or row representation, and by reconstructing the document in original child order on read. A document store satisfies it by storing and returning the serialized form unaltered. The mechanism differs by backend; the contract does not.
 
 Transport-layer roles (Package, Group) are not subjects of the round-trip contract; see §9.4.
+
+### 10.5 Temporal and Bitemporal Data
+
+Bitemporal data records two independent time axes: **valid time** — when a fact is true in the modeled world — and **transaction time** — when the system recorded it. The recurring question in bitemporal design is where each axis lives so that queries, versioning, and content identity behave correctly. GDX's model/metadata boundary (§4.8.1) answers it directly, and with no new construct: the two axes fall on opposite sides of that boundary because they are different *kinds* of information.
+
+- **Valid time is model content.** When a fact is true is part of what the fact *asserts* — it is domain truth, not carriage. It is expressed as ordinary in-model fields: a valid-from / valid-to pair of Properties on the element, or a single interval-typed Property, typically declared by a Template (§8) and named by a vocabulary predicate. Being in-model, valid time participates in model equality and in the canonical hash (§A.5, §A.5.1): two records that assert the same fact over different valid-time intervals are different facts and carry different content addresses — which is the behavior a bitemporal store wants, since correcting or superseding a valid-time interval is a change to what is being asserted.
+
+- **Transaction time is realization-layer metadata.** When the system recorded a fact is writer-assigned bookkeeping about a particular carriage of the element — a row version, a commit stamp — not a statement about the world. It belongs in the metadata channel (§4.8): the same channel §10.2 contemplates for a row version. Being out-of-model, transaction time is excluded from model equality and from the canonical hash. A processor that replicates, re-versions, or re-serializes a fact stamps a new transaction time without perturbing the fact's content identity — the content address is stable across transaction-time changes, exactly the property a content-addressed, append-only transaction-time history depends on.
+
+This split resolves the placement question cleanly: the axis that is domain truth rides in the model and is hashed; the axis that is system bookkeeping rides in metadata and is not. A transaction-time history is then a sequence of realizations (rows, stream frames) that share a content address precisely when they share model content and differ only in metadata — so an unchanged fact is naturally de-duplicated by content address across its recorded history, while a change to valid-time content mints a new address. A system that must retain transaction-time metadata across serialization selects realizations that carry the metadata channel (§4.8.4); the model-conformance contract does not itself guarantee metadata preservation (§10.2).
+
+This section is informative. It introduces no construct: valid time uses ordinary Properties (§6.3) or a Template-typed interval (§8), transaction time uses the metadata channel (§4.8), and the hashing consequences of that placement follow entirely from §A.5 and §A.5.1.
 
 ---
 
@@ -2768,11 +2781,38 @@ For applications requiring byte-for-byte stability (content-addressable storage,
 11. Field write order is exactly Prefix · Id · Predicate · Name · Resource · Type.
 12. Prefixes appear in **canonical form** — three-letter (or longer where natural) names in uppercase: `STR`, `INT`, `BOOL`, `FLOAT`, `BYTE`, `REC`, `OBJ`, `GRP`, `STR*`, `INT*`, `.STR`, `_STR`, `VAL`, `NSTR`, `NINT`, `NBOOL`, `NFLOAT`, `NBYTE`, `NREC`, `DEFSTR`, `DEFINT`, `DEFBOOL`, `DEFFLOAT`, `DEFBYTE`, `DEFREC`, `DEFOBJ`, `REL`, `REM`, `PKG`, `BLK`, the @-Edge family (`@OBJ`, `@REL`), and the REF family (every `%KIND` form generated by `%` wrapping a layer-1 role-prefix). The minified single-letter forms (`S`, `I`, `L`, `F`, `B`, `R`, `O`, `G`, `S*`, `.S`, `_S`, `V`, `NS`, etc.) are valid GDX but do not produce strict canonical bytes; conversion to canonical form is required before content addressing. The `E` minified slot is unassigned (formerly the minified form of `EDGE`, now removed in v0.12.0; see changelog entry 41).
 
-Two strict-canonical-form documents that represent the same data model produce byte-identical serializations. This property allows the strict canonical form to serve as the input to content-addressing functions.
+Two strict-canonical-form documents that represent the same data model produce byte-identical serializations. This property allows the strict canonical form to serve as the input to content-addressing functions. The rules above address a *whole document* as a single unit; §A.5.1 extends the same canonicalization to a hash *per element* that composes its children's hashes, which is what content-addressed operations over parts of a document — structural sharing, subtree diff, and Merkle proofs — require.
 
 The strict canonical form is OPTIONAL. Implementations not requiring byte-stability may produce any representation-conforming serialization, including the minified form for transport efficiency.
 
 **Minified form output.** Implementations MAY produce minified form output for transport-efficiency contexts. The minified form replaces canonical prefix names with their single-letter equivalents where they exist (`STR` → `S`, `STR*` → `S*`, `NSTR` → `NS`, etc.). Prefixes without minified equivalents (`REL`, `REM`, `PKG`, `BLK`, `DEFSTR`, `DEFREC`, etc.) are emitted unchanged. Minified output produces a different byte sequence than canonical output for the same data; content addresses computed against minified output are NOT comparable to addresses computed against canonical output.
+
+#### A.5.1 Canonical Element Hash
+
+The strict canonical form of §A.5 defines a single content address over a whole document. Content-addressed operations that share, compare, or prove *parts* of a document — structural sharing of unchanged subtrees, subtree-granular diff, Merkle inclusion proofs, and the block and exchange constructs built on them — require a hash *per element* that composes the hashes of its children, not one hash over the flattened whole. This subsection defines that per-element hash, the **canonical element hash**. Like the strict canonical form it extends, it is OPTIONAL; an implementation not requiring subtree-level content addressing need not compute it.
+
+The canonical element hash reuses §A.5 unchanged. It is defined over exactly the content §A.5 canonicalizes and excludes exactly what §A.5 excludes, so the whole-document form and the per-element hash draw their model / non-model boundary from a single place (§4.8.1) and cannot drift apart.
+
+**Scope of the hash.** The canonical element hash of an element covers, and covers only:
+
+1. the element's own model fields (Prefix, Id, Predicate, Name, Resource, Type), formatted by the strict-canonical field rules of §A.5 — canonical field order (rule 11), canonical spacing (rules 1–3), literal normalization (rules 8–10), and canonical prefix name (rule 12); and
+2. the canonical element hashes of the element's children, in the normative child order of §3.4.
+
+It excludes the metadata channel (§4.8), exactly as §A.5 model-equality does: two elements that differ only in metadata have the same canonical element hash. Everything §A.5 treats as model content participates — including REM annotations (§6.6), which are elements and round-trip; everything §A.5 excludes is excluded here.
+
+**Local encoding.** The *local encoding* of an element `e`, written `L(e)`, is the strict-canonical byte serialization of `e`'s opening field sequence alone — the Prefix followed by the identity and value fields in canonical field order — with the metadata block omitted (§4.8) and the child list omitted. A null Property uses the bare form (rule 10). `L(e)` is a function of `e`'s own fields only and is computed identically whether `e` is a leaf or an interior element.
+
+**Composition.** Let `H` be a cryptographic hash function producing fixed-length digests, and let `‖` denote byte concatenation. For an element `e` with children `c₁ … cₙ` in §3.4 order (`n = 0` when `e` is a leaf), the canonical element hash `CEH(e)` is:
+
+```
+CEH(e) = H( 0x01 ‖ u32be(len(L(e))) ‖ L(e) ‖ u32be(n) ‖ CEH(c₁) ‖ … ‖ CEH(cₙ) )
+```
+
+where `u32be` is a 4-byte big-endian unsigned integer and `len(L(e))` is the byte length of the local encoding. The leading `0x01` is a domain-separation tag that keeps a node preimage from being read as a bare child digest. Length-prefixing `L(e)` and prefixing the child count `n` make the encoding injective — no two distinct (fields, child-sequence) pairs share a preimage — so the construction does not admit the subtree-boundary ambiguity that afflicts length-only Merkle encodings (a leaf is distinguished from an interior node by `n = 0`, and no rearrangement of fields and children collides). The hash function `H` is an application choice, exactly as for the whole-document address (§A.5, and the Security Considerations companion §6); interoperating systems MUST agree on `H`, its digest length, and this encoding.
+
+**Merkle root and the document address.** The canonical element hash of a document's root element is the document's **Merkle root**: a content address for the whole document that additionally certifies every element within it. Any interior element's hash is recomputable from its own fields and its children's hashes, so an inclusion proof for an element is the sequence of sibling digests along the path to the root. The Merkle root is a *distinct value* from the whole-document strict-canonical hash of §A.5 (a hash of the flattened canonical bytes): the two are different functions over the same model and are not interchangeable addresses. A system chooses one scheme — §A.5 answers "what is the hash of this document"; §A.5.1 answers "what is the hash of this element, and of every element within it."
+
+**Determinism.** Because `L(e)` is strict-canonical and child order is normative (§3.4), the canonical element hash is a deterministic function of an element's model. Two elements with the same model produce the same canonical element hash regardless of the representation-conforming serialization they arrived in (minified or canonical) and regardless of any metadata, once normalized to strict canonical form. As with §A.5, canonical element hashes computed against minified or otherwise non-canonical field encodings are NOT comparable to those computed against strict-canonical encodings.
 
 ### A.6 Implementation Claims
 
@@ -2781,6 +2821,7 @@ An implementation claiming conformance to this specification SHOULD declare:
 - Which conformance layer(s) it implements (representation only, or representation and schema).
 - Which wire format(s) it supports (Standard, Compact, Binary).
 - Whether it produces strict canonical form output.
+- Whether it computes canonical element hashes (§A.5.1), and if so, which hash function and digest length.
 - Which vocabularies it supports, with version identifiers.
 
 The specification does not define a formal conformance certification process. Claims are self-attested.
@@ -2840,6 +2881,15 @@ A conforming implementation SHOULD verify its behavior against a test suite cove
 - Hex-bytes case normalization (uppercase normalizes to lowercase).
 - Null form normalization (empty-value form normalizes to bare form).
 
+**Canonical element hash tests (when §A.5.1 is supported):**
+
+- Determinism: the same model serialized two different representation-conforming ways (minified vs. canonical) produces the same canonical element hash after normalization.
+- Metadata exclusion: two elements differing only in their metadata blocks produce identical canonical element hashes; adding, altering, or stripping metadata does not change any element hash.
+- Child-order sensitivity: reordering an element's children changes its canonical element hash (child order is normative, §3.4).
+- Composition: an interior element's hash recomputed from its own fields and its children's hashes matches the directly computed hash; a change confined to one leaf changes the hashes of exactly that leaf and its ancestors, leaving sibling-subtree hashes unchanged (structural sharing).
+- Merkle root: the root element's canonical element hash serves as a document content address, and an inclusion proof (sibling digests along the path to the root) verifies for a chosen element.
+- Leaf vs. interior distinction: a leaf and an interior element with identical fields but differing child counts produce different hashes (domain separation / injective encoding).
+
 **Resilience and security tests:**
 
 - Documents at the recommended depth limit (positive); documents exceeding it (rejected per §1 of the Security Considerations companion).
@@ -2861,6 +2911,14 @@ The test suite is exhaustive in concept and bounded in practice. Each category a
 ## Appendix B — Detailed Revision History
 
 This appendix records the per-revision change descriptions accumulated during the pre-1.0 working-draft phase. The Revision History table at the top of this document gives the version + date summary; this appendix carries the prose detail. Once the specification reaches v1.0, this appendix will be archived and subsequent revisions will use a leaner change-log format.
+
+### v0.28.0 — Canonical element hash (§A.5.1) and the bitemporal mapping (§10.5)
+
+This revision adds two related, additive features and no breaking change: a per-element (Merkle) content hash that extends the strict canonical form, and an informative mapping of bitemporal time axes onto the existing model/metadata boundary. No grammar, prefix, wire value, or validation behavior changes; documents require no edit.
+
+**(68) Canonical element hash defined as a new OPTIONAL subsection §A.5.1.** The strict canonical form (§A.5) defined exactly one content address per document — a hash over the flattened whole. Content-addressed operations over *parts* of a document (structural sharing of unchanged subtrees, subtree-granular diff, Merkle inclusion proofs, and the block/exchange constructs built on them) need a hash *per element* that composes its children's hashes; a single whole-document hash cannot express subtree identity. §A.5.1 defines that per-element **canonical element hash** and its composition rule `CEH(e) = H(0x01 ‖ u32be(len(L(e))) ‖ L(e) ‖ u32be(n) ‖ CEH(c₁) ‖ … ‖ CEH(cₙ))`, where the *local encoding* `L(e)` is the strict-canonical serialization of the element's own fields (metadata and child list omitted) and children are hashed in the normative §3.4 order. *Design choices:* (a) the feature reuses §A.5 unchanged and is defined over exactly the content §A.5 canonicalizes, excluding exactly what §A.5 excludes (the metadata channel, §4.8) — so the whole-document form and the per-element hash draw their model/non-model boundary from one place (§4.8.1) and cannot drift; REM annotations, being model content, participate. (b) The encoding is made injective by length-prefixing the local encoding and prefixing the child count, and node preimages are domain-separated from bare digests by a leading tag byte, closing the subtree-boundary and leaf-vs-interior second-preimage ambiguities of naïve Merkle encodings. (c) The hash function stays an application choice, as in §A.5; the Merkle root (the root element's hash) is stated to be a *distinct value* from the §A.5 whole-document hash — the two are different functions and are not interchangeable addresses, so a system chooses one scheme. Placed as a subsection under §A.5 (rather than a new top-level appendix section) so it sits adjacent to the canonicalization it extends and renumbers nothing; §A.6 gains an implementation-claim line, and §A.7 gains a "Canonical element hash tests" category. Sections touched: §A.5 (forward pointer), §A.5.1 (new), §A.6, §A.7, and a cross-pointer in §4.8.4. A companion note is added to the Security Considerations §6 (per-element hashing shares §A.5's canonicalization and metadata-exclusion properties, and enables subtree inclusion proofs).
+
+**(69) Bitemporal time axes mapped onto the model/metadata boundary — new informative §10.5.** Bitemporal data carries two independent time axes, and the standing design question is where each lives. §10.5 records that GDX's existing model/metadata boundary (§4.8.1) answers it with no new construct: **valid time** (when a fact is true in the world) is domain truth and therefore in-model — ordinary Properties or a Template-typed interval — and so participates in model equality and the canonical hash (§A.5, §A.5.1); **transaction time** (when the system recorded the fact) is writer-assigned carriage bookkeeping and therefore rides in the out-of-model metadata channel (§4.8), the same channel §10.2 already contemplates for a row version, and is excluded from the hash. *Consequence made explicit:* an element's content address is stable across transaction-time changes, so a transaction-time history de-duplicates unchanged facts by content address while a valid-time change mints a new address. The section is informative and originates no requirement — it names a modeling pattern over mechanisms already normative. Sections touched: §10.5 (new), a cross-pointer added to §10.2 (row version as the transaction-time home) and to §4.8.4 (the writer-assigned axis living in metadata without perturbing content identity).
 
 ### v0.27.0 — Relationship field renamed `Rel` → `Predicate`
 
