@@ -243,7 +243,7 @@ The `IdToken` production above is reproduced for reference only; Core Spec §4.4
 
 - **`NameRef`** — name-mode resolution. The `@Base` is resolved per the scope walk of Core Spec §6.16. When the base carries no role marker, the role is inferred from the enclosing `@KIND` reference element's prefix. When the base carries a role marker, the resolver looks for an element of the named role with the matching identifier.
 - **`PathRef`** — structural traversal rooted at the document containing the reference literal.
-- **`IdRef`** — id-mode lookup within the scope of the reference (Core Spec §4.4.5).
+- **`IdRef`** — id-mode lookup, searching outward from the reference to the document root (Core Spec §4.4.5).
 - **`NamePathRef`** — composed name + path. The `@Base` portion resolves to a starting element; the `$PathExpression` portion is then evaluated rooted at that starting element. When the base carries no role marker, the starting element defaults to an Object (the most common base for cross-document path addressing).
 - **`NameIdRef`** — composed name + id. The `@Base` portion resolves to a starting element; the `&Id` portion is then looked up within that element's scope. When the base carries no role marker, the starting element defaults to an Object.
 
