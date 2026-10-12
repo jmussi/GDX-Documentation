@@ -201,3 +201,8 @@ and representation-tag codes. None of them is tied to the numbering of any imple
 
 *To be written.* The limits every reader enforces on untrusted input (depth, element count, value length, frame
 length), and the refusals it reports.
+
+One rule is settled. A reader that steps over an element without reading it promises only that the element's
+extent is sound: it finds where the element ends without reading past its input. What is inside is not read, so
+it is neither refused nor counted against the limits. The limits bound what is read; a receiver that needs a whole
+frame checked reads all of it.
