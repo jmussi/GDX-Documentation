@@ -1,7 +1,7 @@
 # GDX — Graph Data eXchange Specification
 
-- **Status:** Draft v0.28.0 (working draft, pre-1.0)
-- **Date:** 2026-10-06
+- **Status:** Draft v0.29.0 (working draft, pre-1.0)
+- **Date:** 2026-10-12
 - **Editors:** 
 - **Authors:** Julian Mussi
 
@@ -18,6 +18,7 @@ This is a pre-1.0 working draft. The specification is under active refinement; r
 
 | Version | Date       |
 |---------|------------|
+| v0.29.0 | 2026-10-12 |
 | v0.28.0 | 2026-10-06 |
 | v0.27.0 | 2026-07-19 |
 | v0.26.0 | 2026-07-17 |
@@ -207,6 +208,8 @@ An element has six model fields plus an out-of-model metadata channel. The Prefi
 
 All identity fields (`Name`, `Id`, `Predicate`) use case-sensitive ordinal comparison.
 
+An identity field or `Type` is either **absent** or a non-empty identifier (§4.4). There is no empty value: an empty string in one of these fields is the field being absent, and every realization and runtime treats it so. (A string *Resource* is different: the empty string is a value, §3.3.3.)
+
 On an @-Edge element (§6.4), an existence/specification split applies to the `Predicate` field: the *role* asserts that a relationship exists (an @-edge is, by its role, a relationship), while the `Predicate` field specifies *what* the relationship is — and MAY be empty. An empty Predicate parses to null and means the relationship is **undefined as to nature**: it exists (the role settled that), but its form is not yet specified (§6.4.2). The empty Predicate is the field's ordinary null/absent state — no special syntax and no distinct construct are involved.
 
 Implementations MUST represent these fields as distinct elements of an element's runtime structure. The order in which fields are stored or accessed is implementation-defined; only the children list has a normative order (§3.4).
@@ -249,7 +252,7 @@ A Resource, when present, MUST be one of:
 
 | Value-Kind  | Description                                                                |
 |-------------|----------------------------------------------------------------------------|
-| `string`    | UTF-16 character sequence; quoted in text.                                 |
+| `string`    | Sequence of Unicode scalar values (no unpaired surrogates); quoted in text. |
 | `int`       | Mathematical integer (any whole number).                                   |
 | `float`     | Real number. Representation is determined by suffix (§4.2).                |
 | `bool`      | `true` or `false`.                                                         |
@@ -415,7 +418,7 @@ A string literal is a sequence of characters enclosed in double quotes. The foll
 | `\r`   | Carriage return   |
 | `\u{X}` | Unicode codepoint, where `X` is one or more hex digits |
 
-All other characters appear literally. The string content is interpreted as a UTF-16 character sequence.
+All other characters appear literally. The string content is a sequence of Unicode scalar values: a `\u{X}` escape naming a surrogate code point (U+D800 to U+DFFF) is malformed, and so is a string whose encoding holds an unpaired surrogate.
 
 ```
 <STR greeting : "Hello, world">
@@ -1253,7 +1256,7 @@ Implementations MAY support modes where unresolved references are treated as war
 
 #### 6.4.2 Undefined Relationships — the Empty Predicate
 
-An @-edge's `#predicate` field MAY be empty. An edge with no `#predicate` parses to a null Predicate and round-trips as empty — no special syntax, no distinct construct. The interpretation follows from the **existence/specification split**:
+An @-edge's `#predicate` field MAY be empty. An edge with no `#predicate` parses to a null Predicate and round-trips as absent — no special syntax, no distinct construct. The interpretation follows from the **existence/specification split**:
 
 - **Role** (`@OBJ`, `@REL`) — asserts that a relationship *exists*. An @-edge is, by its role, a relationship (E1, E2′); its presence in the document is the existence assertion.
 - **Predicate field** — specifies *what* the relationship is. It MAY be empty, in which case the relationship is **undefined as to nature**.
@@ -2709,7 +2712,7 @@ The layers are independent: a document may be Layer 1-conforming but Layer 2-non
 A serialization is **representation-conforming** if and only if a round-trip through it preserves, for every element in the document:
 
 1. The Prefix.
-2. The presence and value of `Id`, `Predicate`, `Name`, and `Type` (string-equal, ordinal comparison). An @-edge's empty Predicate (§6.4.2) round-trips as empty — the field is not invented, defaulted, or dropped.
+2. The presence and value of `Id`, `Predicate`, `Name`, and `Type` (string-equal, ordinal comparison). An @-edge's absent Predicate (§6.4.2) round-trips as absent — the field is not invented or defaulted. An empty identity field is absent (§3.1), and a serialization carries it as absent.
 3. The Resource — including:
    - The null state (an element with no Resource value MUST round-trip as a null-state element).
    - The value-kind of the Resource (per §3.3).
@@ -2870,6 +2873,14 @@ The test suite is exhaustive in concept and bounded in practice. Each category a
 ## Appendix B — Detailed Revision History
 
 This appendix records the per-revision change descriptions accumulated during the pre-1.0 working-draft phase. The Revision History table at the top of this document gives the version + date summary; this appendix carries the prose detail. Once the specification reaches v1.0, this appendix will be archived and subsequent revisions will use a leaner change-log format.
+
+### v0.29.0 — Empty identity fields are absent; strings are Unicode scalar values
+
+**(69) An identity field or Type is absent or a non-empty identifier (§3.1).** An empty string in `Id`, `Predicate`, `Name` or `Type` is the field being absent. The text form already could not write an empty identifier (§4.4.1), and an empty Predicate already parsed to null (§6.4.2), but the model did not say so for every field, and the realizations disagreed: a tree built in a runtime with an empty Name read back from text without one, and a content digest that told absent from empty gave the two different digests. Stating it in the model makes every realization agree. A.2 item 2 and §6.4.2 now say an absent Predicate "round-trips as absent" where they said "as empty". A string Resource is unaffected: the empty string remains a value, distinct from null (§3.3.3).
+
+**(70) A string is a sequence of Unicode scalar values (§3.3, §4.2.1).** §3.3 called a string a "UTF-16 character sequence", which admits an unpaired surrogate. No byte encoding can carry one faithfully: UTF-8 cannot represent it, and an encoder either refuses it or replaces it with U+FFFD, which changes the value. A string is now a sequence of Unicode scalar values; a `\u{X}` escape naming a surrogate code point is malformed, and a realization refuses an unpaired surrogate rather than replacing it.
+
+Migration: a document written in Standard Form is unaffected by (69), since the text form could not hold an empty identifier. A document that held an unpaired surrogate, through a `\u{D800}`-style escape, is now malformed. The Binary Form companion (GDX Binary Form, Draft v0.1) relies on both rules.
 
 ### v0.28.0 — `IdRef` lookup widens outward to the document root
 
