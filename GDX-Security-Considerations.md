@@ -15,7 +15,7 @@ This document is a non-normative companion to the GDX Core Specification. It dis
 
 This is the v0.15.0 working draft of the Security Considerations, companion to the GDX Core Specification v0.23.0. It was previously published as Appendix C of the Core Specification through v0.10.0; it is now a separate companion document for clearer separation of normative and non-normative content.
 
-v0.11.0 introduces path-mode reference resolution (`$path` and `@id$path`). The threat surface for path-mode references is anticipated to be similar to that of identifier-mode references — cycles, unresolved targets, scope confusion — with one additional consideration: path expressions traverse the document tree by direct child match, and a maliciously-constructed document may exploit ordinal segments (`[N]`) to address arbitrary sub-elements. The mitigations enumerated in §2 (Reference Resolution) extend to path-mode references. A future revision SHOULD examine path-specific threats once implementations accumulate experience.
+v0.11.0 introduces path-mode target resolution (`$path` and `@id$path`). The threat surface for path-mode targets is anticipated to be similar to that of identifier-mode targets — cycles, unresolved targets, scope confusion — with one additional consideration: path expressions traverse the document tree by direct child match, and a maliciously-constructed document may exploit ordinal segments (`[N]`) to address arbitrary sub-elements. The mitigations enumerated in §2 (Cycle Exploitation) extend to path-mode targets. A future revision SHOULD examine path-specific threats once implementations accumulate experience.
 
 ---
 
@@ -41,19 +41,19 @@ Mitigations for numeric literals:
 
 These limits exist to prevent denial-of-service attacks against parsers processing untrusted input. Documents from trusted sources may not need limits enforced.
 
-## 2. Reference Cycle Exploitation
+## 2. Cycle Exploitation
 
-GDX permits @-edges (`@OBJ`, `@REL`) between graph-entities, allowing arbitrary graph structures including cycles. Cycles are valid data and MUST be supported by parsers and storage layers. The security risk arises when adversarial documents use cycles to attack consumers that traverse references without cycle detection — for example, a service that loads referenced Objects to display them, or that walks @-edge networks to compute derived data.
+GDX permits @-edges (`@OBJ`, `@REL`) between graph-entities, allowing arbitrary graph structures including cycles. Cycles are valid data and MUST be supported by parsers and storage layers. The security risk arises when adversarial documents use cycles to attack consumers that traverse edges and references without cycle detection — for example, a service that loads referenced Objects to display them, or that walks @-edge networks to compute derived data.
 
 Attack vectors:
 
-- **Resource exhaustion via traversal.** A document with a cyclic reference graph causes naive traversal to loop indefinitely, consuming CPU and memory until limits are hit or the process is killed.
-- **Amplification via deep chains.** Long reference chains that eventually cycle can multiply the cost of traversal-based operations, making moderate-size documents trigger expensive processing.
+- **Resource exhaustion via traversal.** A document with a cyclic graph causes naive traversal to loop indefinitely, consuming CPU and memory until limits are hit or the process is killed.
+- **Amplification via deep chains.** Long chains of edges or references that eventually cycle can multiply the cost of traversal-based operations, making moderate-size documents trigger expensive processing.
 
 Mitigations:
 
-- Reference traversal implementations MUST track visited Objects and avoid re-traversing them within a single traversal operation.
-- Implementations SHOULD impose a maximum reference traversal depth as a defense-in-depth measure even when cycle detection is implemented.
+- Traversal implementations MUST track visited Objects and avoid re-traversing them within a single traversal operation.
+- Implementations SHOULD impose a maximum traversal depth as a defense-in-depth measure even when cycle detection is implemented.
 - Resolvers SHOULD detect cycles in Template chains during effective-shape computation (though Template inheritance is not part of GDX, future Common Vocabulary or application Templates may reference each other; cycles in such reference chains should be detected).
 
 ## 3. VAL Occupant Nesting
@@ -66,11 +66,11 @@ Mitigations:
 
 - The §1 nesting-depth and element-count limits apply directly to VAL chains; no separate VAL-specific limit is normatively required.
 - Consumers walking VAL trees SHOULD count each VAL and each occupant against any element-traversal budget.
-- Reference resolvers MUST NOT silently substitute an occupant fetched from an external source for a VAL occupant declared in the document; any vocabulary-defined inclusion mechanism is out of scope for this specification and is the responsibility of the consuming application.
+- Resolvers MUST NOT silently substitute an occupant fetched from an external source for a VAL occupant declared in the document; any vocabulary-defined inclusion mechanism is out of scope for this specification and is the responsibility of the consuming application.
 
 ## 4. Network Resolution
 
-The default Type and @-Edge reference resolution orders (Core Spec §8.5.2 and §7.4.1) include "globally-resolvable IRIs" as a fallback resolution scope. Implementations that resolve such references over the network expose themselves to several risks:
+The default Type and @-Edge target resolution orders (Core Spec §8.5.2 and §6.4.1) include "globally-resolvable IRIs" as a fallback resolution scope. Implementations that resolve such identifiers over the network expose themselves to several risks:
 
 - **Information disclosure.** Network requests to URLs in untrusted documents can leak information about the processing system to attacker-controlled servers (timing, request patterns, internal IP addresses).
 - **Server-side request forgery (SSRF).** Documents containing IRIs targeting internal network addresses can use the parser as a proxy to reach systems otherwise inaccessible to the attacker.
@@ -130,11 +130,11 @@ Considerations:
 
 - **Injection into downstream sinks.** Because metadata values commonly flow into other systems — a `sid` used to build a database lookup, a `pid` written to a log line, a revision string echoed into an HTTP header — they are an injection vector exactly as any untrusted string is. A value like `sid = "455; DROP TABLE …"` is a well-formed GDX string literal; the risk is entirely in the sink. Consumers MUST treat metadata values as untrusted input and apply the escaping/parameterization appropriate to each sink.
 
-- **Dereference and SSRF.** The channel admits no reference literals (Core Spec §4.8.2), so GDX itself never resolves a metadata value. But an application that *interprets* a metadata value as a URL, file path, or record locator and dereferences it reintroduces the network-resolution risks of §4 (SSRF, information disclosure, resource exhaustion) at the application layer. Such interpretation is out of scope for GDX; applications that do it MUST apply the §4 mitigations (allowlisting, timeouts, size limits, disable-by-default for untrusted input).
+- **Dereference and SSRF.** The channel admits no target literals (Core Spec §4.8.2), so GDX itself never resolves a metadata value. But an application that *interprets* a metadata value as a URL, file path, or record locator and dereferences it reintroduces the network-resolution risks of §4 (SSRF, information disclosure, resource exhaustion) at the application layer. Such interpretation is out of scope for GDX; applications that do it MUST apply the §4 mitigations (allowlisting, timeouts, size limits, disable-by-default for untrusted input).
 
 - **Not authenticated by document signatures.** Metadata is excluded from the strict canonical form (§6). A signature over canonical content does not cover metadata; a receiver MUST NOT treat a metadata pair as authenticated merely because the enclosing document is signed. Bind carriage information at the realization layer (signed row, signed frame) if it must be trusted.
 
-- **Amplification is bounded like any field.** Metadata is a flat, non-nested, non-recursive block (Core Spec §4.8.2, §4.8.3); it admits no elements, no nesting, and no references, so it introduces no traversal-amplification vector of its own. The §1 element-count and literal-length limits bound it as they bound any field. A pathologically large single metadata literal is covered by the §1 numeric/string literal-length mitigations.
+- **Amplification is bounded like any field.** Metadata is a flat, non-nested, non-recursive block (Core Spec §4.8.2, §4.8.3); it admits no elements, no nesting, and no target literals, so it introduces no traversal-amplification vector of its own. The §1 element-count and literal-length limits bound it as they bound any field. A pathologically large single metadata literal is covered by the §1 numeric/string literal-length mitigations.
 
 - **Stripping is safe.** Because metadata is out-of-model, a defensive consumer processing untrusted input MAY strip every metadata block on ingress without affecting the data model it recovers. Stripping is the most conservative posture for consumers that have no need of the carriage annotation.
 
@@ -147,7 +147,7 @@ A few practices apply across the categories above:
 - **Errors should not leak.** Error messages from parsers and validators may inadvertently disclose internal paths, file contents, or system configuration. Error messages exposed to untrusted parties should be sanitized.
 - **Resource limits are configuration.** The recommended defaults in this document are starting points. Production deployments should tune limits based on observed legitimate document characteristics and threat model.
 
-The security posture of a GDX-consuming system is determined by the implementation, the deployment environment, and the trust relationships with document sources. This appendix identifies attack classes specific to GDX's structural and reference features; standard application security practices apply on top of these.
+The security posture of a GDX-consuming system is determined by the implementation, the deployment environment, and the trust relationships with document sources. This appendix identifies attack classes specific to GDX's structural and linking features; standard application security practices apply on top of these.
 
 ---
 

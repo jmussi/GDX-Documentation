@@ -1,6 +1,6 @@
 # GDX — A Primer
 
-- **Status:** Draft v0.5.0 (companion to GDX Core Specification v0.30.0, pre-1.0)
+- **Status:** Draft v0.5.0 (companion to GDX Core Specification v0.31.0, pre-1.0)
 - **Date:** 2026-10-19
 - **Authors:** Julian Mussi
 
@@ -206,7 +206,7 @@ This looks a lot like the edge from the last step — both end in `@bob`, both p
 - An **edge** (`@OBJ`) *asserts a relationship*: bob **knows** alice. It's a statement about how two entities relate, and it carries a label (`#knows`) saying what the relationship is.
 - A **reference** (`%OBJ`) *fills a slot*: this order's customer **is** bob. It isn't asserting a relationship about Bob — it's saying "the thing that goes in this slot is over there."
 
-The mark at the front of the prefix keeps the two from blurring: an `@` prefix means "asserts a relationship," a `%` prefix means "fills a slot with a handle." They're never interchangeable, and once you read them that way, a dense line tells you immediately which kind of pointing you're looking at. The address on the right is written the same way in both: `@bob` means "the whole entity whose Id is `bob`," whichever kind of element carries it. The question to ask is simply: *am I stating how two things relate (edge), or saying what goes in this slot (reference)?*
+The mark at the front of the prefix keeps the two from blurring: an `@` prefix means "asserts a relationship," a `%` prefix means "fills a slot with a handle." They're never interchangeable, and once you read them that way, a dense line tells you immediately which kind of pointing you're looking at. The address on the right, the *target*, is written the same way in both: `@bob` means "the whole entity whose Id is `bob`," whichever kind of element carries it. The question to ask is simply: *am I stating how two things relate (edge), or saying what goes in this slot (reference)?*
 
 There's a useful way to say what a reference *means* when you read one: **the value here is the value of the resolved target** — "my content comes from there." The document stores the address (that's what travels and round-trips); following it gets you the real thing (the spec's §6.16 calls this *value-resolution*). That reading also settles the borderline cases. "This field's value is that whole object" — a reference, because you're sourcing a value, even though the target is a whole entity. "These two entities are related" — an edge, because you're stating a relationship. And it explains a capability difference you'd otherwise have to memorize: a reference can reach *inside* an element (pull one field's value out of a record somewhere — sourcing a value from an interior is perfectly sensible), while an edge never can — you don't draw a graph edge to half of an object. An edge's target is always a plain `@` address of a whole entity.
 

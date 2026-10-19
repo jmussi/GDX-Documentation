@@ -1,6 +1,6 @@
 # GDX — A Primer
 
-- **Status:** Draft v0.5.0 (companion to GDX Core Specification v0.30.0, pre-1.0)
+- **Status:** Draft v0.5.0 (companion to GDX Core Specification v0.31.0, pre-1.0)
 - **Date:** 2026-10-19
 - **Authors:** Julian Mussi
 
@@ -368,7 +368,7 @@ This looks a lot like the edge from the last step — both end in `@bob`, both p
 - An **edge** (`@`) *asserts a relationship*: bob **knows** alice. It's a statement about how two entities relate, and it carries a label (`#knows`) saying what the relationship is.
 - A **reference** (`%`) *fills a slot*: this order's customer **is** bob. It isn't asserting a relationship about Bob — it's saying "the thing that goes in this slot is over there."
 
-The prefix sigils keep the two from blurring: a prefix starting with `@` (`@OBJ`) always means "asserts a relationship," a prefix starting with `%` (`%OBJ`) always means "fills a slot with a handle." The `@bob` on the right reads the same in both: the entity whose Id is `bob`. They're never interchangeable, and once you read them that way, a dense line tells you immediately which kind of pointing you're looking at. The question to ask is simply: *am I stating how two things relate (edge), or saying what goes in this slot (reference)?*
+The prefix sigils keep the two from blurring: a prefix starting with `@` (`@OBJ`) always means "asserts a relationship," a prefix starting with `%` (`%OBJ`) always means "fills a slot with a handle." The `@bob` on the right, the *target*, reads the same in both: the entity whose Id is `bob`. They're never interchangeable, and once you read them that way, a dense line tells you immediately which kind of pointing you're looking at. The question to ask is simply: *am I stating how two things relate (edge), or saying what goes in this slot (reference)?*
 
 One affordance falls out here. For `order-1001` to point at `bob`, Bob has to be findable — he needs a stable address. An Object's Id already provides that. But sometimes the thing you want to point at isn't a whole Object — it's an element tucked inside one, and its position might shift as the document is edited. Any element can carry an Id, not only an Object, and a reference can reach it: `&home` finds the element with Id `home` anywhere in this document, and `@bob&home` finds it inside the entity `bob`, wherever that lives. (A reference can also follow a path through the tree, `$…`, which matches Names step by step; it works, but it breaks when the tree is rearranged, so prefer an Id when there is one.) This is the other half of the edge/reference split: an edge only ever joins whole, top-level entities, written as a plain `@x`, while reaching *inside* an entity is a reference's job. You don't need an Id on an interior element for most pointing, so we'll leave it there: it's identity's way of saying "here's a fixed handle on me," available the moment a reference needs one.
 

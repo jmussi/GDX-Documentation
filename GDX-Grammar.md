@@ -1,8 +1,8 @@
 # GDX Standard Form — Grammar Specification
 
-- **Status:** Draft v0.16 (companion to GDX Core Specification v0.30.0, working draft)
+- **Status:** Draft v0.17 (companion to GDX Core Specification v0.31.0, working draft)
 - **Date:** 2026-10-19
-- **Companion to:** GDX Core Specification v0.30.0
+- **Companion to:** GDX Core Specification v0.31.0
 - **Authors:** Julian Mussi
 
 
@@ -23,7 +23,9 @@ Changes from v0.5 (revision v0.6): conformance with Core Specification v0.10.0. 
 Changes from v0.6 (this revision, v0.7): conformance with Core Specification v0.11.0. (1) **§5.6 reference literal grammar normatively specifies path-mode and key-mode.** The placeholder `PathExpression ::= (* reserved; grammar deferred *)` is replaced by a forward reference to the companion GDX Path Expressions Specification (`GDX-Path.md`). Five `ReferenceLiteral` productions are recognized: `NameReference` (`@Base`), `PathReference` (`$PathExpression`), `AnchorReference` (`&AnchorToken`), `NamePathReference` (`@Base$PathExpression`), and `NameAnchorReference` (`@Base&AnchorToken`). The `AnchorReference` and `NameAnchorReference` forms address an element by its location-stable `Anchor` anchor, scoped per Core Specification §4.4.5. The `Base` production extends the identifier portion of `@`-references with an optional `BaseRole` keyword drawn from the closed prefix vocabulary (`OBJ`, `REL`, `DEFOBJ`, `PKG`, etc.) followed by `:`, disambiguating the role of the resolved element. Default anchor role in composed references is `OBJ`. (2) **§6 identifier grammar narrows.** `NameStartChar` no longer admits `/`. Identifiers may continue to contain `/` (`NameContChar` unchanged); only the leading-`/` form is removed. This change is a breaking change for documents conforming to v0.6 or earlier; the migration is mechanical (drop the leading `/` or move to a path-mode reference). (3) Appendix A updated to reflect the new reference-literal productions, the `Base` production, and the narrowed identifier grammar. (4) Cross-references to Core Specification updated to v0.11.0.
 
 
-Changes from v0.15 (this revision, v0.16): conformance with Core Specification v0.30.0. **Reference literals bind by Id.** The productions `NameReference`, `NamePathReference` and `NameIdReference` are renamed `RootReference`, `RootPathReference` and `RootIdReference` (Core Spec v0.30.0, entry 74), and `Base` now takes an `IdToken` rather than a `Name`, because `@Base` addresses a root element by its Id (entries 71-72). §5.6 states that an @-Edge Resource is a `RootReference` only (entry 73). No other production changes.
+Changes from v0.16 (this revision, v0.17): conformance with Core Specification v0.31.0. **Terminology rename, and two documentation productions corrected; the §7.1 `Prefix` productions are unchanged.** The value an @-Edge or a REF element carries in its Resource is a *target*, and its literal a *target literal* (Core Spec v0.31.0, entry 80); "reference" names only the `%KIND` REF family. The production `ReferenceLiteral` is renamed `TargetLiteral` (§4.4, §4.5, §5.6, Appendix A), §5.6 is retitled "Target Literals", and its prose calls the five forms the root, path and Id forms and the composed forms. The productions `RootReference`, `PathReference`, `IdReference`, `RootPathReference` and `RootIdReference` keep their names: they name the forms a target literal takes. No §7.1 production's shape changes, and every document parses as before. The §3.1 documentation alias `ReferenceElement` (`"<" "@" ModifierBase SetSuffix? …`), left over from before Core v0.13.0, named the @-edge a reference and admitted `@` on any base with a Set suffix; it is replaced by `EdgeElement` (`EdgeSigil` with the canonical `OBJ`, `REL` or `HEAD`, no minified form and no Set suffix) and a new `RefElement` (`RefSigil RolePrefix`), matching §7.1 and Core Spec §5.3 and §6.16, the §3.1 note that called `@STR*` a reference to a Set and the §7.1 comment that had references produced by `@` are corrected. These are documentation aliases of `Element`; the `Prefix` productions of §7.1, which a parser uses, are unchanged.
+
+Changes from v0.15 (v0.16): conformance with Core Specification v0.30.0. **Reference literals bind by Id.** The productions `NameReference`, `NamePathReference` and `NameIdReference` are renamed `RootReference`, `RootPathReference` and `RootIdReference` (Core Spec v0.30.0, entry 74), and `Base` now takes an `IdToken` rather than a `Name`, because `@Base` addresses a root element by its Id (entries 71-72). §5.6 states that an @-Edge Resource is a `RootReference` only (entry 73). No other production changes.
 
 Changes from v0.14 (v0.15): conformance with Core Specification v0.27.0. **Terminology rename; no semantic or structural change.** The `Rel` field is renamed `Predicate` (Core Spec v0.27.0, entry 66): productions `Rel`→`Predicate` and `RelContent`→`PredicateContent`, and the `IdentitySection` production now reads `(WS Id)? (WS Predicate)? (WS Name)?`. The `#` sigil is unchanged and continues to introduce the field; the production shape is unchanged and still requires content after the sigil (a bare `#` remains malformed, an empty field is expressed by omitting it). No abbreviated form is introduced — `Predicate` is spelled out in every production. **The `REL` role productions are NOT renamed:** `RelPrefix ::= "REL"`, `RelElement`, and `RelDeclaration` name the Relation Declaration role, not this field, and the rename exists partly to make that distinction lexical rather than case-only.
 
@@ -151,10 +153,6 @@ AnnotationElement ::= "<" WS? AnnotationPrefix ElementBody WS? ">"
    composition-level, defined in Core Specification §6.17 (H1, H3), not in the
    surface grammar. *)
 
-(* @-Edge elements (@OBJ, @REL, @HEAD) are produced by the Edge sigil
-   composing with ObjectPrefix, RelPrefix, or HeadPrefix and follow §6.4 of the
-   Core Specification. They do not have a separate EdgeElement production. *)
-
 (* Refinement-modifier compositions *)
 QualifierElement  ::= "<" WS? QualifierComposition ElementBody WS? ">"
 ExtensionElement  ::= "<" WS? ExtensionComposition ElementBody WS? ">"
@@ -165,8 +163,14 @@ NodeElement       ::= "<" WS? NodeComposition ElementBody WS? ">"
 TemplateElement   ::= "<" WS? TemplatePrefix ElementBody WS? ">"
 RelElement        ::= "<" WS? RelPrefix ElementBody WS? ">"
 
-(* Reference operator — composes with any of the above except itself *)
-ReferenceElement  ::= "<" WS? "@" ModifierBase SetSuffix? ElementBody WS? ">"
+(* @-Edge elements (@OBJ, @REL, @HEAD): the Edge sigil composes only with
+   ObjectPrefix, RelPrefix or HeadPrefix and takes no Set suffix (Core Spec
+   §5.3.2, §6.4 E5) *)
+EdgeElement       ::= "<" WS? EdgeSigil ("OBJ" | "REL" | "HEAD") ElementBody WS? ">"
+
+(* %-Reference (REF) elements: the REF sigil wraps any layer-1 role-prefix,
+   including Set forms (Core Spec §5.3.3, §6.16) *)
+RefElement        ::= "<" WS? RefSigil RolePrefix ElementBody WS? ">"
 
 (* Set suffix — composes with most bases and refinement modifiers *)
 SetElement        ::= "<" WS? ModifierBase "*" ElementBody WS? ">"
@@ -178,7 +182,7 @@ GroupElement      ::= "<" WS? GroupPrefix ElementBody WS? ">"
 
 These are aliases of the general Element production for documentation purposes. A parser may match the general Element form and then determine the role from the prefix; the role-specific aliases are not required at the lexical level.
 
-`ReferenceElement` and `SetElement` are not mutually exclusive: a prefix may have both a leading `@` and a trailing `*` (a reference to a Set, e.g., `@STR*`). The composition pattern in §7.1 governs which prefix forms are valid.
+`EdgeElement` and `SetElement` are mutually exclusive: an @-edge takes no Set suffix (no `@OBJ*`, Core Spec §6.4 E5). A `RefElement` may wrap a Set form: `%STR*` is a REF to a Set of strings (Core Spec §5.3.3). The composition pattern in §7.1 governs which prefix forms are valid.
 
 
 ---
@@ -196,7 +200,7 @@ IdToken     ::= IdStartChar NameContChar*
 IdStartChar ::= ALPHA | DIGIT | "_"
 ```
 
-The `&` sigil MUST be immediately followed by the Id token with no intervening whitespace. An Id token is an identifier token whose start set additionally admits a leading digit (Core Spec §4.4.3); this admits sequential tokens (`&1`, `&2`) and digit-leading GUID/UUID ids (`&7f3a2b9c-…`) alongside named ids. The relaxation is unambiguous because an Id token is always `&`-introduced. Id tokens carry no numeric interpretation and compare by ordinal equality (`&01` ≠ `&1`). This grammar is identical to the `IdToken` used in the reference-literal forms (§5.6); authority is Core Spec §4.4.3.
+The `&` sigil MUST be immediately followed by the Id token with no intervening whitespace. An Id token is an identifier token whose start set additionally admits a leading digit (Core Spec §4.4.3); this admits sequential tokens (`&1`, `&2`) and digit-leading GUID/UUID ids (`&7f3a2b9c-…`) alongside named ids. The relaxation is unambiguous because an Id token is always `&`-introduced. Id tokens carry no numeric interpretation and compare by ordinal equality (`&01` ≠ `&1`). This grammar is identical to the `IdToken` used in the target-literal forms (§5.6); authority is Core Spec §4.4.3.
 
 ### 4.2 Predicate Field
 
@@ -244,7 +248,7 @@ Resource ::= StringLiteral
            | FloatLiteral
            | BoolLiteral
            | BytesLiteral
-           | ReferenceLiteral
+           | TargetLiteral
 ```
 
 Each literal form is defined in §5.
@@ -268,7 +272,7 @@ MetaLiteral     ::= StringLiteral
                   | BytesLiteral
 ```
 
-A `MetaKey` is an identifier (§6), admitting the CURIE form for namespacing; the `=` and `,` separators are outside `NameContChar`, so key/value and pair boundaries are lexically unambiguous. A `MetaLiteral` is a Resource literal of one of the five value-kinds — `ReferenceLiteral` is NOT admitted (metadata addresses nothing). An empty block `{}` is permitted and equivalent to no block. Duplicate `MetaKey` values within one block are malformed. Value-kind is carried by the literal form exactly as in Resource position (§5); no prefix token is written.
+A `MetaKey` is an identifier (§6), admitting the CURIE form for namespacing; the `=` and `,` separators are outside `NameContChar`, so key/value and pair boundaries are lexically unambiguous. A `MetaLiteral` is a Resource literal of one of the five value-kinds — `TargetLiteral` is NOT admitted (metadata addresses nothing). An empty block `{}` is permitted and equivalent to no block. Duplicate `MetaKey` values within one block are malformed. Value-kind is carried by the literal form exactly as in Resource position (§5); no prefix token is written.
 
 Metadata is out-of-model (Core Spec §4.8.1): a conforming parser MAY discard the section without affecting the data model it recovers, and a serializer MAY add, alter, or drop it without affecting representation-conformance (Core Spec §A.2).
 
@@ -400,12 +404,12 @@ A Base64Bytes literal MUST conform to standard Base64 encoding (RFC 4648), inclu
 Base64Char ::= ALPHA | DIGIT | "+" | "/"
 ```
 
-### 5.6 Reference Literals
+### 5.6 Target Literals
 
-Reference literals designate addressable elements. Five forms are recognized, combining the three operations of root lookup by Id (`@`), id lookup within a scope (`&`), and structural traversal (`$`):
+Target literals designate addressable elements: the target an @-Edge or a REF element carries in its Resource (Core Specification §4.2.6). The form productions (`RootReference` and the others) name the forms a target literal takes. Five forms are recognized, combining the three operations of root lookup by Id (`@`), id lookup within a scope (`&`), and structural traversal (`$`):
 
 ```ebnf
-ReferenceLiteral    ::= RootReference
+TargetLiteral       ::= RootReference
                       | PathReference
                       | IdReference
                       | RootPathReference
@@ -426,21 +430,21 @@ PathExpression      ::= (* specified in GDX-Path.md §3-§4 *)
 IdToken         ::= IdStartChar NameContChar*   (* Core Spec §4.4.3; = §4.1 *)
 ```
 
-**Root reference** (`@Base`) is normatively defined. The `@` sigil MUST be immediately followed by the base Id with no intervening whitespace. The `Base` is the Id of a root element (Core Specification §4.2.6, §6.4.1), written as an `IdToken`, so it may be in any of the forms permitted by §6 (CURIEs, GUIDs, IRIs, local names, or hierarchical local names), including a leading digit. It never matches an element's Name. The optional `BaseRole` prefix carries a role-disambiguation keyword from the closed Core Specification §5.2 vocabulary.
+**Root form** (`@Base`) is normatively defined. The `@` sigil MUST be immediately followed by the base Id with no intervening whitespace. The `Base` is the Id of a root element (Core Specification §4.2.6, §6.4.1), written as an `IdToken`, so it may be in any of the forms permitted by §6 (CURIEs, GUIDs, IRIs, local names, or hierarchical local names), including a leading digit. It never matches an element's Name. The optional `BaseRole` prefix carries a role-disambiguation keyword from the closed Core Specification §5.2 vocabulary.
 
-**Path reference** (`$PathExpression`) is normatively defined by the companion GDX Path Expressions Specification (`GDX-Path.md`). The `$` sigil introduces a path expression addressing an element by its structural location in the document tree. The `$` sigil MUST be immediately followed by the `/` of the path with no intervening whitespace.
+**Path form** (`$PathExpression`) is normatively defined by the companion GDX Path Expressions Specification (`GDX-Path.md`). The `$` sigil introduces a path expression addressing an element by its structural location in the document tree. The `$` sigil MUST be immediately followed by the `/` of the path with no intervening whitespace.
 
-**Id reference** (`&IdToken`) uses the `IdToken` grammar defined in §4.1 (authority: Core Spec §4.4.3); its resolution semantics are defined by `GDX-Path.md`. The `&` sigil introduces an id lookup within the current document, searching outward from the reference to the document root (Core Specification §4.4.5); it never reaches another document. The `&` sigil MUST be immediately followed by the Id token with no intervening whitespace.
+**Id form** (`&IdToken`) uses the `IdToken` grammar defined in §4.1 (authority: Core Spec §4.4.3); its resolution semantics are defined by `GDX-Path.md`. The `&` sigil introduces an id lookup within the current document, searching outward from the reference to the document root (Core Specification §4.4.5); it never reaches another document. The `&` sigil MUST be immediately followed by the Id token with no intervening whitespace.
 
 **Composed root + path** (`@Base$PathExpression`) reaches inside a root element, in this document or another, by structural traversal. The `@Base` portion resolves to a root element by its Id (Core Specification §6.4.1), and the `$PathExpression` portion is then evaluated rooted at that element. No whitespace is permitted between `@`, the base, `$`, and the path.
 
 **Composed root + id** (`@Base&IdToken`) reaches inside a root element, in this document or another, by id. The `@Base` portion resolves to a root element by its Id, and the `&IdToken` portion is then looked up within that root's scope. No whitespace is permitted.
 
-**Base role markers.** The optional `BaseRole` prefix is distinguished from a CURIE prefix by lookup against the closed `BaseRole` set defined above; when the part of a `Base` before its first `:` is a `BaseRole` keyword, that `:` is always the role separator. An unmarked base matches a root of any root-eligible role carrying the Id; a marker, when present, is checked. The parser MUST reject an unknown role keyword. At resolution time, the resolver MUST verify that the named element actually has the claimed role; mismatch yields an unresolved reference. Role markers are most useful in composed references where the base's role differs from the terminal target's role (for example, a `%STR` reference targeting an annotation child of a REL: `<%STR x : @REL:my-rel&annotation>`); in plain references and Object-based composed references, the marker is optional.
+**Base role markers.** The optional `BaseRole` prefix is distinguished from a CURIE prefix by lookup against the closed `BaseRole` set defined above; when the part of a `Base` before its first `:` is a `BaseRole` keyword, that `:` is always the role separator. An unmarked base matches a root of any root-eligible role carrying the Id; a marker, when present, is checked. The parser MUST reject an unknown role keyword. At resolution time, the resolver MUST verify that the named element actually has the claimed role; mismatch leaves the target unresolved. Role markers are most useful in composed forms where the base's role differs from the terminal target's role (for example, a `%STR` reference targeting an annotation child of a REL: `<%STR x : @REL:my-rel&annotation>`); in the plain root form and Object-based composed forms, the marker is optional.
 
-The `$` and `&` operators do not combine within a single reference literal. The form `@Base$PathExpression&IdToken` is malformed; an author chooses one of `RootPathReference` or `RootIdReference` for the composed reference.
+The `$` and `&` operators do not combine within a single target literal. The form `@Base$PathExpression&IdToken` is malformed; an author chooses one of `RootPathReference` or `RootIdReference` for the composed form.
 
-When a reference literal appears as the Resource of a `%KIND` REF element (Core Specification §6.16), it MUST resolve to exactly one element of the matching role. See `GDX-Path.md` §7 for the normative address-mode singularity rule.
+When a target literal appears as the Resource of a `%KIND` REF element (Core Specification §6.16), it MUST resolve to exactly one element of the matching role. See `GDX-Path.md` §7 for the normative address-mode singularity rule.
 
 The Resource of an `@KIND` @-Edge element (Core Specification §6.4) MUST be a `RootReference`. An @-Edge whose Resource is a `PathReference`, `IdReference`, `RootPathReference` or `RootIdReference` is malformed; the restriction is a property of the element, checked against the literal's form, not a separate production.
 
@@ -449,7 +453,7 @@ The Resource of an `@KIND` @-Edge element (Core Specification §6.4) MUST be a `
 
 ## 6. Identifiers
 
-A single identifier grammar applies to all identifier-bearing positions: the `Name` field, the contents of named keys (§4.1), the contents of Predicate field when not a URI (§4.2), the contents of Type field (§4.3), and the target of reference literals (§5.6).
+A single identifier grammar applies to all identifier-bearing positions: the `Name` field, the contents of named keys (§4.1), the contents of Predicate field when not a URI (§4.2), the contents of Type field (§4.3), and the Ids within target literals (§5.6).
 
 ```ebnf
 Name          ::= NameStartChar NameContChar*
@@ -461,7 +465,7 @@ NameContChar  ::= ALPHA | DIGIT | "_" | "-" | "." | "/" | ":"
 
 An identifier MUST begin with a letter or an underscore. It MAY continue with any combination of letters, digits, underscores, hyphens, periods, forward slashes, and colons.
 
-The forward slash (`/`) is admitted as a continuation character so that IRIs (e.g., `https://acme.com/people/alice`) remain valid identifiers. It is NOT admitted as a start character; identifiers may not begin with `/`. The leading-`/` syntactic slot is reserved for path-mode reference literals (§5.6 and `GDX-Path.md`). This restriction (introduced in v0.7) is a breaking change from v0.6 and earlier; see `GDX-Path.md` Appendix C for migration patterns.
+The forward slash (`/`) is admitted as a continuation character so that IRIs (e.g., `https://acme.com/people/alice`) remain valid identifiers. It is NOT admitted as a start character; identifiers may not begin with `/`. The leading-`/` syntactic slot is reserved for path-mode target literals (§5.6 and `GDX-Path.md`). This restriction (introduced in v0.7) is a breaking change from v0.6 and earlier; see `GDX-Path.md` Appendix C for migration patterns.
 
 Identifiers MUST NOT begin with a digit (which would be lexically ambiguous with numeric literals). Identifiers MUST NOT contain whitespace, brackets, sigil characters (other than as listed above), or other punctuation.
 
@@ -529,7 +533,9 @@ RolePrefix           ::= EdgeSigil? ModifierBase SetSuffix?
 
 EdgeSigil            ::= "@"
                         (* Restricted: EdgeSigil MUST compose only with
-                           ObjectPrefix, RelPrefix, or HeadPrefix, per Core
+                           ObjectPrefix, RelPrefix, or HeadPrefix, in their
+                           canonical forms OBJ, REL, HEAD (an @-edge has no
+                           minified form, Core Spec §5.2), per Core
                            Spec §6.4 E5. Other compositions (e.g., @REC,
                            @DEFOBJ) are malformed when carrying EdgeSigil;
                            those targets are reached via RefSigil. *)
@@ -597,9 +603,9 @@ RecordBase           ::= "REC"   | "R"
 
 (* The EDGE/E prefix used through Core Spec v0.11.0 is removed in v0.12.0;
    the @-Edge family (@OBJ, @REL — see Core Spec §6.4) replaces it. The
-   `E` minified slot is currently unassigned. @-Edges and References are
-   produced by the `@` operator (§7.2 below) composing with the @-Edge
-   family members or with other base prefixes respectively. *)
+   `E` minified slot is currently unassigned. @-edges are produced by the
+   `@` EdgeSigil composing with ObjectPrefix, RelPrefix or HeadPrefix, and
+   REFs by the `%` RefSigil wrapping a role-prefix (§7.1). *)
 
 (* Template prefixes — canonical only, no minified form *)
 
@@ -984,7 +990,7 @@ HexBytes             ::= "0x" HexDigit+
 Base64Bytes          ::= "0z" Base64Char+ "="*
 BytesLiteral         ::= HexBytes | Base64Bytes
 
-ReferenceLiteral     ::= RootReference
+TargetLiteral        ::= RootReference
                        | PathReference
                        | IdReference
                        | RootPathReference
@@ -1006,7 +1012,7 @@ Resource             ::= StringLiteral
                        | FloatLiteral
                        | BoolLiteral
                        | BytesLiteral
-                       | ReferenceLiteral
+                       | TargetLiteral
 
 
 // ===== Fields =====

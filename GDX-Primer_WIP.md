@@ -1,6 +1,6 @@
 # GDX — A Primer
 
-- **Status:** Draft v0.5.0 (companion to the GDX Specification Core v0.30.0, pre-1.0)
+- **Status:** Draft v0.5.0 (companion to the GDX Specification Core v0.31.0, pre-1.0)
 - **Date:** 2026-10-19
 - **Authors:** Julian Mussi
 
@@ -339,7 +339,7 @@ This looks a lot like the edge from the last step — both end in `@bob`, both p
 - An **edge** (`@`) *asserts a relationship*: bob **knows** alice. It's a statement about how two entities relate, and it carries a label (`#knows`) saying what the relationship is.
 - A **reference** (`%`) *fills a slot*: this order's customer **is** bob. It isn't asserting a relationship about Bob — it's saying "the thing that goes in this slot is over there."
 
-The prefix keeps the two from blurring: a prefix starting with `@` means "asserts a relationship," a prefix starting with `%` means "fills a slot with a handle." They're never interchangeable, and once you read them that way, a dense line tells you immediately which kind of pointing you're looking at. (The `@bob` in the Resource means the same thing under both: the root whose Id is `bob`. What differs is what the element does with it.) The question to ask is simply: *am I stating how two things relate (edge), or saying what goes in this slot (reference)?*
+The prefix keeps the two from blurring: a prefix starting with `@` means "asserts a relationship," a prefix starting with `%` means "fills a slot with a handle." They're never interchangeable, and once you read them that way, a dense line tells you immediately which kind of pointing you're looking at. (The `@bob` in the Resource, the *target*, means the same thing under both: the root whose Id is `bob`. What differs is what the element does with it.) The question to ask is simply: *am I stating how two things relate (edge), or saying what goes in this slot (reference)?*
 
 One affordance falls out here. For `order-1001` to point at `bob`, Bob has to be findable. An Object's Id already provides that. But sometimes the thing you want to point at is not a whole Object. It may be an element tucked inside one, and its position might shift as the document is edited. A reference can reach inside, which an edge never does, and there are two ways to do it.
 
@@ -356,7 +356,7 @@ The first is by Id. The Id field is not only for Objects: any element can carry 
 >
 ```
 
-The reference `@order-1001&shippingAddress` reads in two steps: `@order-1001` finds the root whose Id is `order-1001`, and `&shippingAddress` then looks up the element with that Id inside it. (Within a single document, a bare `&shippingAddress` would also work: an `&` on its own looks for the Id anywhere in the current document, and never outside it. The `@order-1001` in front pins the search to one root, and lets it cross to another document.)
+The target `@order-1001&shippingAddress` reads in two steps: `@order-1001` finds the root whose Id is `order-1001`, and `&shippingAddress` then looks up the element with that Id inside it. (Within a single document, a bare `&shippingAddress` would also work: an `&` on its own looks for the Id anywhere in the current document, and never outside it. The `@order-1001` in front pins the search to one root, and lets it cross to another document.)
 
 The second is a **path reference**, which uses `$` to walk the document shape instead:
 
