@@ -1,6 +1,6 @@
 # GDX Compact Form — Grammar Specification
 
-- **Status:** Draft v0.12 (companion to GDX Core Specification v0.27.0, working draft)
+- **Status:** Draft v0.13 (companion to GDX Core Specification v0.31.0, working draft)
 - **Date:** 2026-07-19
 - **Companion to:** GDX Core Specification v0.27.0, GDX Standard Grammar v0.15, GDX Path Expressions v0.9
 - **Authors:** Julian Mussi
@@ -18,6 +18,8 @@ This document does not address the Standard Form, the Binary Form, semantic vali
 ## Status of This Document
 
 This is the v0.3 working draft. The grammar, indentation model, and Standard Form mapping are stable. The conversion algorithm in §6 is sketched at the structural level; a future revision may include a more detailed algorithmic treatment if implementer experience reveals ambiguities.
+
+Changes from v0.12 to v0.13: conformance with Core Specification v0.31.0. **Terminology rename; no grammar-shape change.** The value an @-edge or a REF carries in its Resource is a *target*, and its literal a *target literal* (Core Spec v0.31.0, entry 80); "reference" names only the `%KIND` REF family. The `Resource` production's `ReferenceLiteral` alternative is renamed `TargetLiteral`, §4.1 calls the five forms the root, path and Id forms and the composed forms, and the metadata block admits "no target literals". No production's shape changes, and every document parses as before.
 
 Changes from v0.11 to v0.12: conformance with Core Specification v0.27.0. **Terminology rename; no grammar-shape change.** The `Rel` field is renamed `Predicate` (Core Spec v0.27.0, entry 66), adopting the word the Core Specification already used for the field's content in prose and removing the case-only collision with the `REL` role. The `#` sigil is unchanged and continues to introduce the field; a bare `#` remains malformed and an empty field is still expressed by omitting it. The Appendix A grammar production is updated (`Rel`→`Predicate`, `RelContent`→`PredicateContent`), as is the §3.3 field-order bullet. No abbreviated form is introduced. The Compact Form's `#` line-comment feature is unaffected — comments are whole-line, the field sigil is inline. Companion-version line updated to Core v0.27.0, Standard Grammar v0.15, and Path v0.9.
 
@@ -330,7 +332,7 @@ R address {sid = 9021}
   I number : 100 {pid = 6}
 ```
 
-Keys are identifiers (CURIEs admitted for namespacing); values are Resource literals of the five value-kinds (no references); `=` separates a key from its value and `,` separates pairs. The grammar is identical to Standard Form (Core Spec §4.8.2); the Compact Form carries the block verbatim. An empty block `{}` is permitted and equivalent to no block.
+Keys are identifiers (CURIEs admitted for namespacing); values are Resource literals of the five value-kinds (no target literals); `=` separates a key from its value and `,` separates pairs. The grammar is identical to Standard Form (Core Spec §4.8.2); the Compact Form carries the block verbatim. An empty block `{}` is permitted and equivalent to no block.
 
 Because the block is brace-delimited and inline, it does not collide with the whole-line `#` comment feature (§5.4). Metadata is out-of-model: a converter MAY carry, add, or drop it without affecting the data model (§6.3).
 
@@ -341,7 +343,7 @@ Because the block is brace-delimited and inline, it does not collide with the wh
 
 ### 4.1 Inline Literals
 
-Inline resource literals follow the same lexical rules as Standard Form (Core Spec §4.2). String, integer, float, boolean, bytes, and reference literals all work identically:
+Inline resource literals follow the same lexical rules as Standard Form (Core Spec §4.2). String, integer, float, boolean, bytes, and target literals all work identically:
 
 ```
 S name : "Alice"
@@ -360,21 +362,21 @@ B encoded : 0zSGVsbG8sIHdvcmxkIQ==
 
 The lexical productions for each literal type are inherited from the Standard Grammar. Compact Form does not modify them.
 
-**Reference literals.** Five forms are recognized in Resource position, all carried over from Standard Form:
+**Target literals.** Five forms are recognized in Resource position, all carried over from Standard Form:
 
-- Root reference: `@root-id`, a root element by its Id (Core Spec §4.2.6). The only form an @-edge Resource may take.
-- Path reference: `$/path/segments` (specified in `GDX-Path.md`).
-- Id reference: `&target-id`, within the current document (specified in `GDX-Path.md`; Id uniqueness rules in Core Spec §4.4.5).
+- Root form: `@root-id`, a root element by its Id (Core Spec §4.2.6). The only form an @-edge Resource may take.
+- Path form: `$/path/segments` (specified in `GDX-Path.md`).
+- Id form: `&target-id`, within the current document (specified in `GDX-Path.md`; Id uniqueness rules in Core Spec §4.4.5).
 - Composed root + path: `@Base$/path/segments`, by path inside a root.
 - Composed root + id: `@Base&target-id`, by Id inside a root.
 
 The `@Base` production may carry an optional role marker (`@OBJ:id`, `@REL:id`, `@DEFOBJ:id`, etc.) drawn from the closed prefix vocabulary; when omitted, the base matches a root of any role carrying the Id, and when present the marker is checked.
 
 ```
-@OBJ #knows : @bob                       // @-edge, root reference target
+@OBJ #knows : @bob                       // @-edge, root form
 %REC mailing : $/people/alice/address    // REF, path-mode
 %REC home : @people/bob$/contacts/[1]    // REF, composed root + path
-%REC shipping : &shippingAddress         // REF, Id reference (current document)
+%REC shipping : &shippingAddress         // REF, Id form (current document)
 %REC origEvent : @system/log&entry-12345 // REF, composed root + id
 %STR desc : @REL:my-rel&description      // REF, composed root + id, REL base
 %STR slotDoc : @DEFOBJ:com.acme.Customer&firstName-doc  // REF, Template base
@@ -1043,7 +1045,7 @@ Resource        ::= StringLiteral
                   | FloatLiteral
                   | BoolLiteral
                   | BytesLiteral
-                  | ReferenceLiteral
+                  | TargetLiteral
                   | MultiLineString
                   | MultiLineBytes
 

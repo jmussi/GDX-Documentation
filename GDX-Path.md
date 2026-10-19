@@ -1,18 +1,18 @@
 # GDX Path Expressions — Specification
 
-- **Status:** Draft v0.10 (companion to GDX Core Specification v0.30.0, working draft)
+- **Status:** Draft v0.11 (companion to GDX Core Specification v0.31.0, working draft)
 - **Date:** 2026-10-19
-- **Companion to:** GDX Core Specification v0.30.0
+- **Companion to:** GDX Core Specification v0.31.0
 - **Authors:** Julian Mussi
 
 
 ## Abstract
 
-This document defines the GDX Path Expression — a syntax and resolution model for addressing individual elements within a GDX document by their structural location. Path expressions complement the root reference syntax (`@Base`, a root element by its Id) and the id reference syntax (`&Id`) defined in the GDX Core Specification by providing access to elements that carry no Id, including Records, Blocks, value Properties, Qualifiers, and Extensions.
+This document defines the GDX Path Expression — a syntax and resolution model for addressing individual elements within a GDX document by their structural location. Path expressions complement the root form (`@Base`, a root element by its Id) and the Id form (`&Id`) of the target literal defined in the GDX Core Specification by providing access to elements that carry no Id, including Records, Blocks, value Properties, Qualifiers, and Extensions.
 
-The path grammar is uniform across all consuming contexts. This specification defines the syntax and per-segment selection semantics; the cardinality and failure semantics for any given consumer (references, delta operations, queries) are specified by the consuming layer. This document normatively defines address-mode behavior — the cardinality contract used by `%KIND` REF elements (Core Specification §6.16). Query-mode and delta-mode behaviors are reserved for future companion specifications.
+The path grammar is uniform across all consuming contexts. This specification defines the syntax and per-segment selection semantics; the cardinality and failure semantics for any given consumer (target literals, delta operations, queries) are specified by the consuming layer. This document normatively defines address-mode behavior — the cardinality contract used by `%KIND` REF elements (Core Specification §6.16). Query-mode and delta-mode behaviors are reserved for future companion specifications.
 
-This specification resolves the `$PathExpression` reservation in Core Specification §11.4 (Path-Mode Reference Resolution). It defines the five reference-literal forms recognized in `%KIND` REF resources and `@OBJ`/`@REL`/`@HEAD` @-Edge resources: `RootRef` (`@Base`), `PathRef` (`$PathExpression`), `IdRef` (`&Id`), `RootPathRef` (`@Base$PathExpression`), and `RootIdRef` (`@Base&Id`). An @-Edge resource is always a `RootRef` (Core Specification §6.4). The composed forms `RootPathRef` and `RootIdRef` reach inside a root element, in this document or another, by structural path or by durable id respectively. The `Base` production carries an optional role marker (`@OBJ:id`, `@REL:id`, `@DEFOBJ:id`, etc.) drawn from the closed prefix vocabulary; when omitted, the base matches a root of any root-eligible role carrying the Id, and when present the marker is checked.
+This specification resolves the `$PathExpression` reservation in Core Specification §11.4 (Path-Mode Target Resolution). It defines the five target-literal forms recognized in `%KIND` REF resources and `@OBJ`/`@REL`/`@HEAD` @-Edge resources: `RootRef` (`@Base`), `PathRef` (`$PathExpression`), `IdRef` (`&Id`), `RootPathRef` (`@Base$PathExpression`), and `RootIdRef` (`@Base&Id`). An @-Edge resource is always a `RootRef` (Core Specification §6.4). The composed forms `RootPathRef` and `RootIdRef` reach inside a root element, in this document or another, by structural path or by durable id respectively. The `Base` production carries an optional role marker (`@OBJ:id`, `@REL:id`, `@DEFOBJ:id`, etc.) drawn from the closed prefix vocabulary; when omitted, the base matches a root of any root-eligible role carrying the Id, and when present the marker is checked.
 
 This document does not address query-mode semantics (wildcards, filters, descendant axis, projections), delta/patch operations, or filter expression languages. The syntactic territory those features require is enumerated as reserved (§9) so that v1 path expressions remain forward-compatible.
 
@@ -23,7 +23,7 @@ This document does not address query-mode semantics (wildcards, filters, descend
 2. [Scope and Modes](#2-scope-and-modes)
 3. [Path Expression Syntax](#3-path-expression-syntax)
 4. [Segment Kinds](#4-segment-kinds)
-5. [Composition with Root and Id References](#5-composition-with-root-and-id-references)
+5. [Composition with the Root and Id Forms](#5-composition-with-the-root-and-id-forms)
 6. [Resolution Algorithm](#6-resolution-algorithm)
 7. [Address-Mode Singularity](#7-address-mode-singularity)
 8. [Required Changes to GDX Core Specification](#8-required-changes-to-gdx-core-specification)
@@ -66,7 +66,7 @@ A *path expression* is a textual selector that, when evaluated against a defined
 
 | Mode     | Consumer                                              | Cardinality required | Failure semantics                |
 |----------|-------------------------------------------------------|----------------------|----------------------------------|
-| Address  | `%KIND` REF elements; future delta operations         | Exactly one          | Unresolved reference / op fails  |
+| Address  | `%KIND` REF elements; future delta operations         | Exactly one          | Unresolved target / op fails     |
 | Query    | Future query / projection contexts                    | Any (0..many)        | Empty result is valid            |
 | Test     | Future existence-test operations                      | Any (0..1 as boolean)| Path absence is a defined outcome|
 
@@ -81,7 +81,7 @@ A v1 path expression — using only the segment kinds and separators defined in 
 
 ### 3.1 Overall Form
 
-A `PathExpression` is introduced by the `$` sigil in textual contexts that accept a reference literal (Core Spec §4.2.6). The path begins with a `/` segment separator and consists of one or more path segments, each separated by `/`:
+A `PathExpression` is introduced by the `$` sigil in textual contexts that accept a target literal (Core Spec §4.2.6). The path begins with a `/` segment separator and consists of one or more path segments, each separated by `/`:
 
 ```ebnf
 PathExpression ::= "/" Segment ("/" Segment)*
@@ -116,7 +116,7 @@ Segment kind is determined by the segment's first character:
 
 A v1 segment carries exactly one selector. Compound segments — those combining more than one selector form within a single step (for example, an Name combined with a Predicate constraint) — are reserved for a future revision (§9).
 
-Id-based addressing does not appear as a path segment. The `Id` field is a in-document id mechanism (Core Spec §3.2, §5.4.3) and is addressed via the `&Id` reference literal forms (§5) rather than by path traversal. A path expression that walks structurally to an id-bearing element is permissible (matching the element by Name, Predicate, or position) but inefficient compared to the direct Id reference; the path syntax intentionally does not provide an Id-matching segment kind.
+Id-based addressing does not appear as a path segment. The `Id` field is a in-document id mechanism (Core Spec §3.2, §5.4.3) and is addressed via the `&Id` target literal forms (§5) rather than by path traversal. A path expression that walks structurally to an id-bearing element is permissible (matching the element by Name, Predicate, or position) but inefficient compared to the direct Id form; the path syntax intentionally does not provide an Id-matching segment kind.
 
 ### 3.3 Lexical Alphabet
 
@@ -128,7 +128,7 @@ A `PathExpression` terminates when the lexer encounters a character outside the 
 
 No whitespace is permitted anywhere within a `PathExpression`. The path is a single contiguous token bounded by:
 
-- The `$` introducer (or the `$` following the `@Base` portion of a composed reference, §5) on the left.
+- The `$` introducer (or the `$` following the `@Base` portion of a composed form, §5) on the left.
 - The first character outside the segment-internal alphabet on the right.
 
 The whitespace tightness rule for `$` and `@` (no whitespace between sigil and content) is established by Core Spec §4.1.1.
@@ -159,7 +159,7 @@ Examples:
 - `gdx:Person` matches a child with `Name` `gdx:Person` (a CURIE; `:` is in `SegContChar`).
 - `com.acme.Address` matches a child with that dotted Name.
 
-The `SegContChar` alphabet excludes `/` (cf. Core Spec §4.4.1 `NameContChar`). To address an element whose `Name` itself contains `/`, give the element an Id (Core Spec §3.2, §5.4.3) and reference it via the `&Id` reference literal (§5.1), or, if it is a root element, via a root reference (`@Base`).
+The `SegContChar` alphabet excludes `/` (cf. Core Spec §4.4.1 `NameContChar`). To address an element whose `Name` itself contains `/`, give the element an Id (Core Spec §3.2, §5.4.3) and address it via the `&Id` target literal (§5.1), or, if it is a root element, via the root form (`@Base`).
 
 ### 4.2 PredicateSegment
 
@@ -167,7 +167,7 @@ The `SegContChar` alphabet excludes `/` (cf. Core Spec §4.4.1 `NameContChar`). 
 PredicateSegment ::= "#" SegmentName
 ```
 
-A `PredicateSegment` matches a child element whose `Predicate` field is string-equal to `SegmentName`. CURIEs and other identifier forms admitted by `SegmentName` are valid as the Predicate value. An element whose Predicate field is empty — for example, an @-edge whose relationship is undefined as to nature (Core Spec §6.4.2, added in Core v0.20.0) — is matched by no `PredicateSegment`; only a named Predicate can be selected by `#SegmentName`. To address such an element, use an `OrdinalSegment` or, when it carries an `Id`, the `&Id` reference literal.
+A `PredicateSegment` matches a child element whose `Predicate` field is string-equal to `SegmentName`. CURIEs and other identifier forms admitted by `SegmentName` are valid as the Predicate value. An element whose Predicate field is empty — for example, an @-edge whose relationship is undefined as to nature (Core Spec §6.4.2, added in Core v0.20.0) — is matched by no `PredicateSegment`; only a named Predicate can be selected by `#SegmentName`. To address such an element, use an `OrdinalSegment` or, when it carries an `Id`, the `&Id` target literal.
 
 Examples:
 
@@ -176,7 +176,7 @@ Examples:
 
 The Predicate field is not constrained to be unique among the children of an element. Multiple Properties, Edges, or other elements MAY share the same Predicate value (Core Spec §6.4 explicitly allows multiple Edges of the same Predicate between the same source/target pair). A `PredicateSegment` therefore may match zero, one, or many child elements at the data layer.
 
-Address-mode consumers (§7) require exactly one match. Authors writing paths in address-mode contexts SHOULD select segments such that the terminal step matches a single child; this typically means using an `NameSegment` or `OrdinalSegment` at any step where multiple siblings could share a Predicate. Alternatively, when the target element carries an `Id`, the `&Id` reference literal (§5.1) addresses it directly without requiring path traversal at all.
+Address-mode consumers (§7) require exactly one match. Authors writing paths in address-mode contexts SHOULD select segments such that the terminal step matches a single child; this typically means using an `NameSegment` or `OrdinalSegment` at any step where multiple siblings could share a Predicate. Alternatively, when the target element carries an `Id`, the `&Id` target literal (§5.1) addresses it directly without requiring path traversal at all.
 
 ### 4.3 OrdinalSegment
 
@@ -210,17 +210,17 @@ The contents of `[ ]` are restricted to a base-10 numeral in v1. Wildcards (`[*]
 
 The uniqueness column indicates the data-layer guarantee per Core Specification. The grammar does not require an `NameSegment` to match exactly one child if the data is malformed; resolution behavior in the presence of duplicate Names is implementation-defined. Conforming documents do not produce such collisions (Core Spec §3.2).
 
-Id-based addressing — matching an element by its `Id` field — is not a path segment kind in v1. Ids are addressed directly via the `&Id` and `@Base&Id` reference literal forms (§5). The rationale is that Ids provide location-stable reference targets (Core Spec §3.2); folding Id matching into path segments would couple Ids to the very location they are designed to be independent of. A path expression that matches by Name, Predicate, or ordinal at each step composes naturally with an Id reference at the start; a path that uses Id matching mid-way is redundant with the direct reference form.
+Id-based addressing — matching an element by its `Id` field — is not a path segment kind in v1. Ids are addressed directly via the `&Id` and `@Base&Id` target literal forms (§5). The rationale is that Ids provide location-stable targets (Core Spec §3.2); folding Id matching into path segments would couple Ids to the very location they are designed to be independent of. A path expression that matches by Name, Predicate, or ordinal at each step composes naturally with an Id lookup at the start; a path that uses Id matching mid-way is redundant with the direct Id form.
 
 
 ---
 
-## 5. Composition with Root and Id References
+## 5. Composition with the Root and Id Forms
 
-The `$PathExpression` syntax composes with the root reference (`@Base`, Core Spec §4.2.6) and the id reference (`&Id`, Core Spec §4.2.6) to express references that combine root lookup, structural traversal, and id lookup. Every form binds to an Id except a path, whose `NameSegment`s match Names; a path is the only place a Name takes part in addressing. Five reference-literal forms are recognized:
+The `$PathExpression` syntax composes with the root form (`@Base`, Core Spec §4.2.6) and the Id form (`&Id`, Core Spec §4.2.6) to express targets that combine root lookup, structural traversal, and id lookup. Every form binds to an Id except a path, whose `NameSegment`s match Names; a path is the only place a Name takes part in addressing. Five target-literal forms are recognized:
 
 ```ebnf
-ReferenceLiteral ::= RootRef | PathRef | IdRef | RootPathRef | RootIdRef
+TargetLiteral ::= RootRef | PathRef | IdRef | RootPathRef | RootIdRef
 
 RootRef          ::= "@" Base
 PathRef          ::= "$" PathExpression
@@ -242,7 +242,7 @@ The `IdToken` production above is reproduced for reference only; Core Spec §4.4
 ### 5.1 Form Semantics
 
 - **`RootRef`** — root lookup. The `@Base` resolves to the root element whose Id equals it, in the order of Core Spec §6.4.1 (this document's roots, loaded document context, then globally-resolvable Ids). A root's Name is never consulted. When the base carries no role marker, the role is the one the enclosing `@KIND` or `%KIND` prefix declares. When the base carries a role marker, the resolver looks for a root of the named role with the matching Id.
-- **`PathRef`** — structural traversal rooted at the document containing the reference literal.
+- **`PathRef`** — structural traversal rooted at the document containing the target literal.
 - **`IdRef`** — id lookup, searching outward from the reference to the document root (Core Spec §4.4.5). It never leaves the document.
 - **`RootPathRef`** — composed root + path. The `@Base` portion resolves to a root element, as for `RootRef`; the `$PathExpression` portion is then evaluated rooted at that root.
 - **`RootIdRef`** — composed root + id. The `@Base` portion resolves to a root element, as for `RootRef`; the `&Id` portion is then looked up within that root's scope.
@@ -251,7 +251,7 @@ Each sigil retains its independent meaning under composition. The `@` operator f
 
 ### 5.2 Base Role Markers
 
-The optional `BaseRole` prefix on an `@`-reference makes the role of the resolved element explicit:
+The optional `BaseRole` prefix on the `Base` of a target literal makes the role of the resolved element explicit:
 
 ```
 @bob                    // the root with Id bob, of whatever root-eligible role it has
@@ -261,7 +261,7 @@ The optional `BaseRole` prefix on an `@`-reference makes the role of the resolve
 @PKG:vendor-pack        // explicit Package
 ```
 
-The role marker is most useful in composed references, where the base's role differs from the terminal target's role:
+The role marker is most useful in composed forms, where the base's role differs from the terminal target's role:
 
 ```
 <%STR description : @REL:my-rel&annotation-3>
@@ -271,19 +271,19 @@ Here the enclosing `%STR` says the terminal target is a string Property. The `@R
 
 **Parse-time validation.** The parser checks that `BaseRole` is one of the keywords in the closed set above. An unknown role keyword (e.g., `@FOO:bar`) is malformed and MUST be rejected.
 
-**Resolution-time validation.** The resolver verifies that the resolved element actually has the claimed role. A mismatch — for example, `@REL:foo` where `foo` resolves to an Object — yields an unresolved reference. This deferred validation means the parser does not need access to the data; only the resolver does.
+**Resolution-time validation.** The resolver verifies that the resolved element actually has the claimed role. A mismatch — for example, `@REL:foo` where `foo` resolves to an Object — leaves the target unresolved. This deferred validation means the parser does not need access to the data; only the resolver does.
 
 **Marker is optional.** A root Id is unique within its document (Core Spec §4.4.5), so the Id alone picks the root and the marker MAY be omitted. An unmarked base matches a root of any root-eligible role; a marked base matches only a root of the named role. The terse form `@bob` and the explicit form `@OBJ:bob` resolve to the same root when that root is an Object.
 
 ### 5.3 Whitespace and Boundaries
 
-No whitespace is permitted between `@`, the `Base`, `$`, `&`, the path segments, or the Id token. The entire `ReferenceLiteral` is one contiguous token.
+No whitespace is permitted between `@`, the `Base`, `$`, `&`, the path segments, or the Id token. The entire `TargetLiteral` is one contiguous token.
 
 In a `RootPathRef`, the `Base` following `@` is consumed up to the first `$`. In a `RootIdRef`, the `Base` is consumed up to the first `&`. Because `$` and `&` are not members of `NameContChar`, the boundaries are lexically clean.
 
 Within an `Base`, the role marker (if present) extends from `@` up to and including `:`. The Id follows the `:`. If the bareword before `:` is in the `BaseRole` set, the `:` is interpreted as the role separator, always; if not, the bareword and `:` are part of a CURIE-style Id (e.g., `gdx:Person`). A root whose Id itself begins with a role keyword and `:` is addressed with an explicit marker in front (`@REL:REL:x`).
 
-The `$` and `&` operators do not combine within a single reference literal. The form `@Base$PathExpression&Id` is malformed; pick one of `RootPathRef` or `RootIdRef`.
+The `$` and `&` operators do not combine within a single target literal. The form `@Base$PathExpression&Id` is malformed; pick one of `RootPathRef` or `RootIdRef`.
 
 ### 5.4 Reaching Inside Another Root
 
@@ -310,18 +310,18 @@ A `PathRef` or `IdRef` with no `@Base` portion is rooted at (or scoped within) t
 
 The forms `@Base$` (trailing `$` with no path segments), `@Base&` (trailing `&` with no Id token), `$` alone, and `&` alone are all malformed. If the resolved element itself is the desired target, omit the trailing operator and use the plain `@Base` form.
 
-### 5.6 Reference-Element Composition
+### 5.6 Forms by Element
 
-A `%KIND` REF element (Core Spec §6.16) MAY use any of the five reference literal forms as its Resource. An `@KIND` @-Edge element (Core Spec §6.4) MUST use a `RootRef`. The choice of form is governed by what the reference is addressing and how the target is most stably identified:
+A `%KIND` REF element (Core Spec §6.16) MAY use any of the five target literal forms as its Resource. An `@KIND` @-Edge element (Core Spec §6.4) MUST use a `RootRef`. The choice of form is governed by what the target is and how the target is most stably identified:
 
-| Use                                                                                            | Form          |
+| Target                                                                                         | Form          |
 |------------------------------------------------------------------------------------------------|---------------|
-| Reference to a root element (Object, REL, HEAD, Template, transport wrapper), by its Id          | `RootRef`     |
-| Reference to an element with no Id, in this document, by structural location                     | `PathRef`     |
-| Reference to an id-bearing element anywhere in this document                                     | `IdRef`       |
-| Reference to an element with no Id inside another root, by structural location                   | `RootPathRef` |
-| Reference to an id-bearing element inside a given root, in this document or another              | `RootIdRef`   |
-| Reference to a child of a non-Object root (REL, Template, transport container)                   | `RootPathRef` or `RootIdRef`; a `BaseRole` marker, if given, checks the root's role |
+| A root element (Object, REL, HEAD, Template, transport wrapper), by its Id                       | `RootRef`     |
+| An element with no Id, in this document, by structural location                                  | `PathRef`     |
+| An id-bearing element anywhere in this document                                                  | `IdRef`       |
+| An element with no Id inside another root, by structural location                                | `RootPathRef` |
+| An id-bearing element inside a given root, in this document or another                           | `RootIdRef`   |
+| A child of a non-Object root (REL, Template, transport container)                                | `RootPathRef` or `RootIdRef`; a `BaseRole` marker, if given, checks the root's role |
 
 When both an Id and a structural path could address the target, prefer the Id form. Ids are location-stable; paths break when intervening structure changes.
 
@@ -332,8 +332,8 @@ When both an Id and a structural path could address the target, prefer the Id fo
 
 Path resolution is a left-to-right traversal of the segments of a `PathExpression`, starting from a defined starting element. The starting element is determined by the consuming context:
 
-- For `PathRef` (Core Spec §4.2.6, as revised): the root of the document containing the reference literal. For documents with multiple top-level elements (Core Spec §7.2 rule 1), the document root is a notional container of the top-level elements; the first segment matches against the top-level elements as children of that container.
-- For `RootPathRef`: the root element produced by resolving the `@Base` portion (Core Spec §6.4.1). If that resolution fails (no root carries the Id in any tier), the path is not evaluated and the entire reference is unresolved.
+- For `PathRef` (Core Spec §4.2.6, as revised): the root of the document containing the target literal. For documents with multiple top-level elements (Core Spec §7.2 rule 1), the document root is a notional container of the top-level elements; the first segment matches against the top-level elements as children of that container.
+- For `RootPathRef`: the root element produced by resolving the `@Base` portion (Core Spec §6.4.1). If that resolution fails (no root carries the Id in any tier), the path is not evaluated and the entire target is unresolved.
 - For other consumers (delta operations, queries — future): the starting element is defined by the consuming specification.
 
 ### 6.1 Per-Segment Matching
@@ -375,21 +375,21 @@ The consuming specification interprets the outcome according to its cardinality 
 
 ## 7. Address-Mode Singularity
 
-This section is **normative** for the use of path expressions as reference literals in `%KIND` REF elements (Core Spec §6.16) and is anticipated to be referenced normatively by future delta-operation specifications.
+This section is **normative** for the use of path expressions as target literals in `%KIND` REF elements (Core Spec §6.16) and is anticipated to be referenced normatively by future delta-operation specifications.
 
 A `PathRef` or `RootPathRef` appearing as the Resource of a `%KIND` REF element is **resolved** if and only if path evaluation yields exactly one element whose role matches the enclosing `%KIND` prefix.
 
-Path evaluation yielding any of the following MUST be treated as an unresolved reference:
+Path evaluation yielding any of the following MUST be treated as an unresolved target:
 
 1. **Zero elements.** No element matched the path at some segment.
 2. **Multiple elements.** Match set cardinality is greater than one at the terminal segment.
 3. **One element of non-matching role.** The terminal element exists, but its role does not match the enclosing prefix. For example, `<%REC x : $/orders/123>` where the path resolves to an Object is unresolved, because the prefix declares the target as a Record.
 
-A reference may additionally be unresolved by the `@Base` portion of a `RootPathRef`: if root lookup fails (no tier yields a root carrying the Id), the path is not evaluated and the entire reference is unresolved.
+A target may additionally be unresolved by the `@Base` portion of a `RootPathRef`: if root lookup fails (no tier yields a root carrying the Id), the path is not evaluated and the entire target is unresolved.
 
 ### 7.1 No Implicit First-Match Selection
 
-In address mode, a resolver MUST NOT silently select a first match (or any other deterministic choice) when the terminal match set contains more than one element. The "MUST NOT" rule forecloses silent ambiguity: an author whose path matches more than one element receives an unresolved reference, not a non-deterministic or implementation-dependent selection.
+In address mode, a resolver MUST NOT silently select a first match (or any other deterministic choice) when the terminal match set contains more than one element. The "MUST NOT" rule forecloses silent ambiguity: an author whose path matches more than one element receives an unresolved target, not a non-deterministic or implementation-dependent selection.
 
 ### 7.2 Author Responsibility for Specificity
 
@@ -411,7 +411,7 @@ For a conforming document, conforming resolvers MUST produce the same resolution
 
 ## 8. Required Changes to GDX Core Specification
 
-The introduction of path-mode reference resolution requires the following modifications to the GDX Core Specification. These changes are normative as of Core Specification v0.11.0, which incorporates path-mode in lockstep with the publication of this companion specification.
+The introduction of path-mode target resolution requires the following modifications to the GDX Core Specification. These changes are normative as of Core Specification v0.11.0, which incorporates path-mode in lockstep with the publication of this companion specification.
 
 ### 8.1 Identifier Grammar (Core Spec §4.4.1)
 
@@ -429,25 +429,25 @@ Migration impact is documented in Appendix C.
 
 ### 8.2 Identifier Forms Table (Core Spec §4.4.2)
 
-The "Path" row of the conventional identifier-forms table is removed. Path-style local naming (e.g., `<OBJ /people/alice>`) is replaced by path-mode reference resolution. The replacement form depends on the use case:
+The "Path" row of the conventional identifier-forms table is removed. Path-style local naming (e.g., `<OBJ /people/alice>`) is replaced by path-mode target resolution. The replacement form depends on the use case:
 
 - For local naming, identifiers may continue to embed `/` as a continuation character; only the leading `/` is invalid.
-- For references that were path-like in spirit, use a `PathRef` or `RootPathRef`.
+- For targets that were path-like in spirit, use a `PathRef` or `RootPathRef`.
 
 ### 8.3 Id Field (Core Spec §3.2, §4.4.3, §4.4.5)
 
 The `Id` field is a location-stable in-document id mechanism, not a Template-slot alignment mechanism:
 
-- Ids are an opt-in named-id mechanism providing location-stable reference targets for elements that lack global identifiers. Ids play no role in Template-instance alignment, and (per Core Spec v0.22.0) the `Id` field is excluded from the universal claim rule — a Template MUST NOT declare an Id on a slot.
+- Ids are an opt-in named-id mechanism providing location-stable targets for elements that lack global identifiers. Ids play no role in Template-instance alignment, and (per Core Spec v0.22.0) the `Id` field is excluded from the universal claim rule — a Template MUST NOT declare an Id on a slot.
 - Core Spec §4.4.5 defines Id uniqueness: Ids MUST be unique within the enclosing Object's scope. Elements at transport-layer position (direct children of a Package, Group, or document root) MUST have Ids unique within the document.
 - **The Id-token grammar is authored by the core, not by this document.** Core Spec §4.4.3 defines `IdToken` as a single grammar — an identifier token whose start set additionally admits a leading digit (`IdToken ::= (ALPHA | DIGIT | "_") NameContChar*`), superseding the former `SegmentName | DIGIT+` split. This admits sequential tokens (`&1`), named ids (`&shippingAddress`), and digit-leading GUID ids (`&7f3a2b9c-…`) under one rule. Id tokens carry no numeric interpretation and compare by ordinal equality (`&01` ≠ `&1`). The grammar blocks in §5 and §8.4 reference the core grammar; this specification no longer originates the `IdToken` production.
 
-### 8.4 Reference Literals (Core Spec §4.2.6)
+### 8.4 Target Literals (Core Spec §4.2.6)
 
-The reference-literal grammar in Core Spec §4.2.6 is replaced by the production from §5 of this specification:
+The target-literal grammar in Core Spec §4.2.6 is replaced by the production from §5 of this specification:
 
 ```ebnf
-ReferenceLiteral ::= RootRef | PathRef | IdRef | RootPathRef | RootIdRef
+TargetLiteral ::= RootRef | PathRef | IdRef | RootPathRef | RootIdRef
 RootRef          ::= "@" Base
 PathRef          ::= "$" PathExpression
 IdRef        ::= "&" IdToken
@@ -462,7 +462,7 @@ BaseRole         ::= "OBJ"  | "REL"  | "PKG"  | "GRP"  | "HEAD"
 
 The address-mode singularity requirement (§7 of this specification) is added as a normative paragraph following the production. The "reserved, grammar deferred" language for `$PathExpression` is removed.
 
-The optional `BaseRole` marker states and checks the role of the resolved root in composed references (`RootPathRef`, `RootIdRef`). In the absence of a marker, the base matches a root of any root-eligible role carrying the Id. Parse-time validation rejects unknown role keywords; resolution-time validation ensures the named element matches the claimed role.
+The optional `BaseRole` marker states and checks the role of the resolved root in composed forms (`RootPathRef`, `RootIdRef`). In the absence of a marker, the base matches a root of any root-eligible role carrying the Id. Parse-time validation rejects unknown role keywords; resolution-time validation ensures the named element matches the claimed role.
 
 ### 8.5 Template-Instance Alignment (Core Spec §8.2)
 
@@ -470,7 +470,7 @@ Core Spec §8.2 is amended with an explicit alignment rule: an instance child sa
 
 ### 8.6 Composition Matrix (Core Spec §7.1)
 
-`%KIND` REF elements become resolvable against targets that were previously not addressable by a root reference. The composition matrix expands as follows:
+`%KIND` REF elements become resolvable against targets that were previously not addressable by the root form. The composition matrix expands as follows:
 
 - `%REC`, `%BLK` — resolvable when the Resource is a `PathRef`, `IdRef`, `RootPathRef`, or `RootIdRef` whose terminal element is a Record or Block, respectively.
 - `%.STR`, `%.INT`, `%.FLOAT`, `%.BOOL`, `%.BYTE` — resolvable when the path or id terminal is a Qualifier of the corresponding value-kind.
@@ -483,7 +483,7 @@ Parent-context restrictions on where `%KIND` references may appear (Core Spec §
 
 ### 8.7 Closure of Open Item §11.4
 
-Core Spec §11.4 (Path-Mode Reference Resolution) closes upon publication of this specification. Its forward reference is satisfied here; the open issue is resolved.
+Core Spec §11.4 (Path-Mode Target Resolution) closes upon publication of this specification. Its forward reference is satisfied here; the open issue is resolved.
 
 
 ---
@@ -508,7 +508,7 @@ The following syntactic forms are reserved by this specification. They MUST NOT 
 | `$./PathExpression`                        | Relative path rooted at the referencing element (future revision).        |
 | `$../PathExpression`                       | Relative path rooted at the parent of the referencing element (future).   |
 | Compound segments — multiple selectors per step | Within-segment combinator (future revision).                         |
-| `&Id` as a path segment                   | Id-based addressing is provided as a reference-literal form (`IdRef`, `RootIdRef`; §5), not as a path segment. The `&` sigil is reserved against use inside `PathExpression` so that a future revision MAY reintroduce Id matching as a path segment if implementer experience demonstrates a need. |
+| `&Id` as a path segment                   | Id-based addressing is provided as a target-literal form (`IdRef`, `RootIdRef`; §5), not as a path segment. The `&` sigil is reserved against use inside `PathExpression` so that a future revision MAY reintroduce Id matching as a path segment if implementer experience demonstrates a need. |
 
 A v1 path expression that uses only the three segment kinds defined in §4 with the `/` separator is a strict syntactic subset of any future query-mode or delta-mode extension. Such a path expression will continue to parse and resolve identically when those extensions are introduced.
 
@@ -527,7 +527,7 @@ A future revision is expected to specify either (a) Node-zone subtrees are opaqu
 
 ### 10.2 Path Behavior Across VAL Slots and Their Occupants
 
-VAL slots (Core Spec §6.11) carry exactly one occupant element as a child. Path traversal through a VAL behaves like traversal through any other parent — the VAL is a child of its containing element, and its occupant is in turn a child of the VAL accessed by further segments — but the two-level identity that VAL introduces (slot-level on the VAL, occupant-level on the contained element) is not given an explicit traversal-form abbreviation. A reference of the form `$/parent/slotName` resolves to the VAL; `$/parent/slotName/occupantId` resolves to the occupant. A future revision MAY introduce an abbreviated form that resolves directly to the occupant (e.g., a sigil that says "the value of this slot"), if implementer experience demonstrates a clear need; v1 does not provide one. Authors should pick the level they need explicitly.
+VAL slots (Core Spec §6.11) carry exactly one occupant element as a child. Path traversal through a VAL behaves like traversal through any other parent — the VAL is a child of its containing element, and its occupant is in turn a child of the VAL accessed by further segments — but the two-level identity that VAL introduces (slot-level on the VAL, occupant-level on the contained element) is not given an explicit traversal-form abbreviation. A target of the form `$/parent/slotName` resolves to the VAL; `$/parent/slotName/occupantId` resolves to the occupant. A future revision MAY introduce an abbreviated form that resolves directly to the occupant (e.g., a sigil that says "the value of this slot"), if implementer experience demonstrates a clear need; v1 does not provide one. Authors should pick the level they need explicitly.
 
 ### 10.3 Ordinal Counting and Annotations
 
@@ -548,7 +548,7 @@ A path expression's terminal element is always an element, not a Resource value.
 
 ### 10.6 Identifier Normalization
 
-Per Core Spec §A.2, identifier comparison is case-sensitive ordinal. The path expression inherits this comparison rule for `NameSegment` and `PredicateSegment` matching; every reference literal's `Base` and `IdToken` inherit the same comparison rule for `IdToken` matching. Unicode normalization (NFC, NFD, etc.) is not specified; conforming documents MUST use a single normalization form throughout. A future revision MAY normatively specify a Unicode normalization profile.
+Per Core Spec §A.2, identifier comparison is case-sensitive ordinal. The path expression inherits this comparison rule for `NameSegment` and `PredicateSegment` matching; every target literal's `Base` and `IdToken` inherit the same comparison rule for `IdToken` matching. Unicode normalization (NFC, NFD, etc.) is not specified; conforming documents MUST use a single normalization form throughout. A future revision MAY normatively specify a Unicode normalization profile.
 
 
 ---
@@ -556,8 +556,8 @@ Per Core Spec §A.2, identifier comparison is case-sensitive ordinal. The path e
 ## Appendix A — Complete Grammar
 
 ```ebnf
-// Reference literals (§5; replaces Core Spec §4.2.6)
-ReferenceLiteral ::= RootRef | PathRef | IdRef | RootPathRef | RootIdRef
+// Target literals (§5; replaces Core Spec §4.2.6)
+TargetLiteral ::= RootRef | PathRef | IdRef | RootPathRef | RootIdRef
 
 RootRef          ::= "@" Base
 PathRef          ::= "$" PathExpression
@@ -736,7 +736,7 @@ The path resolves to the VAL slot. The `%VAL` prefix matches the role. To reach 
 >
 ```
 
-The reference `@system/audit-log&entry-12345` is a `RootIdRef`. The `@system/audit-log` portion resolves the audit-log root Object by its Id; the `&entry-12345` portion then looks up the id-bearing element within that Object's scope. The reference resolves to the `<REC &entry-12345>` element regardless of its position within the Object's subtree.
+The target literal `@system/audit-log&entry-12345` is a `RootIdRef`. The `@system/audit-log` portion resolves the audit-log root Object by its Id; the `&entry-12345` portion then looks up the id-bearing element within that Object's scope. The reference resolves to the `<REC &entry-12345>` element regardless of its position within the Object's subtree.
 
 The Id-based form is location-stable: if the log document is restructured (entries reorganized into nested categories, archived sections moved, etc.), the reference continues to resolve as long as the Id is preserved. A path-based equivalent such as `$/system/audit-log/entries/[1]` would break under any such restructuring.
 
@@ -760,7 +760,7 @@ When the referencing element and the id-bearing target share a document, the `@B
 
 ### B.11 Reference to a Child of a Non-Object Base
 
-When the base of a composed reference is not an Object — for example, a REL declaration with an annotation child — an explicit base role marker is required.
+When the base of a composed form is not an Object — for example, a REL declaration with an annotation child — an explicit base role marker is required.
 
 ```
 <REL &my-rel
@@ -772,7 +772,7 @@ When the base of a composed reference is not an Object — for example, a REL de
 >
 ```
 
-The reference `@REL:my-rel&description` is a `RootIdRef` with an explicit `BaseRole` of `REL`. The `@REL:` marker tells the resolver that the root with Id `my-rel` must be a REL. The `&description` portion then looks up the id-bearing STR within the REL's subtree. Without the marker the reference resolves to the same root; the marker only adds the role check.
+The target literal `@REL:my-rel&description` is a `RootIdRef` with an explicit `BaseRole` of `REL`. The `@REL:` marker tells the resolver that the root with Id `my-rel` must be a REL. The `&description` portion then looks up the id-bearing STR within the REL's subtree. Without the marker the reference resolves to the same root; the marker only adds the role check.
 
 The same pattern applies when the base is a Template, a Package, or a Group:
 
@@ -795,9 +795,9 @@ Two migration patterns are available:
 1. **Drop the leading slash.** Rewrite `<OBJ /people/alice>` as `<OBJ people/alice>`. The interior `/` is preserved because `NameContChar` still admits `/`. References change correspondingly: `@/people/alice` becomes `@people/alice`.
 2. **Replace identifier references with path references.** Where another element used `@/people/alice` as a reference, write `$/people/alice` (if the target is in the current document) or use a CURIE/IRI form for cross-document targets. This is the recommended pattern when the reference is structurally to an element, rather than nominally to an identified resource.
 
-### C.2 Reference Literal Forms
+### C.2 Target Literal Forms
 
-Under Core Specification v0.30.0, `@Base` resolves a root by its Id, not by Name. A reference written `@x` whose target carries `x` only as a Name needs the target to carry the Id `x` (Core Specification Appendix B, v0.30.0).
+Under Core Specification v0.30.0, `@Base` resolves a root by its Id, not by Name. A target written `@x` that carries `x` only as a Name needs the target to carry the Id `x` (Core Specification Appendix B, v0.30.0).
 
 Existing usages of `$PathExpression` (which were previously implementation-defined under Core Spec §11.4) MUST be reviewed against the v1 grammar in this specification. Implementations that previously accepted permissive or non-conforming `$`-prefixed literals MUST be updated to reject any form not produced by the grammar in §5 and Appendix A.
 
@@ -806,16 +806,16 @@ Existing usages of `$PathExpression` (which were previously implementation-defin
 A document that meets **all** of the following conditions is unaffected by this specification and requires no migration:
 
 - No identifier in any element field begins with `/`.
-- No reference literal uses a `$`-prefixed form.
+- No target literal uses a `$`-prefixed form.
 
 Such documents continue to be conforming under the revised Core Specification without change.
 
 ### C.4 Tooling and Parsers
 
-Parser implementations conforming to a pre-v1 reference-literal grammar MUST be updated to:
+Parser implementations conforming to a pre-v1 target-literal grammar MUST be updated to:
 
 1. Reject identifiers beginning with `/` (per the revised §5.4.1).
-2. Accept the three `ReferenceLiteral` forms defined in §5 of this specification.
+2. Accept the three `TargetLiteral` forms defined in §5 of this specification.
 3. Enforce the address-mode singularity rule (§7) for `%KIND` REF elements.
 
 Implementations that defer path-mode resolution to an external resolver MAY continue to do so; the grammar layer is independent of the resolution layer, and parsers MAY accept syntactically valid path literals without performing resolution.

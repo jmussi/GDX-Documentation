@@ -1,6 +1,6 @@
 # GDX — Quick Start
 
-- **Status:** Draft v0.20.0 (companion to GDX Core Specification v0.20.0, working draft, pre-1.0)
+- **Status:** Draft v0.20.0 (companion to GDX Core Specification v0.31.0, working draft, pre-1.0)
 - **Date:** 2026-06-09
 - **Editors:** 
 - **Authors:** Julian Mussi
@@ -117,7 +117,7 @@ The predicate can be left out when the relationship's nature isn't known yet: `<
 
 This is the graph dimension of GDX: tree-structured documents with explicit relationships between elements that aren't parent-child.
 
-For references to elements that don't have a global identifier — a Record inside an Object, a specific item in a list — GDX has a path syntax introduced by `$`:
+For targets that don't have a global identifier — a Record inside an Object, a specific item in a list — GDX has a path syntax introduced by `$`:
 
 ```
 <OBJ alice
@@ -130,7 +130,7 @@ For references to elements that don't have a global identifier — a Record insi
 <%REC residence : $/alice/mailing>
 ```
 
-The `$/alice/mailing` traverses the document tree: into `alice`, then into `mailing`. A root reference and a path compose for targets inside another root — `@bob$/contacts/[1]` resolves the root Object whose Id is `bob` and then takes its first contact. Path expressions are defined in the companion GDX Path Expressions Specification.
+The `$/alice/mailing` traverses the document tree: into `alice`, then into `mailing`. A root (`@`) and a path compose for targets inside another root — `@bob$/contacts/[1]` resolves the root Object whose Id is `bob` and then takes its first contact. Path expressions are defined in the companion GDX Path Expressions Specification.
 
 ## 6. Cross-System Semantic Alignment with Predicates
 

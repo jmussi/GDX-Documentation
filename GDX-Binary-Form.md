@@ -1,6 +1,6 @@
 # GDX Binary Form — Specification
 
-- **Status:** Draft v0.1 (companion to GDX Core Specification v0.29.0, working draft). Sections 1 and 2 only.
+- **Status:** Draft v0.1 (companion to GDX Core Specification v0.31.0, working draft). Sections 1 and 2 only.
 - **Date:** 2026-10-12
 - **Companion to:** GDX Core Specification v0.29.0
 - **Authors:** Julian Mussi
@@ -138,7 +138,7 @@ represented; it does not make a different kind.
 | `bool` | true or false |
 | `string` | the sequence of Unicode scalar values, encoded as UTF-8 |
 | `bytes` | the octet sequence. The text form's bytes encoding (`0x`, `0z`) is carried as the tag. |
-| `reference` | the reference literal (Core §4.2.6), as its text |
+| `target` | the target literal (Core §4.2.6), as its text |
 
 A string is a sequence of Unicode scalar values (Core §3.3). A writer refuses a string holding an unpaired
 surrogate, which UTF-8 cannot carry, and a reader refuses invalid UTF-8. Text is not Unicode-normalized.
@@ -155,7 +155,7 @@ runtime whose decimal type has fewer digits than a `d128` value refuses that val
 
 A frame carries the metadata block of Core §4.8 for any element that has one: every pair it is given, in order,
 with no key treated specially. Each value is one of the five literal kinds the block admits: string, integer,
-float, boolean, bytes. There are no references, no nesting and no elements.
+float, boolean, bytes. There are no target literals, no nesting and no elements.
 
 Metadata is outside the model (Core §4.8.1). It does not take part in model equality or in the content digest, and
 a frame that drops it is still model-faithful. A writer SHOULD carry it and a reader SHOULD keep it, because
