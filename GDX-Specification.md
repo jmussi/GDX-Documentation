@@ -1,7 +1,7 @@
 # GDX — Graph Data eXchange Specification
 
-- **Status:** Draft v0.29.0 (working draft, pre-1.0)
-- **Date:** 2026-10-12
+- **Status:** Draft v0.30.0 (working draft, pre-1.0)
+- **Date:** 2026-10-19
 - **Editors:** 
 - **Authors:** Julian Mussi
 
@@ -18,6 +18,7 @@ This is a pre-1.0 working draft. The specification is under active refinement; r
 
 | Version | Date       |
 |---------|------------|
+| v0.30.0 | 2026-10-19 |
 | v0.29.0 | 2026-10-12 |
 | v0.28.0 | 2026-10-06 |
 | v0.27.0 | 2026-07-19 |
@@ -199,9 +200,9 @@ An element has six model fields plus an out-of-model metadata channel. The Prefi
 | Field      | Purpose |
 |------------|---------|
 | `Prefix`   | Declares the element's role. Required. Drawn from the closed vocabulary in §5. |
-| `Id`      | The element's **durable machine identity** — a position-independent token, scoped per §4.4.5, that persistence and durable graph references bind to. It is the target of `&Id` reference literals (§4.2.6) and the identity an @-edge resolves to when it addresses a root element by id (§6.4). Changing an element's Id **re-identifies** it. |
+| `Id`      | The element's **durable machine identity** — a position-independent token, scoped per §4.4.5, that persistence and every link and reference bind to. A root element's Id is what an `@Base` reference literal and an @-edge resolve to (§4.2.6, §6.4); any element's Id is what an `&Id` reference literal resolves to within its document. Changing an element's Id **re-identifies** it. |
 | `Predicate`      | A predicate-style label naming the relationship between this element and its parent. |
-| `Name`       | The element's **descriptive name** — a local or resource name used for Template slot alignment (§8.2), path and `@name` resolution (§4.2.6), and structural reference. Names are **not durable**: renaming an element does not change its machine identity. |
+| `Name`       | The element's **descriptive name** — a local or resource name used for Template slot alignment (§8.2), for path segments (`GDX-Path.md`), and for display. A Name is a label, not an address: no reference literal resolves by Name except through a path (§4.2.6). Names are **not durable**: renaming an element does not change its machine identity. |
 | `Resource` | The element's typed scalar value. |
 | `Type`     | A reference to a Template the element claims to satisfy. The reference resolves to the Template by the Template's **Id** (§8.5.2), not its descriptive Name. |
 | `Metadata` | *(Out-of-model.)* Realization-layer carriage annotation — flat key/value pairs about how the element is stored or transmitted, not about what it means. Not model content; see §4.8. |
@@ -257,7 +258,7 @@ A Resource, when present, MUST be one of:
 | `float`     | Real number. Representation is determined by suffix (§4.2).                |
 | `bool`      | `true` or `false`.                                                         |
 | `bytes`     | Opaque sequence of octets.                                                 |
-| `reference` | A reference to another Object by identifier.                               |
+| `reference` | A reference to another element by its Id, or by a structural path (§4.2.6). |
 
 The Resource value-kind MUST be consistent with the element's prefix family (string-family prefixes carry strings, int-family prefixes carry ints, etc.). Coercion between value-kinds is implementation-defined and SHOULD be avoided.
 
@@ -269,11 +270,11 @@ A conforming implementation MUST round-trip every representation-conforming nume
 
 #### 3.3.2 Reference Value-Kind
 
-A `reference` resource is a directional pointer to another addressable element by identifier (or by path or key, per §4.2.6). References are interpreted by a resolver, not by the GDX parser; the parser validates only that the literal is well-formed (§4.2.6). The kind of target a reference resource may point at is determined by the prefix of the bearing element — `@OBJ` and `@REL` are the @-Edge family whose resource targets an Object or a REL declaration respectively (§6.4); `%KIND` is the REF family whose resource targets an element of role KIND (§6.16).
+A `reference` resource is a directional pointer to another addressable element by its Id, or by a structural path (§4.2.6). References are interpreted by a resolver, not by the GDX parser; the parser validates only that the literal is well-formed (§4.2.6). The kind of target a reference resource may point at is determined by the prefix of the bearing element — `@OBJ` and `@REL` are the @-Edge family whose resource targets an Object or a REL declaration respectively (§6.4); `%KIND` is the REF family whose resource targets an element of role KIND (§6.16).
 
-The resolution scheme is system-defined. Common approaches include local-document resolution (the reference targets an Object within the same document), namespace-relative resolution (the reference targets an Object within a known scope), and global resolution (the reference is a fully qualified URI). The specification does not mandate any particular scheme; resolvers SHOULD attempt local resolution before broader scopes.
+The literal says how far a reference reaches: an `&Id` or `$path` stays within the current document, and an `@Base` crosses to a root element, in this document or another (§4.2.6). The order in which a resolver searches for a root is normative (§6.4.1); which documents are loaded alongside, and whether a resolver reaches the network for a globally-resolvable Id, is system-defined.
 
-For the special case of @-Edge elements (`@OBJ`, `@REL`, §6.4), the Resource is always a reference value-kind, and the `#predicate` field names the edge type.
+For the special case of @-Edge elements (`@OBJ`, `@REL`, `@HEAD`, §6.4), the Resource is always a reference value-kind addressing a root element by its Id (`@Base`), and the `#predicate` field names the edge type.
 
 #### 3.3.3 Absence and Null Values
 
@@ -355,7 +356,7 @@ A *sigil* is a single non-alphabetic character (or short character sequence) tha
 | `#`   | Introduces the Predicate field |
 | `--`  | Introduces the Type field |
 | `{ }` | Delimit the metadata block (§4.8) — out-of-model carriage annotation |
-| `@`   | Introduces an identifier-mode reference literal (§4.2.6) |
+| `@`   | Introduces a root reference literal: a root element, by its Id (§4.2.6). In prefix position it marks the @-Edge family (§5.3.2); both uses mean "another root" |
 | `$`   | Introduces a path-mode reference literal (§4.2.6); grammar specified in `GDX-Path.md` |
 
 The character `:` is a *separator*, not a sigil. It divides an element into an identity portion (Prefix, Id, Predicate, Name) and a value portion (Resource, Type). The Resource itself has no sigil; it is identified by appearing on the value side of `:`.
@@ -375,11 +376,11 @@ When the `:` separator appears with no identity field on the left in a context w
 Tokens within an element are separated by whitespace. The following rules apply:
 
 - Whitespace MUST separate the Prefix from a following Name when no sigil-introduced field intervenes (so `<REC address>` not `<Raddress>`).
-- The `:` separator MAY have whitespace on either side. The forms `<STR name:"Alice">`, `<STR name :"Alice">`, `<STR name: "Alice">`, and `<STR name : "Alice">` are all valid and equivalent.
+- Whitespace MUST precede the `:` separator (§4.1.1). Whitespace after it is optional: `<STR name : "Alice">` and `<STR name :"Alice">` are valid and equivalent. In `<STR name:"Alice">` and `<STR name: "Alice">` the `:` continues the identifier (§4.4.1), so neither is the element named `name` with the value `"Alice"`.
 - Whitespace MAY appear immediately after `<` and immediately before `>`.
 - Whitespace within an element is otherwise not significant.
 
-The canonical form used in this specification's examples places a single space between adjacent fields and around the `:` separator. Implementations producing GDX text MAY choose more compact forms (e.g., `<STR name:"Alice">`) where appropriate to context.
+The canonical form used in this specification's examples places a single space between adjacent fields and around the `:` separator. Implementations producing GDX text MAY omit the space after `:` (e.g., `<STR name :"Alice">`) where appropriate to context; the space before it is never optional.
 
 #### 4.1.3 Null Forms
 
@@ -560,34 +561,38 @@ A bytes literal with no following digits (`0x` alone) is malformed. A hex litera
 
 #### 4.2.6 Reference Literals
 
-A reference literal designates another addressable element. Five forms are recognized, combining the three operations of name resolution (`@`), structural traversal (`$`), and id lookup (`&`):
+A reference literal designates another addressable element. Five forms are recognized, combining the three operations of root lookup (`@`), id lookup within a scope (`&`), and structural traversal (`$`):
 
 ```ebnf
-ReferenceLiteral ::= NameRef | PathRef | IdRef | NamePathRef | NameIdRef
-NameRef            ::= "@" Base
+ReferenceLiteral ::= RootRef | PathRef | IdRef | RootPathRef | RootIdRef
+RootRef          ::= "@" Base
 PathRef          ::= "$" PathExpression
-IdRef        ::= "&" IdToken
-NamePathRef        ::= "@" Base "$" PathExpression
-NameIdRef      ::= "@" Base "&" IdToken
+IdRef            ::= "&" IdToken
+RootPathRef      ::= "@" Base "$" PathExpression
+RootIdRef        ::= "@" Base "&" IdToken
 
-Base             ::= (BaseRole ":")? Identifier
+Base             ::= (BaseRole ":")? IdToken
 BaseRole         ::= "OBJ"  | "REL"  | "PKG"  | "GRP"  | "HEAD"
                    | "DEFOBJ" | "DEFREC" | "DEFSTR"
                    | "DEFINT" | "DEFFLOAT" | "DEFBOOL" | "DEFBYTE" | "DEFHEAD"
 ```
 
-**Resolution mode is chosen by the resolution sigil, uniformly.** Across every position where a reference is resolved — the Resource of an @-Edge (§6.4.1), the Resource of a REF (§6.16), and the composed forms below — the leading sigil selects the mode and means the same thing everywhere: `@` resolves **by Name**, `&` resolves **by durable Id**, `$` resolves **by structural path**. This uniformity is the reason `@bob` and `&bob` differ: they are not two spellings of one lookup but two modes — name-resolution and id-resolution — of the reference machinery.
+**Every link and reference binds to an Id.** A reference literal never resolves by an element's `Name`: a Name is a descriptive label (§3.1), and labels change. The only place a Name takes part in addressing is a path segment (`GDX-Path.md`), where it locates an element by position in the tree rather than identifying it. The two bare-token fields resolve the same way: the token after `--` or `#` is a bare Id token, resolved by the target Template's or REL's Id (§4.4.2, §8.5.2).
 
-Two consequences worth making explicit, because they are easy to misread as inconsistencies:
+**Each sigil has one meaning, in every position.**
 
-- **The `@` in an @-Edge *prefix* is not the `@` of name-resolution.** `@OBJ` is a prefix-position marker declaring the edge family (§4.1.1, §5.3.2); the `@` in an @-Edge's *Resource* (`@bob`) is the resolution sigil selecting name-mode. They are different roles of the same character in different positions, and an @-Edge may equally carry an id-mode Resource (`&bob`) — the edge family is fixed by the prefix, while the target's resolution mode is chosen per-reference by the Resource's sigil.
-- **`--type` and `#predicate` carry a *bare* identity token, not a sigilled reference literal.** The token after `--` or `#` is not introduced by a resolution sigil; it is a bare identifier, and a bare identity token in these fields is resolved **by Id** (§4.4.2, §8.5.2). This is not `@` "meaning Id there" — there is no `@`; it is the field-level rule that these two fields resolve on identity. The sigilled reference literals above and the bare-token fields are two separate mechanisms that happen to draw identifiers from the same lexical space (§4.4).
+- **`@` means "another root".** In prefix position it marks an @-edge, which joins its source to a root element (§5.3.2, §6.4). In the Resource it introduces the `Base`: a root element, addressed by its Id. A root element is one at root-level position (§4.4.5, §7.2): the root of this document, a sibling root carried in the same Package or Group, or the root of another document. `@bob` is the root whose Id is `bob`.
+- **`&` means "an Id inside a scope".** A bare `&Id` is looked up within the current document, searching outward from the reference (§4.4.5); it never leaves the document. After a `Base` (`@bob&addr`), it is looked up within that root's scope.
+- **`$` means "a structural path"**, from the current document's root or, after a `Base`, from that root.
+- **`%` means "a reference"** in prefix position (§6.16); it does not appear in a Resource.
 
-The `Base` production carries an optional role marker — a closed-vocabulary keyword drawn from §5.2 followed by `:` — that disambiguates the role of the resolved element. The marker is most useful in composed references where the id's role differs from the terminal target's role; in plain `@id` references and in composed references with Object ids, the marker is optional. When omitted in a composed reference, the id defaults to an Object (the most common case).
+So the literal itself says how far a reference reaches. `&addr` and `$/a/b` stay within the current document; anything beginning with `@` crosses to a root, in this document or another. An @-edge and a REF read the same literal the same way: what differs is what each may address (§6.4 E5, §6.16 R5), not what the literal means.
+
+The `Base` production carries an optional role marker — a closed-vocabulary keyword drawn from §5.2 followed by `:` — that disambiguates the role of the resolved root. The marker is most useful in composed references where the root's role differs from the terminal target's role; in a plain `RootRef` the prefix of the bearing element already declares the role, and the marker is optional. An unmarked `Base` matches a root of any root-eligible role that carries the Id; root Ids are unique within their document (§4.4.5), so the Id alone picks the root, and the role is checked against the bearing element's prefix (for a `RootRef`) or left to the terminal target's role check (for a composed form). A marker, when present, is checked: the resolved root MUST have the named role.
 
 The `PathExpression` grammar and the resolution algorithms are specified in the companion GDX Path Expressions Specification (`GDX-Path.md`); the `IdToken` grammar is defined in §4.4.3 of this document. Implementations MUST conform to `GDX-Path.md` for the contents of any `$`-introduced literal and for the resolution semantics of role markers.
 
-**Identifier-mode** (`NameRef`) is an `@` sigil followed by an identifier:
+**Root reference** (`RootRef`) is an `@` sigil followed by the Id of a root element:
 
 ```
 @people/bob
@@ -596,7 +601,7 @@ The `PathExpression` grammar and the resolution algorithms are specified in the 
 @https://acme.com/people/alice
 ```
 
-The identifier following `@` follows the lexical rules in §4.4. The reference is resolved by the implementation's reference resolver; the parser validates only that the literal is well-formed. The `@` sigil MUST be immediately followed by the identifier with no intervening whitespace.
+The token following `@` is an Id token (§4.4.3), so a root Id that begins with a digit, such as a GUID, is written directly. The reference resolves to the root element carrying that Id, searched in the order of §6.4.1: this document's roots, then loaded document context, then, for a globally-resolvable Id (an IRI, or a CURIE expanding to one), global resolution. There is no fallback to Names: a root that carries `bob` only as its `Name` (`<OBJ bob>`) does not satisfy `@bob`; only a root whose Id is `bob` (`<OBJ &bob>`) does. The parser validates only that the literal is well-formed. The `@` sigil MUST be immediately followed by the Id token with no intervening whitespace.
 
 **Path-mode** (`PathRef`) is a `$` sigil followed by a path expression. The path traverses the structural tree of the current document, starting at the document root, addressing an element by its location:
 
@@ -607,7 +612,7 @@ $/orders/[3]/#gdx:postalAddress
 
 The `$` sigil MUST be immediately followed by the path expression with no intervening whitespace.
 
-**Id-mode** (`IdRef`) is an `&` sigil followed by an Id token. The Id is looked up within the scope of the reference (the enclosing Object, or the document for transport-layer positions; see §4.4.5):
+**Id reference** (`IdRef`) is an `&` sigil followed by an Id token. The Id is looked up within the current document, starting from the reference and widening outward to the document root (§4.4.5); a bare `IdRef` never reaches another document:
 
 ```
 &entry-12345
@@ -617,41 +622,44 @@ The `$` sigil MUST be immediately followed by the path expression with no interv
 
 The `&` sigil MUST be immediately followed by the Id token with no intervening whitespace.
 
-**Composed name + path** (`NamePathRef`) concatenates identifier-mode with path-mode. The `@Identifier` portion resolves to a starting element by scope walk; the `$PathExpression` portion is then evaluated rooted at that starting element:
+**Composed root + path** (`RootPathRef`) concatenates a root reference with a path. The `@Base` portion resolves to a root element as a `RootRef` does; the `$PathExpression` portion is then evaluated rooted at that element:
 
 ```
 @gdx:bob$/contacts/[1]
 @https://acme.com/people/alice$/address/[2]
 ```
 
-**Composed name + id** (`NameIdRef`) concatenates identifier-mode with id-mode. The `@Base` portion resolves to a starting element; the `&Id` portion is then looked up within that element's scope. When the id carries no role marker, the starting element defaults to an Object:
+**Composed root + id** (`RootIdRef`) concatenates a root reference with an Id reference. The `@Base` portion resolves to a root element; the `&Id` portion is then looked up within that root's scope. The `Base` may carry a role marker, which is then checked:
 
 ```
-@gdx:bob&shippingAddress                 // Object id (default)
-@system/audit-log&entry-12345            // Object id (default)
-@REL:gdx:knows&annotation-3              // REL id (explicit)
-@DEFOBJ:com.acme.Customer&firstName-doc  // Template id (explicit)
+@gdx:bob&shippingAddress                 ← root gdx:bob, any role
+@system/audit-log&entry-12345            ← root system/audit-log, any role
+@REL:gdx:knows&annotation-3              ← root gdx:knows, checked to be a REL
+@DEFOBJ:com.acme.Customer&firstName-doc  ← root com.acme.Customer, checked to be a Template
 ```
 
-The two composed forms are the canonical mechanisms for cross-document addressing. The `$` and `&` operators do not combine within a single reference literal; pick `NamePathRef` for structural traversal or `NameIdRef` for id-based addressing.
+The two composed forms are the canonical mechanisms for reaching inside another root, in this document or another. The `$` and `&` operators do not combine within a single reference literal; pick `RootPathRef` for structural traversal or `RootIdRef` for id-based addressing.
 
-Because `$` and `&` are not members of `NameContChar`, the boundary between the identifier portion and the path or id portion is lexically unambiguous. The optional `BaseRole` keyword before `:` is distinguished from a CURIE prefix (`gdx:`, `schema:`) by lookup against the closed `BaseRole` set: only `OBJ`, `REL`, `PKG`, `GRP`, `HEAD`, `DEFOBJ`, `DEFREC`, `DEFSTR`, `DEFINT`, `DEFFLOAT`, `DEFBOOL`, `DEFBYTE`, `DEFHEAD` are recognized as role markers.
+Because `$` and `&` are not members of `NameContChar`, the boundary between the `Base` and the path or id portion is lexically unambiguous. The optional `BaseRole` keyword before `:` is distinguished from a CURIE prefix (`gdx:`, `schema:`) by lookup against the closed `BaseRole` set: only `OBJ`, `REL`, `PKG`, `GRP`, `HEAD`, `DEFOBJ`, `DEFREC`, `DEFSTR`, `DEFINT`, `DEFFLOAT`, `DEFBOOL`, `DEFBYTE`, `DEFHEAD` are recognized as role markers. The keyword wins: when the part of a `Base` before its first `:` is one of these keywords, that `:` is the role separator, never part of a CURIE. A root whose Id begins with a role keyword followed by `:` (an Id such as `REL:x`) can therefore be addressed only with an explicit marker in front of it (`@REL:REL:x`).
 
-**Parse-time vs. resolution-time validation of role markers.** The parser MUST reject an unknown role keyword (one not in the closed set). At resolution time, the resolver MUST verify that the named element actually has the claimed role; mismatch yields an unresolved reference.
+**Parse-time vs. resolution-time validation of role markers.** The parser MUST reject an unknown role keyword (one not in the closed set). At resolution time, the resolver MUST verify that the resolved root actually has the claimed role; mismatch yields an unresolved reference.
 
-Reference literals are commonly used as the Resource of @-Edge elements (`@OBJ`, `@REL`, §6.4) and of REF elements (§6.16):
+Reference literals are commonly used as the Resource of @-Edge elements (`@OBJ`, `@REL`, `@HEAD`, §6.4) and of REF elements (§6.16). An @-edge takes only a `RootRef`; a REF may take any form:
 
 ```
-<OBJ alice
-    <@OBJ #knows : @people/bob>           ← @-edge: alice — knows → bob
+<OBJ &alice
+    <@OBJ #knows : @people/bob>           ← @-edge: alice — knows → the root with Id people/bob
     <%REC mailing : $/addresses/[1]>      ← REF: handle to a Record via path
-    <%REC home    : &homeAddress>         ← REF: handle to a Record via key
+    <%REC home    : &homeAddress>         ← REF: handle to a Record via its Id, in this document
+    <%REC work    : @com.acme&hq>         ← REF: handle to the Record with Id hq inside the root com.acme
 >
 ```
 
-**Address-mode singularity.** A reference literal whose Resource is a `PathRef`, `IdRef`, `NamePathRef`, or `NameIdRef` resolves to a single element. The reference is resolved if and only if path or id evaluation yields exactly one element whose role matches the enclosing prefix; zero matches, multiple matches, and a single match of non-matching role all yield an unresolved reference. Resolvers MUST NOT silently select a first match in the multi-match case. See `GDX-Path.md` §7 for the normative definition.
+**A root reference must be able to reach the declared role.** A plain `RootRef` resolves only to a root element, so it is meaningful only under a prefix whose role can stand at root level: `@OBJ`, `@REL`, `@HEAD`, and `%OBJ`, `%REL`, `%HEAD`, `%DEF…`, `%PKG`, `%GRP`. Under any other prefix — `%REC`, `%BLK`, `%STR` and the other value primitives, `%VAL`, the modifier forms (`%.STR`, `%_INT`, `%NSTR`), the Set forms (`%STR*`, `%REC*`), and `%@OBJ`/`%@REL` — a bare `@Base` can never resolve, and the element is malformed (Layer 1), exactly as an @-edge with a local part is (§6.4). Such a target is reached by a form with a local part: `&id`, `$path`, `@root&id` or `@root$path`.
 
-The five reference forms serve different addressing strategies. Identifier-mode looks up a target by name in the appropriate scope. Path-mode traverses a structural path to reach an element that may not have a global identifier. Id-mode looks up an element by its location-stable Id. The composed forms combine name resolution with one of structural traversal or id lookup. The choice among them is the author's, based on what the target is, where it lives, and how stably it is identified. When both an Id and a path could address the target, prefer the Id form — Ids are location-stable, paths break under restructuring.
+**Address-mode singularity.** Every reference literal resolves to a single element. The reference is resolved if and only if evaluation yields exactly one element whose role matches the enclosing prefix; zero matches, multiple matches, and a single match of non-matching role all yield an unresolved reference. Resolvers MUST NOT silently select a first match in the multi-match case. For a `RootRef`, the first resolution tier of §6.4.1 in which the Id occurs decides, exactly as the first region does for an `IdRef` (§4.4.5). See `GDX-Path.md` §7 for the normative definition.
+
+The five reference forms serve different addressing strategies. A root reference addresses a whole root element by its Id. An Id reference addresses any id-bearing element of the current document. A path traverses the structure to reach an element that has no Id. The composed forms reach inside a root, by Id or by path. The choice among them follows from what the target is and where it lives; the reach of each is fixed by its form. When both an Id and a path could address the target, prefer the Id form — Ids are location-stable, paths break under restructuring. An element that must be linked to durably needs an Id: a Name alone makes it reachable only by path.
 
 ### 4.3 Type References
 
@@ -663,13 +671,13 @@ A Type reference attaches to an element via the `--` sigil and follows the Resou
     <INT number : 100>
 >
 
-<DEFOBJ MyAddress --schema:address
+<DEFOBJ &MyAddress --schema:address
     <STR street : "Broadway">
     <STR city : "Oakland">
 >
 ```
 
-In the first element, `--com.acme.Address` resolves to the Template whose Id is `com.acme.Address`. In the second, the declaring Template's own identifier `MyAddress` is its **Id** — the token by which instances will reference it — and the Template additionally `--type`-claims `schema:address`. A bare leading identifier on a Template or REL declaration is read as that declaration's Id (§3.2); no distinct sigil is required.
+In the first element, `--com.acme.Address` resolves to the Template whose Id is `com.acme.Address`. In the second, the declaring Template's Id `&MyAddress` is the token by which instances will reference it, and the Template additionally `--type`-claims `schema:address`. A Template or REL declaration carries its Id in the `&` field like any other element; a bare identifier on it is its Name, which nothing resolves (§3.1, §4.2.6).
 
 The `--` sigil MUST be preceded by whitespace separating it from the previous token, and MUST be immediately followed by a Type identifier with no intervening whitespace. The Type identifier follows the lexical rules in §4.4.
 
@@ -717,14 +725,14 @@ The grammar is uniform but admits several conventional forms. The following are 
 | GUID / opaque      | `7f3a2b9c-4e21-4f88-91d5-abcdef012345` | System-generated identifiers                |
 | IRI                | `https://acme.com/people/alice`        | Globally resolvable identifiers             |
 
-All forms work in any identifier position because the grammar accepts the union of their characters. An identifier `gdx:Person` may appear as a Property identifier (unusual but valid), an entity Id, a Type reference, or a Predicate reference. Consumers interpret the identifier in context. A Type reference (`--gdx:Person`) and a Predicate reference (`#gdx:knows`) resolve to the target's **Id** (§8.5.2), not its descriptive Name; the CURIE the author writes after `--` or `#` is read as an Id token. This is a field-level rule for the two bare-token fields, distinct from the sigil-selected resolution modes of reference literals (`@`=name, `&`=id, `$`=path); the two mechanisms and their relationship are stated in §4.2.6.
+All forms work in any identifier position because the grammar accepts the union of their characters. An identifier `gdx:Person` may appear as a Property identifier (unusual but valid), an entity Id, a Type reference, or a Predicate reference. Consumers interpret the identifier in context. A Type reference (`--gdx:Person`) and a Predicate reference (`#gdx:knows`) resolve to the target's **Id** (§8.5.2), not its descriptive Name; the CURIE the author writes after `--` or `#` is read as an Id token. Reference literals bind by Id too (`@` a root by its Id, `&` an Id within a scope, `$` a structural path); the two mechanisms and their relationship are stated in §4.2.6.
 
 CURIEs are typically expanded to full IRIs by the resolver. The choice between IRI and CURIE is a tradeoff between explicitness (IRI) and compactness (CURIE):
 
 - IRI form: `<OBJ https://acme.com/people/alice ...>`
 - CURIE form: `<OBJ acme:people/alice ...>` (where `acme:` resolves to `https://acme.com/`)
 
-This identity model parallels RDF's: globally resolvable identifiers are the canonical scheme; CURIEs and other syntactic forms (paths, local names, GUIDs) are conveniences for specific use cases. The schemes in this section describe the lexical space a `Name` may occupy for descriptive naming and reference resolution; the same schemes are available to the `Id` field (§4.4.3), which carries the element's **durable** machine identity. When an element must be durably identified — for persistence or for durable graph relationships — the globally-resolvable identity belongs on its Id, not on its Name.
+This identity model parallels RDF's: globally resolvable identifiers are the canonical scheme; CURIEs and other syntactic forms (paths, local names, GUIDs) are conveniences for specific use cases. The schemes in this section describe the lexical space a `Name` may occupy for descriptive naming; the same schemes are available to the `Id` field (§4.4.3), which carries the element's **durable** machine identity. When an element must be identified — for persistence, or to be the target of any link or reference — the identity belongs on its Id, not on its Name; a Name is never resolved as an address (§4.2.6).
 
 When an IRI appears in `Predicate` position, the lexer recognizes it by the `://` scheme separator and parses it as a URI reference following RFC 3986 syntax. In other identifier positions, the same input is parsed as a maximal identifier (which incidentally captures the URI-like form because all its characters are valid NameContChars). Either way, the value carried is the same identifier; the distinction is lexical.
 
@@ -747,9 +755,9 @@ All of the following are valid id values:
 <REC &7f3a2b9c-4e21-4f88-91d5-abcdef012345 #log:event ...>
 ```
 
-The leading-digit relaxation is unambiguous because an Id token never appears in an open lexical position: it is always introduced by the `&` sigil, whether in field position (§4.1) or in a `IdRef`/`NameIdRef` reference literal (§4.2.6), so the digit-start ambiguity with numeric literals that motivates the `NameStartChar` restriction (§4.4.1) cannot arise. Id tokens are opaque: they carry NO numeric interpretation and are compared by case-sensitive ordinal equality like every other identity field (§3.2). An all-digit Id is a token, not a number — `&01` and `&1` are distinct Ids.
+The leading-digit relaxation is unambiguous because an Id token never appears in an open lexical position: it is always introduced by the `&` sigil, whether in field position (§4.1) or in a reference literal (§4.2.6) — after `&`, or after the `@` of a `Base`, so the digit-start ambiguity with numeric literals that motivates the `NameStartChar` restriction (§4.4.1) cannot arise. Id tokens are opaque: they carry NO numeric interpretation and are compared by case-sensitive ordinal equality like every other identity field (§3.2). An all-digit Id is a token, not a number — `&01` and `&1` are distinct Ids.
 
-The digit-permissive start admits the two id idioms that plain identifiers exclude: sequential tokens (`&1`, `&2`, … for log entries and append-only records) and digit-leading GUID/UUID tokens (`&7f3a2b9c-…`). Named Ids serve semantic identities (named addresses, designated child records), and IRI/CURIE Ids serve globally-resolvable durable identities. The Id is the element's durable machine identity and its location-stable reference target (§3.1, §4.2.6, §4.4.5): it is what persistence and durable graph relationships bind to, and — for a root element (§4.4.5) — what an @-edge resolves to when addressing by id (§6.4). Because Id is durable identity and `Name` is descriptive, the two are independent registers: changing a `Name` renames an element without changing its identity, while changing an Id re-identifies it. Once an Id has been externally referenced or persisted, it SHOULD NOT be changed. Ids are NOT slot positions for Template-instance alignment, and the `Id` field is excluded from the universal claim rule (§8.2.3): alignment uses the `Name` field, and Ids are never Template-declared.
+The digit-permissive start admits the two id idioms that plain identifiers exclude: sequential tokens (`&1`, `&2`, … for log entries and append-only records) and digit-leading GUID/UUID tokens (`&7f3a2b9c-…`). Named Ids serve semantic identities (named addresses, designated child records), and IRI/CURIE Ids serve globally-resolvable durable identities. The Id is the element's durable machine identity and its location-stable reference target (§3.1, §4.2.6, §4.4.5): it is what persistence and every link and reference bind to, and — for a root element (§4.4.5) — what an `@Base` reference and an @-edge resolve to (§4.2.6, §6.4). Because Id is durable identity and `Name` is descriptive, the two are independent registers: changing a `Name` renames an element without changing its identity, while changing an Id re-identifies it. Once an Id has been externally referenced or persisted, it SHOULD NOT be changed. Ids are NOT slot positions for Template-instance alignment, and the `Id` field is excluded from the universal claim rule (§8.2.3): alignment uses the `Name` field, and Ids are never Template-declared.
 
 #### 4.4.4 Identifier Length and Collisions
 
@@ -762,22 +770,22 @@ Practical guidance:
 - IRI-form identifiers may run to several hundred characters when full URIs are used. This is acceptable but compact identifiers (CURIEs, GUIDs) are preferred for documents that are read or edited by humans.
 - Implementations SHOULD impose an upper limit on identifier length (a reasonable default is 1024 characters) to bound memory use and prevent denial-of-service via pathologically long identifiers in untrusted documents.
 
-Identifier collisions across documents are an application concern, not a parser concern. Two documents using `gdx:Person` are referencing the same conceptual identifier; whether they refer to the same Template depends on the resolver's vocabulary mapping (§8.5.2). Within a single document, identifiers in the same scope MUST be unique among elements that compete for resolution (e.g., two top-level Objects with the same Name is malformed); identifiers in different scopes (different parents) are independent.
+Identifier collisions across documents are an application concern, not a parser concern. Two documents using `gdx:Person` are referencing the same conceptual identifier; whether they refer to the same Template depends on the resolver's vocabulary mapping (§8.5.2). Within a single document, Ids in the same scope MUST be unique (§4.4.5), because Ids are what references resolve to (e.g., two top-level Objects with the same Id is malformed); Ids in different scopes are independent. Names compete for nothing: two siblings MAY share a Name, and a path that steps through that Name then matches both and is unresolved in address mode (`GDX-Path.md` §7).
 
 #### 4.4.5 Id Uniqueness and Scope
 
-When an element carries an `Id` field, the Id value participates in a scope-local namespace used for `IdRef` and `NameIdRef` reference resolution (§4.2.6).
+When an element carries an `Id` field, the Id value participates in a scope-local namespace used for `IdRef` and `RootIdRef` reference resolution (§4.2.6). A root element's Id is also what a `RootRef` (`@Base`) resolves to.
 
 Id scope is determined by the element's position in the document:
 
 - **Object-scoped.** An element whose nearest enclosing addressable container is an Object has its Id scoped within that Object. Two elements inside the same Object MUST NOT share an Id value.
 - **Document-scoped.** An element at transport-layer position — a direct child of a Package, Group, or document root — has its Id scoped within the document. Two elements at this level MUST NOT share an Id value.
 
-**Root ids and interior ids.** An Id on a **root-level element** (a document-root Object, REL, HEAD, or Template — §7.2) is a **root id**: it is document-scoped and identifies the element durably, independent of its position or any structural rename. An Id on any non-root element (a Property, Record, Block-internal element, edge attribute, or an element nested inside an Object) is an **interior id** (equivalently, a child id): it identifies an interior element within its enclosing scope.
+**Root ids and interior ids.** An Id on a **root-level element** (a document-root Object, REL, HEAD, or Template — §7.2) is a **root id**: it is document-scoped and identifies the element durably, independent of its position or any structural rename, and it is what an `@Base` reference resolves to from any document (§4.2.6, §6.4.1). An Id on any non-root element (a Property, Record, Block-internal element, edge attribute, or an element nested inside an Object) is an **interior id** (equivalently, a child id): it identifies an interior element within its enclosing scope.
 
 Root-id status alone does not determine @-edge targetability. The @-Edge family is closed to three members by axiom E5 (§6.4) and Rule 14 (§7.2) — `@OBJ`, `@REL`, `@HEAD` — because only Object, REL, and HEAD are **independent graph-entities** in the E5 sense. A root id on one of these three roles MAY be the target of an @-edge. A Template's root id does not carry this property: Templates are vocabulary-layer artifacts, not independent graph-entities, and are categorically excluded from the @-edge family by E5/Rule 14 regardless of whether they carry an id. A Template — like any non-@-edge-eligible role, and like any interior id on any element — is addressable only through a REF (`%DEFOBJ`, `%DEFREC`, etc. — §6.16), never an @-edge. It does not otherwise change how the Id is written or compared.
 
-The enclosing-Object rule means that two different Objects MAY each contain an element with the same Id (`&entry-12345` in two different log Objects is permitted), because Id resolution within each Object is independent. The composed `NameIdRef` form (`@id-id&key`) pins the scope explicitly when addressing across Object boundaries.
+The enclosing-Object rule means that two different Objects MAY each contain an element with the same Id (`&entry-12345` in two different log Objects is permitted), because Id resolution within each Object is independent. The composed `RootIdRef` form (`@root&id`) pins the scope explicitly to one root.
 
 **Embedded Objects open a fresh Id scope.** An Object occupying a VAL slot (§6.11) is an Object for the purposes of the nearest-enclosing-container rule: elements inside it are Id-scoped to the embedded Object, not to the host Object. The embedded Object's own Id, if it carries one, belongs to the host's scope, exactly as any other child of the host.
 
@@ -785,21 +793,23 @@ The enclosing-Object rule means that two different Objects MAY each contain an e
 
 1. the nearest enclosing Object of the referencing element, including every element nested inside it (embedded Objects included);
 2. then the next enclosing Object outward, again including everything nested inside it, and so on;
-3. finally the whole document.
+3. finally the whole root that holds the reference.
 
-The first region in which the Id occurs decides the result. If it occurs once in that region, the reference resolves to that element; if it occurs more than once there, the reference is ambiguous and a resolver MUST NOT pick one of the matches (the author pins the scope with `NameIdRef`). Because the nearest region decides, an Id inside an inner Object shadows the same Id further out. The search never leaves the document root: a bare `IdRef` cannot reach an element in another document. Cross-document addressing uses `NameIdRef`, or a globally-resolvable id (below).
+In a plain document that root is the document root. In a Package or Group, each payload is a root of its own, so the search from inside a payload stops at that payload's root and never reaches another payload's interior; a sibling payload is reached with `@` (`@sibling` or `@sibling&id`). A reference carried directly by the Package or Group, outside any payload, searches the whole Package or Group.
 
-The outward search is what makes a bare `&key` useful: it reaches any id-bearing element of its document, not only the referencing element's own descendants, without the author naming where that element sits. The scope rules above govern where an Id must be unique; they do not limit how far a reference can see.
+The first region in which the Id occurs decides the result. If it occurs once in that region, the reference resolves to that element; if it occurs more than once there, the reference is ambiguous and a resolver MUST NOT pick one of the matches (the author pins the scope with `RootIdRef`). Because the nearest region decides, an Id inside an inner Object shadows the same Id further out. The search never leaves the document root: a bare `IdRef` cannot reach an element in another document. Reaching another document is what `@` is for: a `RootRef` for a whole root, a `RootIdRef` for an element inside one.
 
-**Globally-resolvable ids.** An Id written in a globally-resolvable form — an IRI, or a CURIE that expands to one (§4.4.2) — additionally participates in global resolution. When a bare `IdRef` names such an id and the outward search above finds no element carrying it, a resolver MAY resolve it against loaded document context and then against globally-resolvable IRIs, in the order defined for reference resolution in §6.4.1. This is the mechanism by which a durable root id identifies the same entity across documents: an id of the form `&https://acme.com/people/alice` needs no scope-local declaration to resolve. Non-global (local, sequential, GUID-form) ids keep the strict single-scope, no-shadowing rule above; the global tier applies only to ids whose form is itself globally resolvable.
+The outward search is what makes a bare `&id` useful: it reaches any id-bearing element of its document, not only the referencing element's own descendants, without the author naming where that element sits. The scope rules above govern where an Id must be unique; they do not limit how far a reference can see.
 
-**Default id role in composed references.** In a composed reference (`NamePathRef`, `NameIdRef`), if the `@Base` portion carries no role marker, the resolved element MUST be of role Object. This default reflects the common case for cross-document addressing. To id a composed reference at a non-Object element (a REL, a Template, a Package, or a Group), the author MUST use an explicit role marker (§4.2.6).
+**Globally-resolvable ids.** A root Id written in a globally-resolvable form — an IRI, or a CURIE that expands to one (§4.4.2) — additionally participates in global resolution. When a `Base` names such an Id and neither this document nor the loaded document context holds a root carrying it, a resolver MAY resolve it against globally-resolvable IRIs, in the order defined in §6.4.1. This is the mechanism by which a durable root Id identifies the same entity across documents: `@https://acme.com/people/alice` needs no declaration in the referring document to resolve. At no tier does a root's `Name` stand in for its Id. The global tier belongs to `@` only; a bare `IdRef` stays within its document whatever form its Id takes.
+
+**Role of an unmarked root in composed references.** In a composed reference (`RootPathRef`, `RootIdRef`), a `@Base` with no role marker matches the root carrying that Id whatever its root-eligible role (Object, REL, HEAD, Template, Package or Group); root Ids are unique within a document, so the Id alone picks the root. A role marker, when present, is checked, and a mismatch leaves the reference unresolved (§4.2.6).
 
 Id collisions within the same scope make the document malformed; conforming parsers SHOULD emit a diagnostic, and conforming resolvers MUST NOT silently pick one matching element over another.
 
 All Id tokens — named, all-digit, and GUID-form alike (§4.4.3) — participate in the same scope rules and compare by ordinal equality; `&01` and `&1` are distinct Ids.
 
-Ids are OPTIONAL at the data-model level. An element MAY omit the Id field entirely; in that case the element has no durable machine identity and is addressable only by `Name` (if present) or by structural path. The decision to carry an Id is the author's, based on whether the element needs a durable identity or to be a stable reference target. An element MUST carry an Id before it can be the target of an `IdRef`. A persistence profile MAY require an Id on every stored independent graph entity (§10); the core model does not.
+Ids are OPTIONAL at the data-model level. An element MAY omit the Id field entirely; in that case the element has no durable machine identity and is addressable only by structural path (a path may step through its `Name`). The decision to carry an Id is the author's, based on whether the element needs a durable identity or to be a reference target. An element MUST carry an Id before it can be the target of an `IdRef` or `RootIdRef`, and a root element MUST carry one before it can be the target of a `RootRef` or an @-edge. A persistence profile MAY require an Id on every stored independent graph entity (§10); the core model does not.
 
 ### 4.5 Whitespace Between Elements
 
@@ -919,7 +929,7 @@ Both forms are equivalent at the data-model level. Conversion is deterministic; 
 
 **Strict canonical for content addressing.** The strict canonical form (Appendix A.5), used for content addressing and signing, uses canonical prefix names. Minified output is valid GDX but does not produce strict canonical bytes.
 
-**Prefixes without minified forms.** Some prefixes are canonical-only — they are already three or more letters and represent infrequent declarative items where minification would save little: `REL`, `REM`, `PKG`, `BLK`, `GRP`, and all `DEF…` Template prefixes. These are identity-mapped between canonical and minified output: a minified document still contains `<REL gdx:knows>` and `<DEFREC Customer>`.
+**Prefixes without minified forms.** Some prefixes are canonical-only — they are already three or more letters and represent infrequent declarative items where minification would save little: `REL`, `REM`, `PKG`, `BLK`, `GRP`, and all `DEF…` Template prefixes. These are identity-mapped between canonical and minified output: a minified document still contains `<REL &gdx:knows>` and `<DEFREC &Customer>`.
 
 ### 5.2 Base Vocabulary
 
@@ -1008,7 +1018,7 @@ Detailed treatment of Sets, including empty-vs-absent semantics, is in §6.13.
 
 #### 5.3.2 The Sigil `@` — @-Edge Family
 
-The `@` prefix marks an element as a member of the **@-Edge family** (§6.4) — a first-class graph-statement element whose Resource is a reference to an independent graph-entity and whose `#predicate` field asserts a relationship the parent has to that target. The family has exactly three members:
+The `@` prefix marks an element as a member of the **@-Edge family** (§6.4) — a first-class graph-statement element whose Resource is a root reference (`@Base`, §4.2.6) to an independent graph-entity, addressed by its root Id, and whose `#predicate` field asserts a relationship the parent has to that target. The `@` means the same thing in the prefix as in the Resource: a crossing to another root. The family has exactly three members:
 
 - `@OBJ` — @-edge to an Object (data-Objects, including concept-Objects per §6.15)
 - `@REL` — @-edge to a REL declaration (predicate-to-predicate or REL-to-concept-Object)
@@ -1017,8 +1027,8 @@ The `@` prefix marks an element as a member of the **@-Edge family** (§6.4) —
 @-edges carry an associative `#predicate` specifying the relationship's nature — the field MAY be empty, leaving the relationship undefined pending refinement (§6.4 axiom E4, §6.4.2) — and MAY carry attribute children, identity (`Name`/`Id`), Qualifiers, Extensions, and Annotations.
 
 ```
-<@OBJ #knows : @bob>                  ← @-edge: alice knows bob
-<@OBJ edge-1 #knows : @bob            ← @-edge with identity and attributes
+<@OBJ #knows : @bob>                  ← @-edge: alice knows the root with Id bob
+<@OBJ &edge-1 #knows : @bob           ← @-edge with identity and attributes
     <STR since : "2024-01-15">
 >
 <@REL #gdx:inverse : @gdx:knownBy>    ← @-edge: predicate-to-predicate
@@ -1028,7 +1038,7 @@ The `@` prefix marks an element as a member of the **@-Edge family** (§6.4) —
 
 Three compositions are malformed:
 
-- **`@@KIND`** — no @-edge-to-@-edge directly. To reify a specific @-edge from outside, use a `%@OBJ` or `%@REL` REF with the edge's key (see §5.3.3 and §6.16).
+- **`@@KIND`** — no @-edge-to-@-edge directly. To reify a specific @-edge from outside, use a `%@OBJ` or `%@REL` REF with the edge's Id (see §5.3.3 and §6.16).
 - **`@OBJ*`** and **`@REL*`** — no Set-of-@-edges. Each @-edge is a single graph statement (§6.4 axiom E2′); multiple edges from one source are expressed as siblings, not as Set members.
 - **`@%KIND`** — no @-edge-to-REF. @-edges target only independent graph-entities (§6.4 axiom E5); REFs are slot-contents, not graph-entities.
 
@@ -1056,10 +1066,10 @@ where the layer-1 role-prefix follows the established pattern `[@?][refinement-m
 REFs MAY carry a `#predicate` (compositional — aligns the slot to a vocabulary predicate; see §6.16 axiom R4), Qualifiers, Extensions, an `Name` (slot name), and Annotations. They MUST NOT carry structural children — that would make a REF a substance rather than a handle.
 
 ```
-<%OBJ database : @primary-db>                ← REF: handle to an Object
-<%DEFOBJ #conformsTo : &ServerConfigV2>      ← REF: handle to a Template, slot aligned
-<%REC mailing : @alice$/addresses/[1]>       ← REF: handle to an interior Record
-<%@OBJ source : @alice&knows-bob-2024>       ← REF: handle to an @-edge (reification)
+<%OBJ database : @primary-db>                ← REF: handle to a root Object, by its Id
+<%DEFOBJ #conformsTo : @ServerConfigV2>      ← REF: handle to a Template (a root), slot aligned
+<%REC mailing : @alice$/addresses/[1]>       ← REF: handle to an interior Record, by path
+<%@OBJ source : @alice&knows-bob-2024>       ← REF: handle to an @-edge by its Id (reification)
 ```
 
 Two compositions are malformed:
@@ -1088,7 +1098,7 @@ Examples:
     <.STR unit : "celsius">             ← Qualifier refining what 21.5 means
 >
 
-<DEFSTR Email
+<DEFSTR &Email
     <_STR pattern : "^[^@]+@[^@]+$">    ← Extension carrying a constraint
 >
 
@@ -1119,7 +1129,7 @@ The closed enumeration of roles is: Object, Record, Property, Block, Annotation,
 |-----------|----------|-----------|------------|
 | `OBJ`     | `O`      | —         | required (resource identifier) |
 
-An Object is a **thing with identity** — an independently-identified entity that stands on its own and may be referenced from other elements. Conceptually, an Object is the kind of element that *other* elements refer to: a Person, an Order, a Server, a Document. It is the unit of persistence and exchange, and its identifier (a path, CURIE, GUID, IRI, or other globally meaningful identifier) is what makes that referenceability possible. The specification places no constraint on the identifier scheme.
+An Object is a **thing with identity** — an independently-identified entity that stands on its own and may be referenced from other elements. Conceptually, an Object is the kind of element that *other* elements refer to: a Person, an Order, a Server, a Document. It is the unit of persistence and exchange, and its `Id` (a path, CURIE, GUID, IRI, or other globally meaningful identifier) is what makes that referenceability possible: links and references bind to the Id, never to the Object's descriptive `Name` (§4.2.6). The specification places no constraint on the identifier scheme.
 
 Structurally, an Object is a container of named children. The root of a GDX document MUST be one or more Objects, HEADs, Templates, REL declarations, or Packages. Objects may not contain other Objects except as the occupant of a VAL slot (§6.11), as the Body of a HEAD (§6.17), or as transport-layer payload (§6.7, §9).
 
@@ -1140,7 +1150,7 @@ A Record is a **compound property** — a named composite that belongs to its pa
 
 Structurally, a Record is a container of named children, admitting Properties, Sets, Edges, nested Records, Qualifiers, Nodes, and Annotations. A Record's identifier is a local identifier, meaningful within its containing scope — it names the slot the Record fills in its parent, not a globally addressable resource. A Record *contains* its children, in contrast to a Block which merely *labels* a region of children (§6.5). Records may not contain Objects (except as the occupant of a VAL slot, §6.11) or Groups.
 
-**Records and Objects share structural shape** (both are composites of named children) but differ conceptually: an Object stands as an identified thing; a Record belongs to its parent as a compound property. The distinction matters for addressability (Objects are globally referenceable by Name; Records require path or key composition to reach — see §4.2.6), for persistence (Objects are the unit of storage; Records are stored as part of their containing Object), and for what may root a document (Objects may root; Records may not).
+**Records and Objects share structural shape** (both are composites of named children) but differ conceptually: an Object stands as an identified thing; a Record belongs to its parent as a compound property. The distinction matters for addressability (a root Object is referenceable from anywhere by its Id; a Record is reached by an Id or a path inside its root — see §4.2.6), for persistence (Objects are the unit of storage; Records are stored as part of their containing Object), and for what may root a document (Objects may root; Records may not).
 
 ```
 <REC address
@@ -1185,20 +1195,20 @@ An **@-edge** is a **first-class but dependent relationship** — a persistent e
 
 @-edges are GDX's labeled-property-graph mechanism. They are how a document carries the assertion that one graph-entity stands in some named relation to another, optionally with attributes refining the relation.
 
-**Family enumeration.** The @-Edge family has exactly three members: `@OBJ` (target is a data-Object, including concept-Objects), `@REL` (target is a predicate, i.e., a REL declaration), and `@HEAD` (target is a persistent aggregate head, §6.17). The membership is restricted to *independent graph-entities* — Objects, REL declarations, and HEADs are the roles that stand as independent entities. Targets that are not independent graph-entities — Templates (vocabulary-layer artifacts), value Properties (interior to their parent), Qualifiers/Extensions/Annotations (refinement-only), VAL slots (a container, not an entity), Records/Blocks (composite parts of an Object), or any element addressed by path or key into another element's interior — are not @-edges; pointing at such targets is the job of the Reference family (§6.16).
+**Family enumeration.** The @-Edge family has exactly three members: `@OBJ` (target is a data-Object, including concept-Objects), `@REL` (target is a predicate, i.e., a REL declaration), and `@HEAD` (target is a persistent aggregate head, §6.17). The membership is restricted to *independent graph-entities* — Objects, REL declarations, and HEADs are the roles that stand as independent entities. Targets that are not independent graph-entities — Templates (vocabulary-layer artifacts), value Properties (interior to their parent), Qualifiers/Extensions/Annotations (refinement-only), VAL slots (a container, not an entity), Records/Blocks (composite parts of an Object), or any element addressed by path or Id into another element's interior — are not @-edges; pointing at such targets is the job of the Reference family (§6.16).
 
-**Both endpoints are role-explicit.** The *source* endpoint of an @-edge is its containing element, whose role is self-declared by its own prefix; the *target* endpoint's role is declared by the @-edge prefix and verified at resolution (E1). No endpoint's role is ever discovered by resolution — the declared-not-discovered discipline holds at both ends, and any source/target role combination admitted by the composition matrix (§7.1) is expressible (Object-to-Object data graphs, REL-to-REL predicate axioms, REL-to-concept-Object domain/range statements, and so on). This is also why @-edges connect whole, self-declaring elements only: a `$path`- or `&key`-addressed interior has no role-declaring definition of its own for the endpoint claim to verify against, so interior addressing is value-resolution territory (REF, §6.16), never edge territory.
+**Both endpoints are role-explicit.** The *source* endpoint of an @-edge is its containing element, whose role is self-declared by its own prefix; the *target* endpoint's role is declared by the @-edge prefix and verified at resolution (E1). No endpoint's role is ever discovered by resolution — the declared-not-discovered discipline holds at both ends, and any source/target role combination admitted by the composition matrix (§7.1) is expressible (Object-to-Object data graphs, REL-to-REL predicate axioms, REL-to-concept-Object domain/range statements, and so on). This is also why @-edges connect whole, self-declaring elements only: a `$path`- or `&id`-addressed interior has no role-declaring definition of its own for the endpoint claim to verify against, so interior addressing is value-resolution territory (REF, §6.16), never edge territory.
 
 ```
-<OBJ alice
-    <@OBJ #knows : @bob>                              ← simple edge: alice — knows → bob
-    <@OBJ employmentEdge #worksFor : @com.acme        ← edge with identity and attributes
+<OBJ &alice
+    <@OBJ #knows : @bob>                              ← simple edge: alice — knows → the root with Id bob
+    <@OBJ &employment-1 #worksFor : @com.acme         ← edge with identity and attributes
         <STR startDate : "2024-01-15">
         <FLOAT confidence : 0.95>
     >
 >
 
-<REL gdx:knows
+<REL &gdx:knows
     <@REL #gdx:inverse  : @gdx:knownBy>               ← predicate-to-predicate edge
     <@OBJ #gdx:domain   : @gdx:Person>                ← predicate-to-concept-Object edge
     <@OBJ #gdx:range    : @gdx:Person>
@@ -1207,7 +1217,7 @@ An **@-edge** is a **first-class but dependent relationship** — a persistent e
 
 #### Axioms (E1–E6)
 
-**E1 — Prefix asserts target role; Resource asserts target identity.** The `@KIND` prefix declares the role the resolved target MUST occupy: `@OBJ` declares an Object target; `@REL` declares a REL target. The Resource is a reference literal addressing the target — either by name (`NameRef`, `@identifier` per §4.2.6) or by durable identity (`IdRef`, `&id`, when the id is a **root id** resolving to an independent graph entity — E5, §4.4.5). Resolution checks both — the addressed target MUST exist AND MUST be of the declared role, whichever addressing form is used. The prefix asserts the target-role even when the Resource is empty: `<@OBJ #knows : >` in Template context declares "a slot for an Object-edge predicated `knows` belongs here"; in instance context, the empty Resource represents a null edge (per §3.3.3). The prefix is the type assertion; it stands whether or not a Resource is present.
+**E1 — Prefix asserts target role; Resource asserts target identity.** The `@KIND` prefix declares the role the resolved target MUST occupy: `@OBJ` declares an Object target; `@REL` declares a REL target. The Resource is a root reference (`RootRef`, `@Base` per §4.2.6) addressing the target by its root Id (E5, §4.4.5). Resolution checks both — the addressed target MUST exist AND MUST be of the declared role. The prefix asserts the target-role even when the Resource is empty: `<@OBJ #knows : >` in Template context declares "a slot for an Object-edge predicated `knows` belongs here"; in instance context, the empty Resource represents a null edge (per §3.3.3). The prefix is the type assertion; it stands whether or not a Resource is present.
 
 **E2′ — First-class but dependent.** An @-edge is its own entity in the data model — it can carry identity, predicate, and attribute children — but it does not exist independently of its source: it is owned by and serialized within the source element. The edge *relates* its source to its target; it does NOT contain either. An edge dies with its source (delete the source and the edge is gone; relational projections SHOULD model this with `ON DELETE CASCADE` on the source side). An edge dangles if its target is removed (the edge persists as a structurally well-formed element with an unresolved reference; the consumer decides how to handle dangling). This distinguishes @-edges from VAL: VAL *contains* its value as an occupant; an @-edge *points at* its target.
 
@@ -1215,13 +1225,13 @@ An **@-edge** is a **first-class but dependent relationship** — a persistent e
 
 **E4 — The role asserts existence; the `#predicate` field specifies nature and MAY be empty.** An @-edge is, by its role, the assertion that a relationship *exists* between its source and its target. The `#predicate` field specifies *what* that relationship is; when present, it is associative (it asserts the parent-to-target meaning), and it MAY be empty. An edge with no `#predicate` parses to a null Predicate, is well-formed, and denotes a relationship **undefined as to nature** — to be refined later by filling the field on the same edge (§6.4.2). An empty predicate is therefore never ambiguous about whether a relationship exists; the role settled that. Since the v0.13 sigil partition, the construct discrimination this field once carried lives in the sigil itself: `@`-prefixed elements are @-edges and `%`-prefixed elements are REFs, with or without a `#predicate`. The empty predicate is not an idiom for *permanent* type-free adjacency — empty means "not yet specified," and a relationship whose intended meaning is bare adjacency is expressed with a designated predicate value (e.g., `<@OBJ #gdx:adjacent : @target>`).
 
-**E5 — Family is enumerated by target role and restricted to independent graph-entities.** The family consists of exactly `@OBJ`, `@REL`, and `@HEAD`. The restriction is principled: only Objects (including concept-Objects, since GDX uses concept-as-Object for ontology layering — see §6.15), REL declarations, and HEAD aggregates (§6.17) are independent graph-entities. An @-edge resolves only to such an entity at **root-level position** (a document-root element, or an element promoted to root — §7.2); it never resolves to an interior element. A target may be addressed by its `Name` (`@identifier`) or, when it carries a root id, by its durable identity (`&id`); interior ids and structural paths are Reference territory, never edge targets (see Resolution, below). Source role is orthogonal to membership: any role admitted as a parent of an @-edge by the composition matrix (§7.1) may carry @-edges; the family enumeration is over targets only. The Set forms `@OBJ*`, `@REL*`, and `@HEAD*` are **malformed** — each @-edge is a single graph statement (per E2′); multiple edges from one source are expressed as siblings, not as Set members. To address multiple edges as a collection (e.g., for iteration or query), the parent Object's children are filtered by prefix — the structure is implicit in the document, not collected into a Set.
+**E5 — Family is enumerated by target role and restricted to independent graph-entities.** The family consists of exactly `@OBJ`, `@REL`, and `@HEAD`. The restriction is principled: only Objects (including concept-Objects, since GDX uses concept-as-Object for ontology layering — see §6.15), REL declarations, and HEAD aggregates (§6.17) are independent graph-entities. An @-edge resolves only to such an entity at **root-level position** (a document-root element, or an element promoted to root — §7.2); it never resolves to an interior element. A target is addressed by its root Id (`@id`), so a root that is to be an edge target MUST carry an Id; interior ids and structural paths are Reference territory, never edge targets (see Resolution, below). Source role is orthogonal to membership: any role admitted as a parent of an @-edge by the composition matrix (§7.1) may carry @-edges; the family enumeration is over targets only. The Set forms `@OBJ*`, `@REL*`, and `@HEAD*` are **malformed** — each @-edge is a single graph statement (per E2′); multiple edges from one source are expressed as siblings, not as Set members. To address multiple edges as a collection (e.g., for iteration or query), the parent Object's children are filtered by prefix — the structure is implicit in the document, not collected into a Set.
 
-**E6 — Identity is optional and orthogonal to predicate; the Id is the substance, the Name names it.** An @-edge MAY carry an `Id` (its durable machine identity) and/or a `Name` (a descriptive name). The **Id** is the edge's *substance* — the persistent entity (per E2′) that endures across changes to predicate, attributes, target, or Name, and that disambiguates multiple edges between the same endpoints. The substance/predication distinction is the spine of the model: the `Id` is what the edge *is* (the enduring thing); the `#predicate` is what it currently *asserts*; the `Name` is a descriptive label for alignment or symbolic reference; attribute children ride on the substance. Changing an edge's predicate, target, or Name does not change its identity; changing its Id does. An id-bearing edge with an empty predicate is well-formed and is the canonical capture-first pattern (§6.4.2 — the substance exists, the predication is pending); predicate-without-identity is the common case (most edges are content with anonymous substance). Two @-edges that share the same source, predicate, and target ARE distinct edges if they carry different Ids; uniqueness is by identity, not by the (source, predicate, target) triple.
+**E6 — Identity is optional and orthogonal to predicate; the Id is the substance, the Name names it.** An @-edge MAY carry an `Id` (its durable machine identity) and/or a `Name` (a descriptive name). The **Id** is the edge's *substance* — the persistent entity (per E2′) that endures across changes to predicate, attributes, target, or Name, and that disambiguates multiple edges between the same endpoints. The substance/predication distinction is the spine of the model: the `Id` is what the edge *is* (the enduring thing); the `#predicate` is what it currently *asserts*; the `Name` is a descriptive label for alignment and display; attribute children ride on the substance. Changing an edge's predicate, target, or Name does not change its identity; changing its Id does. An id-bearing edge with an empty predicate is well-formed and is the canonical capture-first pattern (§6.4.2 — the substance exists, the predication is pending); predicate-without-identity is the common case (most edges are content with anonymous substance). Two @-edges that share the same source, predicate, and target ARE distinct edges if they carry different Ids; uniqueness is by identity, not by the (source, predicate, target) triple.
 
-**Resolution.** An @-edge's Resource addresses a single root-level entity, in one of two forms: by name (`NameRef`, `@identifier` per §4.2.6) or by durable identity (`IdRef`, `&id`) when the id is a **root id** resolving to an independent graph entity of the declared role (§4.4.5, E5). A bare `&id` naming a globally-resolvable durable identity (an IRI, or a CURIE expanding to one) resolves across documents via the global tier of §4.4.5. Everything else is Reference territory, never an edge target: a `$path`, an `&id` resolving to an **interior** element, and the composed `@Base$PathExpression` and `@Base&Id` forms all address interior locations and are handled by the Reference family (§6.16). An @-edge resolves to a single whole entity; interior-reaching is by definition not an @-edge concern.
+**Resolution.** An @-edge's Resource is a `RootRef` (`@id`, §4.2.6): it addresses a single root-level entity of the declared role by its root Id (§4.4.5, E5), in this document or another, resolved in the order of §6.4.1. Every other reference form is Reference territory, never an edge target: an `IdRef` (`&id`), a `PathRef` (`$path`), and the composed `RootIdRef` (`@Base&Id`) and `RootPathRef` (`@Base$PathExpression`) forms all address elements by their place inside a root, and are handled by the Reference family (§6.16). An @-edge whose Resource is any of these forms is malformed; the form is visible in the literal, so a parser can refuse it without resolving anything. An @-edge resolves to a single whole entity; interior-reaching is by definition not an @-edge concern.
 
-**Predicate-to-predicate and concept-Object edges.** @-edges from a REL to another REL (vocabulary metadata: inverse, subPropertyOf, equivalentProperty) and from a REL to a concept-Object (domain, range) are first-class edges. They are how a vocabulary document expresses the predicate-axiom layer (§6.15) without leaving the same element form used for everyday data. The substance/predication split applies uniformly: a `<@REL eid #gdx:inverse : @gdx:reportsTo>` edge with identity `eid` is a trackable assertion about predicate relationships, addressable from other documents and editable independently of the predication it currently carries.
+**Predicate-to-predicate and concept-Object edges.** @-edges from a REL to another REL (vocabulary metadata: inverse, subPropertyOf, equivalentProperty) and from a REL to a concept-Object (domain, range) are first-class edges. They are how a vocabulary document expresses the predicate-axiom layer (§6.15) without leaving the same element form used for everyday data. The substance/predication split applies uniformly: a `<@REL &eid #gdx:inverse : @gdx:reportsTo>` edge with identity `eid` is a trackable assertion about predicate relationships, addressable from other documents and editable independently of the predication it currently carries.
 
 **Composition.** Per §7.1, @-edges are admitted as children of Object, Record, Block, Edge (recursion: an edge's attribute children may themselves be edges), VAL (when the slot's value is an edge-shaped element), Template (declaring an edge slot), and REL (carrying vocabulary metadata about the predicate). Sources of @-edges are determined by where they are admitted; targets are determined by the prefix.
 
@@ -1229,20 +1239,20 @@ An **@-edge** is a **first-class but dependent relationship** — a persistent e
 
 #### 6.4.1 @-Edge Reference Resolution
 
-An @-edge's Resource is a reference to a target entity (Object for `@OBJ`, REL for `@REL`), addressed by name (`@identifier`) or by root id (`&id`, E5). Reference resolution determines whether the target exists and what entity it identifies.
+An @-edge's Resource is a reference to a target entity (Object for `@OBJ`, REL for `@REL`, HEAD for `@HEAD`), addressed by its root Id (`@id`, E5). Reference resolution determines whether the target exists and what entity it identifies. The same order resolves the `@Base` of every root reference, whether it is the Resource of an @-edge, of a REF (§6.16), or the first part of a composed form (§4.2.6).
 
-The default resolution order below is normative for name-addressed targets. An id-addressed target resolves by the Id lookup of §4.4.5 — outward from the reference to the document root first, then, for a globally-resolvable durable id, the same loaded-context and IRI tiers listed below.
+The default resolution order is normative. At each tier, a root matches when its Id equals the `Base` by ordinal comparison; a root's `Name` is never consulted:
 
-The default resolution order is normative:
+1. **Local document.** The root elements of the same document as the reference are checked first: the document root, and the roots carried alongside it in the same Package or Group (§7.2). An `@bob` reference from an `@OBJ` edge is satisfied by an `<OBJ &bob>` root in the same document if one exists.
+2. **Loaded document context.** When the reference appears in a document being processed alongside other documents (e.g., in a batch import, registry or store context), the roots of those documents are checked in the order they were loaded.
+3. **Globally-resolvable Ids.** A `Base` that is an IRI, or a CURIE expanding to one (e.g., `@https://acme.com/people/alice`), MAY be resolved by a network-aware resolver if the implementation supports it. Implementations are not required to perform network resolution.
+4. **Resolution failure.** If no tier yields a target, the reference is unresolved.
 
-1. **Local document.** Identifiers declared within the same document as the @-edge are checked first. An `@bob` reference from an `@OBJ` edge is satisfied by an `<OBJ bob>` declaration in the same document if one exists.
-2. **Loaded document context.** When the @-edge appears in a document being processed alongside other documents (e.g., in a batch import or registry context), entities from those documents are checked in the order they were loaded.
-3. **Globally-resolvable IRIs.** References expressed as full IRIs (e.g., `@https://acme.com/people/alice`) MAY be resolved by a network-aware resolver if the implementation supports it. Implementations are not required to perform network resolution.
-4. **Resolution failure.** If no scope yields a target, the reference is unresolved.
+The first tier in which a root carries the Id decides. If more than one root at that tier carries it, the reference is ambiguous and the resolver MUST NOT pick one (§4.4.5).
 
 The resolver MUST verify that the resolved entity's role matches the @-edge prefix: an `@OBJ` reference resolving to a REL is a role mismatch and yields an unresolved reference; an `@REL` reference resolving to an Object is similarly malformed.
 
-**Prefer `&id` for durable and cross-document edges.** Both target forms are first-class, and the choice is the author's, but they have different stability characteristics. A name-addressed target (`@bob`) binds to the target's descriptive `Name`, which is non-durable (§3.1): renaming the target breaks the edge. An id-addressed target (`&bob`) binds to the target's durable `Id`, which survives renames and — when the id is globally-resolvable (an IRI, or a CURIE expanding to one) — resolves across documents (§4.4.5). Authors SHOULD therefore prefer the `&id` form for edges that must survive target relabeling or that address a target in another document, reserving the `@name` form for local, same-document convenience where the target's name is known and stable. This mirrors the Id-over-path preference stated for references generally (§4.2.6): bind to the most durable identity the target exposes.
+**An edge binds to its target's Id, never its Name.** The target's `Name` is a descriptive label and is non-durable (§3.1); binding an edge to it would let a relabel break the edge. Because the `@Base` is always an Id, an edge survives any rename of its target, and an edge to a root whose Id is globally resolvable (an IRI, or a CURIE expanding to one) resolves the same way from any document.
 
 When an @-edge reference cannot be resolved:
 
@@ -1412,7 +1422,7 @@ Structurally, the `_` modifier marks an element as an Extension. Extensions MAY 
 **Extensions carry primitive value-kinds only.** The closed Extension prefix vocabulary admits string, int, float, bool, and bytes (the table below). To express an adjunct statement whose value is a *reference* to another element, the construct depends on whether the assertion is a graph statement or a slot binding:
 
 - For **graph statements between graph-entities** (Objects, RELs) — e.g., "this predicate has `gdx:Person` as domain," "this REL is the inverse of `gdx:knownBy`" — use an @-edge (`@OBJ` or `@REL`, §6.4) with an associative `#predicate`: `<@OBJ #gdx:domain : @gdx:Person>`, `<@REL #gdx:inverse : @gdx:knownBy>`.
-- For **handle slots pointing at non-graph-entities** (Templates, Records, value-Properties, Qualifiers, etc.) — e.g., "this slot holds a handle to the schema that types the range" — use a REF (`%KIND`, §6.16) with optional compositional `#predicate`: `<%DEFOBJ #gdx:rangeSchema : &PersonTemplate>`, `<%REC defaultMailing : @global-defaults$/mailing>`.
+- For **handle slots pointing at non-graph-entities** (Templates, Records, value-Properties, Qualifiers, etc.) — e.g., "this slot holds a handle to the schema that types the range" — use a REF (`%KIND`, §6.16) with optional compositional `#predicate`: `<%DEFOBJ #gdx:rangeSchema : @PersonTemplate>`, `<%REC defaultMailing : @global-defaults$/mailing>`.
 
 Extensions, @-edges, and REFs together cover the adjunct-statement surface: Extensions for primitive-valued assertions, @-edges for graph-statement assertions, REFs for handle-valued assertions. All three attach to elements as vocabulary-keyed children; the choice follows the value-kind and genus (slot-filling vs relationship-asserting) of the assertion.
 
@@ -1429,7 +1439,7 @@ See §6.9 for the contrast with Qualifier — both attach to elements, but Quali
 A schema constraint on a Template (Extensions' most common use):
 
 ```
-<DEFSTR Email
+<DEFSTR &Email
     <_BOOL required : true>
     <_STR pattern : "^[^@]+@[^@]+$">
 >
@@ -1438,7 +1448,7 @@ A schema constraint on a Template (Extensions' most common use):
 A predicate-semantic Extension on a REL:
 
 ```
-<REL gdx:knows
+<REL &gdx:knows
     <@OBJ #gdx:domain : @gdx:Person>
     <@OBJ #gdx:range  : @gdx:Person>
     <_BOOL gdx:symmetric : true>
@@ -1468,11 +1478,11 @@ A presentation hint attached to a Property:
 A migration directive attached to a Template:
 
 ```
-<DEFOBJ CustomerV2
+<DEFOBJ &CustomerV2
     <STR firstName>
     <STR lastName>
     <STR email>
-    <%DEFOBJ #gdx:supersedes : &CustomerV1>
+    <%DEFOBJ #gdx:supersedes : @CustomerV1>
     <_STR migrate:from-v1 : "add-email-from-default">
 >
 ```
@@ -1485,7 +1495,7 @@ In each case, GDX records the Extension as a well-formed element; what (if anyth
     <_STR acme:precision : "high">   ← Extension (adjunct): an assertion about the measurement
 >
 
-<DEFFLOAT TemperatureReading
+<DEFFLOAT &TemperatureReading
     <_STR unit : "celsius">          ← Extension on Template (incorporated into validation by the validator)
 >
 ```
@@ -1686,17 +1696,17 @@ A `DEFHEAD` Template (§6.17) declares the shape of a persistent aggregate: its 
 A Template's *fields* are described using regular prefixes (not `DEF…` prefixes). The DEF prefix appears only at the Template's declaration root; the children are field descriptions using the standard structural and value prefixes.
 
 ```
-<DEFREC com.acme.Address
+<DEFREC &com.acme.Address
     <STR street>
     <INT number>
 >
 
-<DEFSTR schema:csv
+<DEFSTR &schema:csv
     <_STR separator : ",">
     <_BOOL hasHeader : true>
 >
 
-<DEFINT gdx:i8
+<DEFINT &gdx:i8
     <_INT gdx:min : -128>
     <_INT gdx:max : 127>
 >
@@ -1720,7 +1730,7 @@ Structurally, a `REL` element declares a predicate as a first-class entity. The 
 - **Records, Sets, Blocks, VAL** — structured data, collections of data, and organizational containers, by the same principle. A REL with a `<REC documentation>` carrying a structured description block, or a `<STR* aliases>` carrying alias strings, is well-formed; the vocabulary that interprets these structures decides their meaning.
 - **@-edges** (§6.4) — first-class predicate-axiom statements. An `@OBJ` edge to a concept-Object expresses domain or range (`<@OBJ #gdx:domain : @gdx:Person>`); an `@REL` edge to another REL expresses inverse, subPropertyOf, or equivalent-property relationships (`<@REL #gdx:inverse : @gdx:reportsTo>`). These are first-class assertions about the predicate — they may carry their own identity (per §6.4 axiom E6) and attribute children describing the axiom.
 - **Extensions** (§6.10) — primitive-valued vocabulary-defined predicate axioms: symmetry (`<_BOOL gdx:symmetric : true>`), cardinality bounds, transitivity flags, and any other primitive-valued semantic claim a vocabulary defines.
-- **REFs** (§6.16) — typed handles to non-graph-entities: a Template that types the range (`<%DEFOBJ #gdx:rangeSchema : &PersonTemplate>`), a documentation document, a related vocabulary file.
+- **REFs** (§6.16) — typed handles to non-graph-entities: a Template that types the range (`<%DEFOBJ #gdx:rangeSchema : @PersonTemplate>`), a documentation document, a related vocabulary file.
 - **Annotations** (§6.6) — free-text notes for human readers.
 
 **Excluded children.** A REL does NOT admit:
@@ -1741,7 +1751,7 @@ The mechanical version: would a validator or reasoner act on it? → Extension. 
 **@-edge target convention.** The @-Edge family axioms (§6.4 E5) restrict @-edge targets to Objects or RELs structurally. The vocabulary convention for @-edges on a REL is to target *concept-Objects* (Objects with conceptual identifiers like `@gdx:Person`) or other RELs — to make predicate-axiom statements like domain/range/inverse. This is convention, not enforcement; the matrix admits any @OBJ or @REL target, and the concept-vs-data-instance distinction lives in vocabulary practice, not in GDX-core.
 
 ```
-<REL gdx:knows
+<REL &gdx:knows
     <STR rdfs:label : "knows">
     <STR rdfs:comment : "Asserts an acquaintance relationship between two Persons.">
     <STR* aliases <STR : "is_acquainted_with"> <STR : "is_connected_to">>
@@ -1750,7 +1760,7 @@ The mechanical version: would a validator or reasoner act on it? → Extension. 
     <_BOOL gdx:symmetric : true>
 >
 
-<REL gdx:manages
+<REL &gdx:manages
     <@REL #gdx:inverse : @gdx:reportsTo>
 >
 ```
@@ -1768,15 +1778,15 @@ The three are coordinated by identity: **when** a `#predicate` token matches the
 **A small vocabulary document:**
 
 ```
-<OBJ gdx:Person
+<OBJ &gdx:Person
     <STR rdfs:label : "Person">
 >
 
-<OBJ gdx:Organization
+<OBJ &gdx:Organization
     <STR rdfs:label : "Organization">
 >
 
-<REL gdx:knows
+<REL &gdx:knows
     <STR rdfs:label : "knows">
     <STR rdfs:comment : "Asserts an acquaintance relationship.">
     <@OBJ #gdx:domain : @gdx:Person>
@@ -1784,27 +1794,27 @@ The three are coordinated by identity: **when** a `#predicate` token matches the
     <_BOOL gdx:symmetric : true>
 >
 
-<REL gdx:employs
+<REL &gdx:employs
     <STR rdfs:label : "employs">
     <@OBJ #gdx:domain : @gdx:Organization>
     <@OBJ #gdx:range  : @gdx:Person>
     <@REL #gdx:inverse : @gdx:employedBy>
 >
 
-<REL gdx:employedBy
+<REL &gdx:employedBy
     <STR rdfs:label : "employed by">
     <@OBJ #gdx:domain : @gdx:Person>
     <@OBJ #gdx:range  : @gdx:Organization>
 >
 
-<DEFOBJ gdx:Person
+<DEFOBJ &gdx:PersonShape
     <STR firstName>
     <STR familyName>
     <REC* knows>
 >
 ```
 
-This document defines a small vocabulary: two concept Objects (`gdx:Person`, `gdx:Organization`), three predicates with declared domain/range, inverse relationships, and human-facing labels, and one Template binding instance shape to the Person concept. The entire vocabulary is GDX; consumers parse it with the same parser they use for instances. The labels on each REL are Properties (data carried for downstream consumers like documentation tools); the domain/range/inverse are @-edges (graph statements); the symmetry flag is an Extension (a vocabulary-defined axiom a reasoner may act on).
+This document defines a small vocabulary: two concept Objects (`gdx:Person`, `gdx:Organization`), three predicates with declared domain/range, inverse relationships, and human-facing labels, and one Template (`gdx:PersonShape`) giving the shape of a Person instance. The Template carries its own Id: root Ids share one document scope (§4.4.5), so it cannot reuse the concept's. The entire vocabulary is GDX; consumers parse it with the same parser they use for instances. The labels on each REL are Properties (data carried for downstream consumers like documentation tools); the domain/range/inverse are @-edges (graph statements); the symmetry flag is an Extension (a vocabulary-defined axiom a reasoner may act on).
 
 A REL declaration MAY appear at the document root (alongside or instead of primary Objects) or within a vocabulary document. Resolution of `#predicate` references follows the same Id-based mechanism as Type reference resolution (§8.5.2): the `#predicate` token is matched against REL `Id`s across the same scope sequence (local document, loaded vocabularies, globally-resolvable IRIs).
 
@@ -1845,11 +1855,11 @@ Three compositions are malformed:
 
 #### Axioms
 
-**R1 — Prefix asserts target role; Resource asserts target identity.** The `%KIND` prefix declares the role the resolved target MUST occupy. `%OBJ` declares an Object target; `%STR` declares a string-Property target; `%@OBJ` declares an Object-edge target; and so on. The Resource is a reference literal (`@id`, `$path`, `&key`, `@id$path`, or `@id&key` per §4.2.6) naming the target's address. Resolution dereferences the address and verifies the resolved element's role matches the prefix; mismatch yields an unresolved reference (the REF element remains structurally well-formed; the resolution fails).
+**R1 — Prefix asserts target role; Resource asserts target identity.** The `%KIND` prefix declares the role the resolved target MUST occupy. `%OBJ` declares an Object target; `%STR` declares a string-Property target; `%@OBJ` declares an Object-edge target; and so on. The Resource is a reference literal (`@root`, `&id`, `$path`, `@root&id`, or `@root$path` per §4.2.6) naming the target's address. Resolution dereferences the address and verifies the resolved element's role matches the prefix; mismatch yields an unresolved reference (the REF element remains structurally well-formed; the resolution fails). The one mismatch visible without resolving is a plain `@Base` under a prefix whose role can never stand at root level (`%REC`, `%STR`, `%@OBJ`, …): that REF is malformed (§4.2.6).
 
 The prefix is a *role-to-dereference* (`%OBJ` → resolves to an Object element): it declares the role of the element the address resolves to, and resolution verifies that role. What the slot *stores* is the address — that is what serializes, signs, and round-trips (Appendix A.2); the target's content is never copied into the document. What the slot *means* is the resolved target: dereferencing yields the target element and, for value-Property targets, its value. This is the value-resolution reading (see the lead of this section) of the same structural fact. The two views are layered, not competing — address at the representation layer, resolved value at the consumption layer.
 
-**R1a — The role-assertion is a resolution constraint, particularly pronounced for path/key resolution.** Because path/key targets may be locatable only at resolution time, the role-check piggybacks on the dereference step rather than being verifiable at parse time. The same constraint applies in principle to identifier-mode resolution but can often be verified earlier (when the target is locally declared). The constraint is structural — it stands whether enforcement happens at parse time or resolution time.
+**R1a — The role-assertion is a resolution constraint, particularly pronounced for path and id resolution.** Because path and id targets may be locatable only at resolution time, the role-check piggybacks on the dereference step rather than being verifiable at parse time. The same constraint applies in principle to a root reference but can often be verified earlier (when the root is in the same document). The constraint is structural — it stands whether enforcement happens at parse time or resolution time.
 
 **R2 — A REF fills a slot; it asserts nothing about its parent.** The REF's only assertion is "this slot holds a handle to that element." No relationship (vs. @-Edge), no containment (vs. VAL). Removing a REF removes a slot's content — not a relationship, not a contained thing, and never the target (which exists independently and is unaffected by the REF).
 
@@ -1866,9 +1876,9 @@ It MUST NOT carry structural children (Properties, @-edges, Sets, Records, Objec
 
 The structural test (proof by collapse): if `<%OBJ #X x : @T>` and `<@OBJ #X : @T>` could both assert "parent X T," the sigils would be interchangeable spellings and the partition would dissolve. They do not assert the same thing, by R4 — the `%` form is "slot named `x` holds a handle to `T`, slot semantically aligned with `#X`"; the `@` form is "parent stands in relation `#X` to `T`."
 
-**R5 — A REF may target any addressable element, by any resolution mode.** Entities by name (`@identifier`), interiors by path (`$path`), id-bearing elements (including @-edges via E6 identity) by id (`&id`), and composed cross-document forms (`@Base$path`, `@Base&id`). The full addressable space — including the interior, cross-document, and reification reach that the @-Edge family (entities-by-name-only, §6.4 resolution rule) cannot provide — is Reference territory.
+**R5 — A REF may target any addressable element, by any reference form.** Root elements by their Id (`@root`), id-bearing elements of the current document (including @-edges via E6 identity) by Id (`&id`), elements without an Id by path (`$path`), and elements inside another root by the composed forms (`@root&id`, `@root$path`). The full addressable space — including the interior and reification reach that the @-Edge family (root targets by `@root` only, §6.4 resolution rule) cannot provide — is Reference territory.
 
-Bases in composed references remain restricted to globally-addressable entities (Objects, RELs, Templates, transport wrappers — see §4.2.6). The "any addressable element" of R5 refers to the *target*, not the id; reaching interior targets is accomplished by id-plus-path/key.
+The `Base` of a composed reference is always a root element (an Object, REL, HEAD, Template, or transport wrapper — see §4.2.6), found by its Id. The "any addressable element" of R5 refers to the *target*, not the `Base`; reaching an interior target is accomplished by a root plus an Id or a path.
 
 **R6 — A REF has no identity of its own beyond the slot it fills.** A handle is not a substance; the only name a REF bears is its slot name (a Property's `Name`), which is the parent's concern. A REF is **never itself a reference target** — to point at what a REF points at, point at the target directly; do not chain through the intermediate REF.
 
@@ -1884,7 +1894,7 @@ REF earns its keep on three jobs no other role can do:
 
 - **Configuration and wiring** — typed slot-content pointing at independently-existing entities: `<%OBJ database : @primary-db>`, `<%OBJ fallback : @secondary-db>`.
 - **Reification** — pointing at an @-edge by its identity to make a statement about the relationship: `<%@OBJ source : @alice&knows-bob-2024>`.
-- **Interior and cross-document addressing** — pointing at Records, Blocks, Qualifiers, Extensions, value-Properties, or any other interior element by path or key: `<%REC home : @com.acme$/locations/[1]>`, `<%.STR unit : @units$/celsius>`.
+- **Interior and cross-document addressing** — pointing at Records, Blocks, Qualifiers, Extensions, value-Properties, or any other interior element by path or Id: `<%REC home : @com.acme$/locations/[1]>`, `<%.STR unit : @units$/celsius>`.
 
 All three are one shape: a typed handle held in a slot.
 
@@ -1893,11 +1903,11 @@ All three are one shape: a typed handle held in a slot.
 Configuration / wiring:
 
 ```
-<OBJ ServerConfig
+<OBJ &ServerConfig
     <STR name : "web-01">
     <%OBJ database : @primary-db>
     <%OBJ fallback : @secondary-db>
-    <%DEFOBJ #conformsTo : &ServerConfigV2>
+    <%DEFOBJ #conformsTo : @ServerConfigV2>
 >
 ```
 
@@ -1912,18 +1922,18 @@ Interior and cross-document addressing:
 Reification (REF to an @-edge):
 
 ```
-<OBJ alice
-    <@OBJ knows-bob-2024 #knows : @bob>     ← @-edge with identity
+<OBJ &alice
+    <@OBJ &knows-bob-2024 #knows : @bob>    ← @-edge with identity (its Id)
 >
 
-<OBJ audit-record
-    <%@OBJ source : @alice&knows-bob-2024>  ← REF to the edge by id
+<OBJ &audit-record
+    <%@OBJ source : @alice&knows-bob-2024>  ← REF to the edge by its Id, inside the root alice
     <STR confidence : "verified">
     <STR auditedBy : "SecurityTeam">
 >
 ```
 
-The audit-record references the specific @-edge by its key; the edge itself remains owned by `alice` per E2′. The REF asserts only "this slot holds a handle to that @OBJ-edge" — no relationship, no containment, no claim over the edge.
+The audit-record references the specific @-edge by its Id; the edge itself remains owned by `alice` per E2′. The REF asserts only "this slot holds a handle to that @OBJ-edge" — no relationship, no containment, no claim over the edge.
 
 Adjunct metadata about a binding (R6 workaround):
 
@@ -1939,7 +1949,7 @@ The Extensions describe how this *binding* was made (who selected the handle, wh
 REF to a Set:
 
 ```
-<%STR* allowedTags : @global-tag-set>
+<%STR* allowedTags : @global-defaults&tag-set>
 ```
 
 A `%KIND*` REF is a single REF whose target is a `KIND*` Set element — `%STR*` resolves to a `<STR* …>` Set. There is no "Set of REFs" form: a `%KIND*` element carries a Resource (the Set's address) and no members; multiple handles from one parent are expressed as sibling REFs, exactly as multiple edges are expressed as sibling @-edges. Because the target must be a Set that can exist, `%KIND*` is valid only for bases that admit Sets (the value primitives, REC, and the modifier Sets); `%DEF…*`, `%REL*`, `%OBJ*`, and `%@OBJ*` are malformed.
@@ -1948,17 +1958,16 @@ A `%KIND*` REF is a single REF whose target is a `KIND*` Set element — `%STR*`
 
 A REF's Resource is a reference literal per §4.2.6. Resolution behavior parallels @-Edge reference resolution (§6.4.1) with the role-check generalized to the prefix-declared role:
 
-1. **Local document.** Identifiers and paths within the same document are checked first.
-2. **Loaded document context.** When the REF appears alongside other documents (batch import, registry context), those documents are checked in load order.
-3. **Globally-resolvable IRIs.** References expressed as full IRIs MAY be resolved by a network-aware resolver if the implementation supports it.
-4. **Role verification.** The resolver MUST verify the resolved element's role matches the REF prefix. Mismatch yields an unresolved reference.
-5. **Resolution failure.** Unresolved REFs are reported as structurally non-conforming (Layer 2); the REF element itself is representation-conforming (Layer 1).
+1. **Within the document.** An `IdRef` or `PathRef` resolves within the current document only (§4.4.5, `GDX-Path.md`).
+2. **The root.** The `Base` of a `RootRef`, `RootIdRef` or `RootPathRef` resolves to a root element by its Id, in the order of §6.4.1: this document's roots, then loaded document context, then globally-resolvable Ids. The Id or path portion of a composed form is then evaluated within that root.
+3. **Role verification.** The resolver MUST verify the resolved element's role matches the REF prefix. Mismatch yields an unresolved reference.
+4. **Resolution failure.** Unresolved REFs are reported as structurally non-conforming (Layer 2); the REF element itself is representation-conforming (Layer 1).
 
-A REF whose Resource is any non-`NameRef` literal MUST resolve to exactly one element of the matching role (see `GDX-Path.md` §7).
+A REF's Resource MUST resolve to exactly one element of the matching role, whatever its form (§4.2.6 address-mode singularity; `GDX-Path.md` §7).
 
 #### Summary
 
-A %-reference is GDX's value-resolution construct: structurally, a slot-filler whose Resource is a typed handle — the slot stores the resolved address of an independently-existing target whose role the prefix asserts, and dereferencing yields that target as the slot's effective content. The prefix declares the target's role; the Resource gives its address by name, path, or key; resolution dereferences and verifies the role. A REF asserts no relationship about its parent (its `#predicate`, if present, aligns the slot — it never associates), does not contain its target (vs. VAL), and is inert toward the target while elaborated toward its own slot, exactly as any Property is.
+A %-reference is GDX's value-resolution construct: structurally, a slot-filler whose Resource is a typed handle — the slot stores the resolved address of an independently-existing target whose role the prefix asserts, and dereferencing yields that target as the slot's effective content. The prefix declares the target's role; the Resource gives its address by Id or by path; resolution dereferences and verifies the role. A REF asserts no relationship about its parent (its `#predicate`, if present, aligns the slot — it never associates), does not contain its target (vs. VAL), and is inert toward the target while elaborated toward its own slot, exactly as any Property is.
 
 ### 6.17 HEAD — `HEAD` (persistent aggregate head)
 
@@ -2210,7 +2219,7 @@ This layered model is what makes GDX a structural schema with pluggable constrai
 A Template is an element with a `DEF…` prefix. It declares an *interface* — a set of properties, records, edges, and constraints — that an instance element claims to satisfy via its `--type` field.
 
 ```
-<DEFREC com.acme.Address
+<DEFREC &com.acme.Address
     <STR street>
     <INT number>
     <STR country
@@ -2250,7 +2259,7 @@ An instance child satisfies a Template slot by matching the slot's `Name` field,
 
 When an element is untyped, its `Name`s are free identifiers — they carry semantic weight on their own, because there is no Template to resolve them against. When an element claims a `--type`, resolution (by Id, §8.5.2) locates the Template, and the type then declares a set of expected slot names to which the instance's `Name`s bind — the name's role shifts from carrying meaning to aligning with the meaning the type defines. The name must still be carried by the instance because alignment is an instance-to-template match: which filler claims which slot is irreducible instance information the type cannot supply. `Name` and `--type` therefore operate at different levels — `--type` resolves the Template by Id; `Name` aligns the instance's children to that Template's slots — and reinforce rather than duplicate, with the child-naming responsibility migrating to slot-alignment on type-claim.
 
-The `Id` field plays no role in Template-instance alignment. Ids are an independent named-id mechanism (§4.4.5) used by `IdRef` and `NameIdRef` reference literals; they are not consulted during schema validation and are excluded from the universal claim rule (§8.2.3).
+The `Id` field plays no role in Template-instance alignment. Ids are an independent named-id mechanism (§4.4.5) used by every reference literal (§4.2.6); they are not consulted during schema validation and are excluded from the universal claim rule (§8.2.3).
 
 #### 8.2.2 Cross-Role and Transport Restrictions
 
@@ -2300,7 +2309,7 @@ This creates a real difference between the instance's logical content and its pe
 
 ```
 # Template:
-<DEFREC com.acme.Customer
+<DEFREC &com.acme.Customer
     <STR firstName #schema:givenName>
     <STR locale : "en-US">
 >
@@ -2331,7 +2340,7 @@ Property Templates (`DEFSTR`, `DEFINT`, `DEFFLOAT`, `DEFBOOL`, `DEFBYTE`) declar
 A typical Property Template uses Extensions to express constraints:
 
 ```
-<DEFSTR gdx:email
+<DEFSTR &gdx:email
     <_STR gdx:pattern : "^[^@]+@[^@]+$">
     <_INT gdx:maxLength : 254>
 >
@@ -2339,7 +2348,7 @@ A typical Property Template uses Extensions to express constraints:
 <STR contact : "alice@example.com" --gdx:email>
 ```
 
-The same pattern serves several common needs: width-bounded numerics (`<DEFINT gdx:i8>` with min/max constraints), format-bounded strings (patterns, length limits), semantic interpretation (a `gdx:csv` Template signaling structured string content), and domain typing (a `gdx:uuid` Template constraining a string to UUID format). The constraint vocabulary on the Template determines what each Template means.
+The same pattern serves several common needs: width-bounded numerics (`<DEFINT &gdx:i8>` with min/max constraints), format-bounded strings (patterns, length limits), semantic interpretation (a `gdx:csv` Template signaling structured string content), and domain typing (a `gdx:uuid` Template constraining a string to UUID format). The constraint vocabulary on the Template determines what each Template means.
 
 The interpretation rules are carried by Extensions on the Template. The Extension vocabulary is application-extensible; the GDX Common Vocabulary defines a base set (§8.6).
 
@@ -2360,7 +2369,7 @@ This discipline is structural: by holding constraint semantics out of the core, 
 The general form of a Constraint Extension on a Template slot is:
 
 ```
-<DEFX TemplateName
+<DEFX &TemplateName
     <X slotName
         <_X constraintIdentifier : constraintValue>
     >
@@ -2376,7 +2385,7 @@ Because constraint identifiers are opaque to GDX, multiple constraint vocabulari
 A worked example showing XSD, JSON Schema, and a bespoke vendor vocabulary on the same Template:
 
 ```
-<DEFSTR UserHandle
+<DEFSTR &UserHandle
     <_STR xsd:pattern : "^[a-z0-9_]+$">
     <_INT xsd:minLength : 3>
     <_INT xsd:maxLength : 32>
@@ -2426,7 +2435,7 @@ Implementations declare their default mode and provide configuration to override
 
 A `--type` reference is resolved to a Template by matching the reference token against Template **Ids**, walking a defined sequence of resolution scopes. Resolution keys on the Template's `Id`, never on its descriptive `Name`: a Template's Name may change over its lifetime (relabeling, localization) without breaking references, exactly as an Object's Name may; the Id is the stable resolution target. The default resolution order is normative:
 
-1. **Local document.** Templates declared within the same document as the reference are checked first. A `--gdx:Person` reference is satisfied by a `<DEFREC gdx:Person>` declaration in the same document if one exists — matching the reference token against the Template's Id.
+1. **Local document.** Templates declared within the same document as the reference are checked first. A `--gdx:Person` reference is satisfied by a `<DEFREC &gdx:Person>` declaration in the same document if one exists — matching the reference token against the Template's Id.
 2. **Loaded vocabularies.** Templates from explicitly-loaded vocabularies are checked next, in the order the vocabularies were loaded. CURIE prefixes (`gdx:`, `vocab:`) expand to their declared IRI bases via the resolver's vocabulary mapping table.
 3. **Globally-resolvable IRIs.** Templates whose Id is a full IRI (e.g., `--https://acme.com/vocab/Person`) MAY be resolved by a network-aware resolver if the implementation supports it. Implementations are not required to perform network resolution.
 4. **Resolution failure.** If no scope yields a Template whose Id matches, the reference is unresolved.
@@ -2511,14 +2520,14 @@ A vocabulary export Package carrying Templates and RELs:
     <STR vocabName : "color-science">
     <STR version : "1.0.0">
     
-    <DEFREC ColorReading
+    <DEFREC &ColorReading
         <FLOAT l>
         <FLOAT a>
         <FLOAT b>
     >
     
-    <REL color:measuredBy>
-    <REL color:hasReading>
+    <REL &color:measuredBy>
+    <REL &color:hasReading>
 >
 ```
 
@@ -2678,12 +2687,12 @@ The introduction of distinct absent/null/present states implies three independen
 
 Path-mode reference resolution is normatively specified by the companion GDX Path Expressions Specification (`GDX-Path.md`). All sub-items previously open under this issue are addressed:
 
-- **The path expression grammar.** Specified in `GDX-Path.md` §3 and §3. Three segment kinds — `NameSegment`, `PredicateSegment`, `OrdinalSegment` — separated by `/`. Id-based addressing is provided through the `IdRef` and `NameIdRef` reference-literal forms rather than as a path segment.
+- **The path expression grammar.** Specified in `GDX-Path.md` §3 and §3. Three segment kinds — `NameSegment`, `PredicateSegment`, `OrdinalSegment` — separated by `/`. Id-based addressing is provided through the `IdRef` and `RootIdRef` reference-literal forms rather than as a path segment.
 - **The resolution algorithm.** Specified in `GDX-Path.md` §5. Left-to-right segment traversal from a defined starting element, with per-segment match semantics and explicit handling of zero, one, and multi-match outcomes.
-- **The composition matrix expansion.** Specified in `GDX-Path.md` §8.5 (changes required of this specification). `%REC`, `%BLK`, `%.STR`, `%_INT`, `%VAL`, value-Property targets, and other interior elements become resolvable when the resource is a `PathRef` or `NamePathRef`. Parent-context restrictions are unchanged; only target-addressability expands. (Under v0.13.0, these targets are addressed via the REF family `%KIND`; prior to v0.13.0 they were addressed via leaf-like `@KIND` references, now migrated.)
+- **The composition matrix expansion.** Specified in `GDX-Path.md` §8.5 (changes required of this specification). `%REC`, `%BLK`, `%.STR`, `%_INT`, `%VAL`, value-Property targets, and other interior elements become resolvable when the resource is a `PathRef` or `RootPathRef`. Parent-context restrictions are unchanged; only target-addressability expands. (Under v0.13.0, these targets are addressed via the REF family `%KIND`; prior to v0.13.0 they were addressed via leaf-like `@KIND` references, now migrated.)
 - **Modifier-stacking interaction.** The `%`-with-modifier-bases pattern (`%.STR`, `%_INT`) resolves through path-mode references.
 
-The composed reference form `@Identifier$PathExpression` is the canonical mechanism for cross-document addressing: the identifier portion resolves a starting element by scope walk (per §6.16), and the path portion traverses structurally from there. This form replaces the speculative path-style identifier convention (e.g., `@/people/alice`) used in earlier revisions; with the v0.11.0 narrowing of `NameStartChar` (§4.4.1), identifiers no longer begin with `/`.
+The composed reference form `@Base$PathExpression` is the canonical mechanism for reaching by path inside another root: the `Base` resolves a root element by its Id (per §6.4.1), and the path portion traverses structurally from there. This form replaces the speculative path-style identifier convention (e.g., `@/people/alice`) used in earlier revisions; with the v0.11.0 narrowing of `NameStartChar` (§4.4.1), identifiers no longer begin with `/`.
 
 ---
 
@@ -2873,6 +2882,30 @@ The test suite is exhaustive in concept and bounded in practice. Each category a
 ## Appendix B — Detailed Revision History
 
 This appendix records the per-revision change descriptions accumulated during the pre-1.0 working-draft phase. The Revision History table at the top of this document gives the version + date summary; this appendix carries the prose detail. Once the specification reaches v1.0, this appendix will be archived and subsequent revisions will use a leaner change-log format.
+
+### v0.30.0 — Links and references bind by Id; `@` addresses a root
+
+**(71) Every link and reference binds to an Id; resolution by Name is withdrawn (§3.1, §4.2.6, §4.4.2, §4.4.3, §4.4.5).** v0.25.0 separated the descriptive `Name` from the durable identity (now `Id`), and v0.26.0 (64) moved `--type` and `#predicate` to resolve by Id. The `@` reference literal was left resolving by Name, so a label still served as an address in one place: an edge or REF written `@bob` bound to whatever element was labelled `bob`, and broke when it was relabelled. A reference literal now never resolves by Name. The only place a Name still takes part in addressing is a path segment (`GDX-Path.md`), which locates an element by its place in the tree and is already the fragile, location-bound form the specification tells authors to avoid when an Id is available. An element that is to be linked to must carry an Id; one with only a Name is reachable by path. There is no fallback: `<OBJ bob>` does not satisfy `@bob`. §4.4.4's uniqueness rule, which said two top-level Objects with the same Name are malformed, now speaks of Ids, since Names no longer compete for resolution.
+
+**(72) `@` addresses a root element by its Id; `&` stays within the document (§4.2.6, §4.4.5, §6.4.1, §6.16).** Under v0.29.0 the two sigils overlapped in what they reached: `@name` searched this document, then loaded documents, then IRIs, and `&id` searched outward to the document root and then, for an IRI or CURIE Id, the same loaded-document and IRI tiers. Which one an author wanted depended on whether the target was a root and where it lived, and an @-edge and a REF read `&id` with different expectations — a REF meant an element of this document, an edge meant a root, possibly elsewhere. Each sigil now has one reach, fixed by the literal: `@Base` is a root element, found by its Id in this document's roots, then loaded document context, then (for a globally-resolvable Id) global resolution; `&Id` is an Id within the current document and never leaves it; `@Base&Id` and `@Base$path` reach inside a root. The global tier moves from `&` to `@`. The `@` in a prefix and the `@` in a Resource now mean the same thing, a crossing to another root, which withdraws the "different roles of the same character" explanation of (65). `Base` takes an Id token (§4.4.3) rather than an identifier, so a root Id that begins with a digit, such as a GUID, is written directly; the `@7f3a…` example of §4.2.6 was already of this form. Where the part of a `Base` before its first `:` is a `BaseRole` keyword, that `:` is the role separator, never part of a CURIE; v0.29.0 implied this by lookup against the closed set but did not say which reading wins.
+
+**(73) An @-edge's Resource is a `RootRef` only (§3.3.2, §5.3.2, §6.4 E1, E5, Resolution, §6.4.1).** E5 already restricted @-edges to root-level targets, but v0.29.0 let the target be written `@name` or `&id`, and R5 still described the family as "entities-by-name-only". An @-edge's Resource is now a plain `@Base`; an `IdRef`, `PathRef`, `RootIdRef` or `RootPathRef` on an @-edge is malformed. The form is visible in the literal, so a parser refuses it without resolving anything. This keeps E5 and its reason — edges join whole, self-declaring entities; reaching inside one is a REF's job — and makes it a rule about the literal rather than about what resolution happens to find. The §6.4.1 recommendation to prefer `&id` over `@name` for edges is replaced by the rule itself, since both of its cases now bind to the Id.
+
+**(74) The reference-literal productions are renamed: `NameRef` → `RootRef`, `NamePathRef` → `RootPathRef`, `NameIdRef` → `RootIdRef` (§4.2.6, `GDX-Path.md`, `GDX-Grammar.md`).** The old names described a lookup the forms no longer perform. `Base`, `BaseRole`, `PathRef` and `IdRef` are unchanged. Terminology note: entries prior to this one use the former names, and the words "name-mode" and "key", as originally written; they are not retroactively edited.
+
+**(75) Examples and stale wording corrected.** Roots that examples link to now carry the Ids the links resolve to (`<OBJ &bob>`, `<REL &gdx:knows>`, `<DEFOBJ &CustomerV2>`); the REL table already required an Id, but the examples declared RELs by Name. "@-edge with identity" examples that carried only a Name (`edge-1`, `employmentEdge`, the §6.16 reification edge `knows-bob-2024`) now carry an Id, as E6 requires; the reification REF `@alice&knows-bob-2024` previously looked up an Id that nothing carried. REFs to Templates, which are roots, are written `@Template` rather than `&Template`. The leftover word "key" for `&` (from before the v0.24.0 Key/Anchor and v0.26.0 Anchor/Id renames) is replaced by "Id" in §3.3.2, §4.2.6, §4.4.5, R1, R1a and the §6.16 summary. A `%STR*` example that targeted a Set by root reference now reaches it inside its root, since a Set is never a root. The vocabulary example's Template gets its own Id (`gdx:PersonShape`), since root Ids share one document scope and it previously shared the concept Object's.
+
+**(76) A root reference under a prefix whose role can never be a root is malformed (§4.2.6, §6.16).** A plain `@Base` resolves only to a root element. Under `%REC`, `%BLK`, a value-primitive REF, `%VAL`, a modifier REF, a Set REF or `%@OBJ`/`%@REL`, no root can ever have the declared role, so the reference is unresolvable by construction. Making it malformed (Layer 1) lets a parser report it with the reason, as it does an @-edge with a local part (73), instead of leaving it to surface later as an ordinary unresolved reference. The §6.16 example `<%STR* allowedTags : @global-tag-set>` was of this kind and now reaches the Set inside its root.
+
+**(77) An unmarked `Base` matches a root of any root-eligible role (§4.2.6, §4.4.5, `GDX-Path.md` §5).** v0.29.0 defaulted the base of a composed reference to an Object, so `@my-rel&x` failed to resolve when `my-rel` was a REL unless the author wrote `@REL:my-rel&x`. Now that a base is found by its Id, the default has no work to do: root Ids are unique within a document, so the Id alone picks the root; an unmarked base matches whatever root carries it, and a marker, when present, is a check that the root has the named role.
+
+**(78) Template and REL declarations carry their Id in the `&` field; whitespace before `:` is restated in §4.1.2 (§4.1.2, §4.3, §5.1, §6.14, §8).** §4.3 still said that a bare leading identifier on a Template or REL declaration is read as that declaration's Id, and the declarations in §4.3, §5.1, §6.14 and §8 were written that way (`<DEFREC com.acme.Address …>`, `<REL color:measuredBy>`). That was a leftover of the field model before v0.25.0, when the leading identifier was the identity. Since then `Name` and `Id` are separate fields read the same way on every element, and since (71) a Name is never resolved, so a declaration written that way had a Name and no Id, and nothing could reach it: neither `--type`, `#predicate`, an @-edge nor a REF. The special reading is withdrawn and the examples carry `&` (`<DEFREC &com.acme.Address …>`, `<REL &color:measuredBy>`). §4.1.2 still said the `:` separator MAY have whitespace on either side and offered `<STR name:"Alice">` as a compact form, which (67) had already made a different element; it now restates (67).
+
+**(79) Inside a Package or Group, a bare `IdRef` stops at its payload's root (§4.4.5).** (68) widened the `IdRef` search outward to "the whole document", which left open what that means when the document is a Package or Group carrying several payloads. If the search went on to the whole Package, an `&id` inside one payload could reach into the interior of a sibling payload, which is a different root, and a reference's meaning would change when its payload was packed with others or unpacked. (72) gives that job to `@`: reaching another root, or inside one, is `@sibling` or `@sibling&id`. The last region of the search is now the root that holds the reference: the payload root inside a Package or Group, the document root otherwise. A reference carried directly by the Package or Group, outside any payload, still searches the whole transport element. Migration: an `&id` inside a payload that resolved to an element of a sibling payload becomes `@sibling&id`.
+
+Supersedes: (65)'s statement that `@` resolves by Name and its §6.4.1 nudge; the default-Object rule for unmarked bases in composed references.
+
+Migration: a reference written `@x` whose target carries `x` only as a Name must give the target the Id `x` (or be rewritten to the target's existing Id). An @-edge written with an `&rootid` Resource becomes `@rootid`. A reference to a globally-resolvable Id written `&https://…` or `&prefix:local`, meant to reach another document, becomes `@https://…` or `@prefix:local`. An @-edge whose Resource reached inside a root (a path, an interior Id, or a composed form) was already outside E5 and is now malformed; if it was meant to reach inside, it becomes a REF of the target's role (`%REC`, `%OBJ`, …) with the same literal. A bare `&id` that resolved within its own document is unaffected. A REF to a non-root role written with a bare `@x` (for example `%STR* tags : @tag-set`) becomes `&x` within the document or `@root&x` across documents. A composed reference that relied on the default-Object rule to fail on a non-Object root now resolves to that root; add a role marker to keep the check. A Template or REL declared with a bare leading identifier (`<DEFREC com.acme.Address …>`) writes it as its Id (`<DEFREC &com.acme.Address …>`), or keeps it as a Name and adds an Id.
 
 ### v0.29.0 — Empty identity fields are absent; strings are Unicode scalar values
 

@@ -1,7 +1,7 @@
 # GDX — A Primer
 
-- **Status:** Draft v0.4.0 (companion to the GDX Specification, pre-1.0)
-- **Date:** 2026-05-25
+- **Status:** Draft v0.5.0 (companion to GDX Core Specification v0.30.0, pre-1.0)
+- **Date:** 2026-10-19
 - **Authors:** Julian Mussi
 
 > **This document is non-normative.** I
@@ -141,7 +141,7 @@ The model GDX uses to organize and contextualize data is structurally simple.  T
 
 Elements package data so that its associations can express layered meaning. Every element has 6 data slots, or **fields**. Every bit of data lives in a field, and the element groups the fields.
 
-The fields that make up an element are **Role**, **Id**, **Rel**, **Key**, **Resource** and **Type**.
+The fields that make up an element are **Prefix** (which declares the element's role), **Id**, **Predicate**, **Name**, **Resource** and **Type**. (An element can also carry a small block of metadata about how it is stored or sent, but that sits outside the model and isn't one of the six.)
 
 The majority of the primer will be spent explaining the function of each of these fields and how they work together.
 
@@ -198,7 +198,7 @@ GDX's standard form encloses everything between an opening `<` and a closing `>`
 
  In the text form a GDX element is what's between the matched angle brackets. Data in GDX can't exist outside of an element.
 
-GDX also makes use of **sigils**; these are punctuation marks that tell the reader, be it a human or a machine parser, how to interpret the text in each element. The common ones are `:`, `#`, `@`, `%`, and `--`. None of them are concepts to memorize. The meaning of an element always lives in its fields, never in the punctuation.
+GDX also makes use of **sigils**; these are punctuation marks that tell the reader, be it a human or a machine parser, how to interpret the text in each element. The common ones are `:`, `&`, `#`, `@`, `%`, and `--`. None of them are concepts to memorize. The meaning of an element always lives in its fields, never in the punctuation.
 
 Nested bracket pairs form **child** elements of the enclosing element. 
 
@@ -256,7 +256,7 @@ But given a GDX document with a null value, one that hasn't been filled in YET, 
 
 Put the three together and read the line back: *a string Property, identified as `firstName`, holding a string`"Bob"`.* That sentence is the whole element, and every part of it is stated explicitly; what kind of element it is, what it's called, and what it carries. Nothing is inferred from a schema you loaded elsewhere or guessed from the shape of the value. This is the first and most basic sense in which GDX data **describes itself**: change the the prefix and the element changes what it says `<INT age : 24>`, `<BOOL active : true>`, but the shape never changes. A prefix saying what the element is, a name for it, a Resource holding what it carries. A program reading the line knows all three without help. And now so do you.
 
-One mark before we move on. The `:` between `firstName` and `"Bob"` is punctuation, not a concept. It marks where the Id ends and the Resource begins, so you and the parser can find the boundary at a glance. A different mark would do the job just as well; nothing about the element would change.
+One mark before we move on. The `:` between `firstName` and `"Bob"` is punctuation, not a concept. It marks where the element's identity ends (here, its name `firstName`) and the Resource begins, so you and the parser can find the boundary at a glance. It is always written with a space before it: `firstName : "Bob"`, not `firstName:"Bob"`, because a `:` glued to a word is read as part of that word (names like `schema:givenName` carry one inside them). A different mark would do the job just as well; nothing about the element would change.
 
 
 
@@ -270,13 +270,13 @@ Let's look at the line again:
 <STR firstName : "Bob">
 ```
 
- In this example the element has 3 defined fields. The first is always the PREFIX. The field to the right of the `:` is the resource. The field after the prefix,  `firstName` and is the element's **Id** field. It's how we refer to this particular element within the document. The `firstName` is the element's **Id** — the name we give it so we can refer to it. Every element can carry one. Without it, the element still holds its value perfectly well, but we'd have no handle for it: no way to say *this* property as opposed to that one, no way to point at it from elsewhere. The Id is that handle.
+ In this example the element has 3 defined fields. The first is always the PREFIX. The field to the right of the `:` is the resource. The field after the prefix, `firstName`, is the element's **Name** field. It's how we talk about this particular element among its neighbours. The `firstName` is the element's **Name** — the label we give it so we can tell it apart. Every element can carry one. Without it, the element still holds its value perfectly well, but we'd have no label for it: no way to say *this* property as opposed to that one. The Name is that label.
 
-For a Property like this one, the Id is a **local** name. It means something *within the context the property sits in* — it names the role this value plays among its neighbors, the way `firstName` is a meaningful field among the others you'd expect when describing a person. It isn't a globally unique name, and it doesn't need to be: two different people can each have a `firstName`, with no conflict, because each is named only within its own surroundings. (Later, when we meet elements that *do* need to be findable across a whole document, we'll see identity reach further. For now, local is exactly enough.)
+For a Property like this one, the Name is a **local** name. It means something *within the context the property sits in* — it names the role this value plays among its neighbors, the way `firstName` is a meaningful field among the others you'd expect when describing a person. It isn't a globally unique name, and it doesn't need to be: two different people can each have a `firstName`, with no conflict, because each is named only within its own surroundings. (Later, when we meet elements that *do* need to be findable and linked to, we'll meet a second identity field that does that job. For now, local is exactly enough.)
 
-The Id is the only kind of name we need yet, but it isn't the only kind an element can carry. GDX has a couple of other identity fields for jobs that haven't come up. We'll meet them when something actually calls for them, rather than listing them now.
+The Name is the only kind of identity we need yet, but it isn't the only kind an element can carry. GDX has two other identity fields for jobs that haven't come up. We'll meet them when something actually calls for them, rather than listing them now.
 
-With the Id named, we can see the whole element for what it is!  this is alos a good time to point out that the element it has two distinct halves. On the left of the `:` is everything about *what the element is and how we refer to it*: its role (`STR`) and its name (`firstName`). On the right is *what it actually holds*: the Resource, `"Bob"`. GDX draws this line through every element. One side identity, the other side value. It's a small thing to notice now, with only a name and a string to divide, but it's a division the whole model is built on: it's why an element can tell you everything about its place in the data before you ever read its contents.
+With the Name in place, we can see the whole element for what it is!  this is alos a good time to point out that the element it has two distinct halves. On the left of the `:` is everything about *what the element is and how we refer to it*: its role (`STR`) and its name (`firstName`). On the right is *what it actually holds*: the Resource, `"Bob"`. GDX draws this line through every element. One side identity, the other side value. It's a small thing to notice now, with only a name and a string to divide, but it's a division the whole model is built on: it's why an element can tell you everything about its place in the data before you ever read its contents.
 
 ## Grouping values: the Record
 
@@ -289,9 +289,9 @@ A single property is rarely the whole story. Bob has a first name, but also an a
 >
 ```
 
-A Record is a named thing made of properties, the struct, in a programming-language analogy. `REC` is its prefix; `person` is its Id, naming this record the same local way a property's Id names a property. Unlike properties, `REC` has no resource field. Instead it gets its value from it's children.
+A Record is a named thing made of properties, the struct, in a programming-language analogy. `REC` is its prefix; `person` is its Name, labelling this record the same local way a property's Name labels a property. Unlike properties, `REC` has no resource field. Instead it gets its value from it's children. And like a property, a Record is always part of something larger: it is never a document on its own. We'll give it something to belong to in the next step.
 
-And inside it sit the two properties. The child properties should now be easy to read. An `STR` element with an **id** field `firstName` with a **resource** holding the value "Bob". 
+And inside it sit the two properties. The child properties should now be easy to read. An `STR` element with a **Name** field `firstName` with a **resource** holding the value "Bob". 
 
 Notice what *isn't* there. Nothing on the `firstName` line says "I belong to `person`." There's no joining word, no pointer back to the parent, no mark connecting child to container. The relationship is carried entirely by **position**: `firstName` is inside `person`, so `firstName` is one of `person`'s properties. GDX leaves parent-child containment implicit because it doesn't need stating — the nesting already says it, and the child's role already says *what kind* of thing it contributes. Spelling it out on every line would only repeat what the structure makes plain.
 
@@ -302,17 +302,27 @@ And here is the first quiet thing worth noticing about that arrangement. Putting
 The `person` record from the last step was a *compound property* but as was stated earlier properties must belong to something. For things that are distinct from other things, something that has a unique identity like a person, an order, a server, or a document GDX has the **Object** role.
 
 ```
-<OBJ bob
+<OBJ &bob
     <STR firstName : "Bob">
     <INT age : 24>
 >
 ```
 
-An Object represents an **entity**, a thing that exists on its own and can be referred to by it's id. An Object is **self-contained** standing on its own as a complete, addressable entity.  If a Record is a *component*, an Object is a *whole*.
+An Object represents an **entity**, a thing that exists on its own and can be referred to by its Id. An Object is **self-contained** standing on its own as a complete, addressable entity.  If a Record is a *component*, an Object is a *whole*.
 
-Being a whole is exactly what makes an Object referable. Its Id `bob`  isn't just a local label among siblings; it's an address. A Record's name only locates it inside its immediate parent. In real world applications "bob" is more likely to require a name that is locally, or globaly unique. This may be in the form of a GUID r a fully qualified UIR. 
+This is where the second identity field comes in. The `&` in `&bob` marks the element's **Id**: its durable identity, the token that every link and reference to it binds to. A Name is a label: it describes the element, it can be changed freely, and no link or reference binds to it. (A path through the tree can step through Names, but a path names a place, not an identity.) An Id is an address: it stays fixed while labels, values and position change, and changing it makes the element a different element as far as anything pointing at it is concerned. An element can carry both, Id first and Name after it:
 
-`<OBJ com.acme:people/robert >`
+```
+<OBJ &bob Bob
+    <STR firstName : "Bob">
+>
+```
+
+Here `bob` is what other elements point at, and `Bob` is the label a person reads; renaming the label to `Robert` breaks nothing.
+
+Being a whole is exactly what makes an Object referable. Its Id `bob` isn't a local label among siblings; it's an address. A Record's Name only labels it inside its immediate parent. In real world applications "bob" is more likely to need an Id that is unique beyond this one document. This may be in the form of a GUID or a namespaced identifier:
+
+`<OBJ &com.acme:people/robert>`
 
 That difference is the foundation of what comes next: once an entity has an address others can use, those others can link to it — and that is where GDX stops being a tree and starts being a graph.
 
@@ -321,19 +331,19 @@ That difference is the foundation of what comes next: once an entity has an addr
 Everything so far has been one entity described in isolation — Bob, with his properties. But data is rarely a set of isolated things; the interesting part is usually how things *relate*. Bob knows someone. To say so, we need a second entity to point at, so let Alice into the document:
 
 ```
-<OBJ alice
+<OBJ &alice
     <STR firstName : "Alice">
 >
-<OBJ bob
+<OBJ &bob
     <STR firstName : "Bob">
     <INT age : 24>
     <@OBJ #knows : @alice>
 >
 ```
 
-The new line inside `bob` is an **edge** — a link from one entity to another. Read it left to right like any element. The prefix `@OBJ` says this element points at an Object. The `@alice` on the right is the target: not a value Bob holds, but the *address* of another entity — Alice, whom we just gave a name precisely so she could be pointed at. And between them, `#knows` is the **label** on the link: it says *what kind* of relationship this is. The whole line reads: *bob knows alice.*
+The new line inside `bob` is an **edge** — a link from one entity to another. Read it left to right like any element. The prefix `@OBJ` says this element points at an Object. The `@alice` on the right is the target: not a value Bob holds, but the *address* of another entity — the Object whose Id is `alice`, whom we gave an Id precisely so she could be pointed at. A Name would not do: `<OBJ alice>` carries a label, not an address, and `@alice` would find nothing. And between them, `#knows` is the **label** on the link: it says *what kind* of relationship this is. The whole line reads: *bob knows alice.*
 
-Two marks earn a word here, since this is the first time you've seen them. The `@` is how GDX flags "this points at an entity" — for you, scanning, and for the parser. The `#` flags the label that names the relationship. Like the colon, they're recognition marks, not concepts; the meaning is in what they point at. The label `knows` has more behind it than first appears — it's the kind of thing two different systems can agree on — but that's a later step; for now, read it as the name of the relationship.
+Two marks earn a word here, since this is the first time you've seen them. The `@` is how GDX flags "another entity" — for you, scanning, and for the parser. In the prefix (`@OBJ`) it marks the line as an edge; in front of `alice` it says the target is a whole, top-level entity found by its Id, in this document or another one loaded beside it. The `#` flags the label that names the relationship. Like the colon, they're recognition marks, not concepts; the meaning is in what they point at. The label `knows` has more behind it than first appears — it's the kind of thing two different systems can agree on — but that's a later step; for now, read it as the name of the relationship.
 
 Notice how this differs from a property. When we nested `firstName` inside `bob`, the relationship was silent — *bob has a firstName* — carried by position, with no "has" written anywhere. An edge makes the relationship *explicit and named*: `#knows` states the link out loud. That's the difference between an attribute an entity carries and a relationship it stands in — and it's why the edge gets a label where the property didn't need one.
 
@@ -351,16 +361,16 @@ Recall the Resource — the value slot on the right of an element. So far it's h
 >
 ```
 
-The `%OBJ` is a **reference**: the slot `customer` doesn't contain a customer, it holds a handle to one — the Object `bob`, living elsewhere. Read left to right: the prefix `%OBJ` says "a handle to an Object goes here," and `@bob` is the address it resolves to. The order's `customer` slot is *filled by* a pointer to Bob.
+The `%OBJ` is a **reference**: the slot `customer` doesn't contain a customer, it holds a handle to one — the Object whose Id is `bob`, living elsewhere. Read left to right: the prefix `%OBJ` says "a handle to an Object goes here," and `@bob` is the address it resolves to. The order's `customer` slot is *filled by* a pointer to Bob.
 
 This looks a lot like the edge from the last step — both end in `@bob`, both point at an entity. But they do genuinely different jobs, and GDX keeps them firmly apart:
 
 - An **edge** (`@`) *asserts a relationship*: bob **knows** alice. It's a statement about how two entities relate, and it carries a label (`#knows`) saying what the relationship is.
 - A **reference** (`%`) *fills a slot*: this order's customer **is** bob. It isn't asserting a relationship about Bob — it's saying "the thing that goes in this slot is over there."
 
-The sigils keep the two from blurring: `@` always means "asserts a relationship," `%` always means "fills a slot with a handle." They're never interchangeable, and once you read them that way, a dense line tells you immediately which kind of pointing you're looking at. The question to ask is simply: *am I stating how two things relate (edge), or saying what goes in this slot (reference)?*
+The prefix sigils keep the two from blurring: a prefix starting with `@` (`@OBJ`) always means "asserts a relationship," a prefix starting with `%` (`%OBJ`) always means "fills a slot with a handle." The `@bob` on the right reads the same in both: the entity whose Id is `bob`. They're never interchangeable, and once you read them that way, a dense line tells you immediately which kind of pointing you're looking at. The question to ask is simply: *am I stating how two things relate (edge), or saying what goes in this slot (reference)?*
 
-One affordance falls out here. For `order-1001` to point at `bob`, Bob has to be findable — he needs a stable address. An Object's Id already provides that. But sometimes the thing you want to point at isn't a whole Object with a global name — it's an element tucked inside one, and its position might shift as the document is edited. For those cases an element can carry a **Key**: a stable anchor, independent of where the element sits, that references can target even when nothing else about its location holds still. You don't need a Key for most pointing — an Object's Id is enough — so we'll leave it there: it's identity's way of saying "here's a fixed handle on me," available the moment a reference needs one.
+One affordance falls out here. For `order-1001` to point at `bob`, Bob has to be findable — he needs a stable address. An Object's Id already provides that. But sometimes the thing you want to point at isn't a whole Object — it's an element tucked inside one, and its position might shift as the document is edited. Any element can carry an Id, not only an Object, and a reference can reach it: `&home` finds the element with Id `home` anywhere in this document, and `@bob&home` finds it inside the entity `bob`, wherever that lives. (A reference can also follow a path through the tree, `$…`, which matches Names step by step; it works, but it breaks when the tree is rearranged, so prefer an Id when there is one.) This is the other half of the edge/reference split: an edge only ever joins whole, top-level entities, written as a plain `@x`, while reaching *inside* an entity is a reference's job. You don't need an Id on an interior element for most pointing, so we'll leave it there: it's identity's way of saying "here's a fixed handle on me," available the moment a reference needs one.
 
 There is also a third way to fill a slot, used less often: a **VAL**. Where a reference points at something that lives elsewhere, a VAL holds a structured value *right there in the slot* — a composite that belongs to this element and nowhere else, rather than a handle to an independent entity. It's the slot-filler for "the value here is itself a structured thing, owned by this element." We mention it for completeness; most slots hold either a literal or a reference, and VAL is there for the case that needs it.
 
@@ -377,14 +387,14 @@ And the reason to name one is the payoff GDX is built for. A bare label like `kn
 Because a predicate is a shared name, it helps to be able to *define* it — to say, in one place, what `knows` is. GDX does this with a **relation declaration**, written `REL`:
 
 ```
-<REL gdx:knows
+<REL &gdx:knows
     <@REL #gdx:inverse : @gdx:knownBy>
     <@OBJ #gdx:domain  : @gdx:Person>
     <@OBJ #gdx:range   : @gdx:Person>
 >
 ```
 
-This declares the predicate `knows` and says a few things about it: its inverse is `knownBy`, and it relates a `Person` to a `Person`. (The `gdx:` in front of each name just says which shared vocabulary the name comes from — more on vocabularies in a moment.) Notice what this *is*, though: it's just GDX. A predicate is declared with the same elements, edges, and references you already know how to read; `gdx:Person` is simply an Object with a conceptual name, pointed at like any other. GDX has no separate language for "defining vocabulary" — the things that give your data shared meaning, the predicates and the concepts they relate, are themselves ordinary GDX. A vocabulary is just a GDX document whose contents happen to be definitions.
+This declares the predicate `knows` and says a few things about it: its inverse is `knownBy`, and it relates a `Person` to a `Person`. (The `gdx:` in front of each identifier just says which shared vocabulary it comes from — more on vocabularies in a moment.) The REL's Id, `&gdx:knows`, is the predicate's identity: an edge's `#gdx:knows` is matched against it, never against a Name, so the declaration needs an Id just as Alice did. Notice what this *is*, though: it's just GDX. A predicate is declared with the same elements, edges, and references you already know how to read; `gdx:Person` is simply an Object with a conceptual Id, pointed at like any other. GDX has no separate language for "defining vocabulary" — the things that give your data shared meaning, the predicates and the concepts they relate, are themselves ordinary GDX. A vocabulary is just a GDX document whose contents happen to be definitions.
 
 That is the quiet payoff the earlier steps were building toward. Each line you wrote was already a small statement about how things relate — *bob has a firstName, bob knows alice.* Predicates are what let those relationships carry meaning past the edge of your own document, into any system that shares the names. The relationships were there all along; this is the step that lets them travel.
 
@@ -401,18 +411,18 @@ So far every element has been valid on its own terms — a `STR` holds a string,
 >
 ```
 
-The `--schema:address` is the Type. It's the element saying *I claim to be a `schema:address`* — that this record matches the shape that name stands for. A validator can take that claim and check it: does this record actually carry what a `schema:address` is supposed to have? The claim travels on the data, like everything else; the element announces not only what it is and what it holds, but what shape it asserts it conforms to.
+The `--schema:address` is the Type. It's the element saying *I claim to be a `schema:address`* — that this record matches the shape that identifier stands for. A validator can take that claim and check it: does this record actually carry what a `schema:address` is supposed to have? The claim travels on the data, like everything else; the element announces not only what it is and what it holds, but what shape it asserts it conforms to.
 
-The shape itself — the thing `schema:address` names — is called a **Template**, and here is the move you've now seen once already. A Template is written in GDX:
+The shape itself — the thing `schema:address` identifies — is called a **Template**, and here is the move you've now seen once already. A Template is written in GDX:
 
 ```
-<DEFREC schema:address
+<DEFREC &schema:address
     <STR street>
     <STR city>
 >
 ```
 
-That is the definition of `schema:address`: a record that should have a `street` and a `city`. It's an ordinary GDX element — the `DEFREC` prefix marks it as a *definition* of a record rather than an instance of one, but its body is just properties, read exactly as you've read properties all along. The properties have names but no values, because a Template describes the *shape* a conforming element must fill, not the data that fills it.
+That is the definition of `schema:address`: a record that should have a `street` and a `city`. Like a REL, a Template carries its identity as an Id (`&schema:address`), because that is what a `--schema:address` claim is matched against; the instance's children line up with the Template's slots by their Names (`street`, `city`). It's an ordinary GDX element — the `DEFREC` prefix marks it as a *definition* of a record rather than an instance of one, but its body is just properties, read exactly as you've read properties all along. The properties have names but no values, because a Template describes the *shape* a conforming element must fill, not the data that fills it.
 
 This is the same lesson predicates taught, now for schemas: GDX has no separate language for defining structure. Just as a vocabulary was a GDX document full of predicate definitions, a schema is a GDX document full of Templates — written in the same form, read by the same parser, as the data they describe. The schema *is* data. There is nothing new to learn to read one; you already can.
 
@@ -424,9 +434,9 @@ You've now met every part of a GDX element, one at a time. Here they all are on 
 <%OBJ &primary #schema:customer customer : @bob --schema:customerRef>
 ```
 
-At the start of this tour, that would have been noise. Now you can read it. It's a **reference** (`%OBJ`, a handle to an Object) filling a slot named `customer`; it carries a stable anchor (`&primary`) so other elements can point at it; it aligns to a shared predicate (`#schema:customer`) so its meaning travels; the handle resolves to `@bob`; and it claims to conform to a Template (`--schema:customerRef`). Every field doing its job at once. You can take it left to right and say what each part is — which is the whole skill the tour set out to give you.
+At the start of this tour, that would have been noise. Now you can read it. It's a **reference** (`%OBJ`, a handle to an Object) filling a slot named `customer`; it carries its own Id (`&primary`), a durable identity other elements can point at; it aligns to a shared predicate (`#schema:customer`) so its meaning travels; the handle resolves to the entity whose Id is `bob` (`@bob`); and it claims to conform to a Template (`--schema:customerRef`). Every field doing its job at once. You can take it left to right and say what each part is — which is the whole skill the tour set out to give you.
 
-A line that dense is not something to avoid. If you're using everything GDX offers — typed values, shared meaning, stable anchors, schema claims — a line like that is simply what it looks like when you need all of it, and that's fine. The point isn't to write less; it's that **you choose what you need, and you don't pay for what you don't.** Look back at where the tour started:
+A line that dense is not something to avoid. If you're using everything GDX offers — typed values, shared meaning, durable Ids, schema claims — a line like that is simply what it looks like when you need all of it, and that's fine. The point isn't to write less; it's that **you choose what you need, and you don't pay for what you don't.** Look back at where the tour started:
 
 ```
 <STR firstName : "Bob">
@@ -440,18 +450,18 @@ One last thing, now that you can read all of it. Everything in this tour has bee
 
 ```
 Standard form, full prefixes        Standard form, minified
-<REC bob                            <R bob
+<OBJ &bob                           <O &bob
     <STR firstName : "Bob">             <S firstName : "Bob">
     <INT age : 24>                      <I age : 24>
 >                                   >
 
 Compact form, full prefixes         Compact form, minified
-REC bob                             R bob
+OBJ &bob                            O &bob
     STR firstName : "Bob"               S firstName : "Bob"
     INT age : 24                        I age : 24
 ```
 
-Four renderings, one element. The prefixes are longer or shorter; the brackets are present or replaced by indentation — but the model is identical in all four: the same record named `bob`, holding the same string and the same integer. This is what it means for GDX to be a model with several realizations rather than a syntax. The text is how the model is written down, and it can be written down more than one way. Reading any of them is the same skill — which is now yours.
+Four renderings, one element. The prefixes are longer or shorter; the brackets are present or replaced by indentation — but the model is identical in all four: the same Object with the Id `bob`, holding the same string and the same integer. This is what it means for GDX to be a model with several realizations rather than a syntax. The text is how the model is written down, and it can be written down more than one way. Reading any of them is the same skill — which is now yours.
 
 The tour ends here. What follows steps back from *how* GDX works to *why* it's shaped this way, how it compares to the formats it sits beside, and where it's the right tool — and where it isn't.
 
@@ -465,7 +475,7 @@ The tour ends here. What follows steps back from *how* GDX works to *why* it's s
 
 **Inline semantic linking.** Names are local: one system's `firstName` is another's `given_name` is another's `fname`, and reconciling them is the work mapping layers and integration glue exist to do. GDX lets a field carry a shared *predicate* beside its local name, so `firstName` and `fname` can both declare themselves `schema:givenName` and align with no table in between — the meaning rides on the data, not in glue between systems. This is the multi-tenant integration problem dissolved: tenants keep their own field names and still agree on what the fields *mean*.
 
-**First-class predicates.** If you've reached for RDF or OWL to model a domain, you know the power is real and so is the cost: triple stores, blank nodes, several serializations, a query language and a reasoner before you can do anything. GDX gives you the load-bearing parts — named relationships you can define and share, concepts you can relate, axioms like inverse and domain and range — using nothing but the elements you already write. A predicate is declared with a `REL`, a concept is just an Object with a conceptual name, and a whole vocabulary is a GDX document full of definitions, read by the same parser as your data. You get shared, machine-checkable meaning without a second modeling stack to stand up and operate.
+**First-class predicates.** If you've reached for RDF or OWL to model a domain, you know the power is real and so is the cost: triple stores, blank nodes, several serializations, a query language and a reasoner before you can do anything. GDX gives you the load-bearing parts — named relationships you can define and share, concepts you can relate, axioms like inverse and domain and range — using nothing but the elements you already write. A predicate is declared with a `REL`, a concept is just an Object with a conceptual Id, and a whole vocabulary is a GDX document full of definitions, read by the same parser as your data. You get shared, machine-checkable meaning without a second modeling stack to stand up and operate.
 
 **Schema as data.** In most stacks the schema is a separate language — XSD is not XML, JSON Schema is a convention bolted onto JSON — so you maintain two artifacts in two grammars and keep them in sync by hand. In GDX a schema is a GDX document: a Template is an ordinary element, read by the same parser, and it can travel in the same file as the data it describes. There's nothing new to learn to read or write one, and no impedance between the shape and the thing it shapes. For config especially, this is the missing middle: readable like YAML, but with a real schema in the same readable form, not a typed language you switched to just to get safety.
 
@@ -473,9 +483,9 @@ The tour ends here. What follows steps back from *how* GDX works to *why* it's s
 
 **Materialized instances.** When a schema fills in values an instance leaves out, the instance is only whole *with the schema in hand* — pull it into storage or hit it with a query on its own, and the schema-supplied parts are missing. GDX can write those values into the element before it's stored, so the stored thing is complete by itself: searchable, queryable, and parseable with no schema loaded. You author against the schema; your data doesn't depend on it afterward.
 
-**References as data.** Anything worth pointing at can be pointed at — not just top-level objects with global names, but elements tucked inside them, reached by a stable anchor that survives the document being rearranged. And the pointers themselves are ordinary GDX: an edge linking two entities, a reference filling a slot with a handle, are elements like any other, with their own identity and attributes. Configurations point at objects, vocabularies point at schemas, records point at each other — one uniform model, nothing special-cased about the act of pointing, and references you can attach data to like anything else.
+**References as data.** Anything worth pointing at can be pointed at — not just top-level objects with global Ids, but elements tucked inside them, reached by an Id that survives the document being rearranged and the element being relabelled. And the pointers themselves are ordinary GDX: an edge linking two entities, a reference filling a slot with a handle, are elements like any other, with their own identity and attributes. Configurations point at objects, vocabularies point at schemas, records point at each other — one uniform model, nothing special-cased about the act of pointing, and references you can attach data to like anything else.
 
-Underneath all of these is the property the tour ended on: you reach for each capability only when the data needs it. An element is valid with nothing but its prefix; type, meaning, schema, links, and anchors are there when a situation calls for them and silent when it doesn't. None of the powers above is mandatory — which is what lets the same model carry a one-line typed config value and a fully-aligned, schema-validated, graph-connected entity, and ask no ceremony of the simple case.
+Underneath all of these is the property the tour ended on: you reach for each capability only when the data needs it. An element is valid with nothing but its prefix; type, meaning, schema, links, and Ids are there when a situation calls for them and silent when it doesn't. None of the powers above is mandatory — which is what lets the same model carry a one-line typed config value and a fully-aligned, schema-validated, graph-connected entity, and ask no ceremony of the simple case.
 
 ---
 
@@ -504,7 +514,7 @@ The clearest way to read the map is to watch a single record take shape across i
 **GDX (Standard Form):**
 
 ```
-<OBJ bob
+<OBJ &bob
     <INT age : 24>
     <@OBJ #schema:knows : @alice>
 >
@@ -540,7 +550,7 @@ bob:
 
 Read for the type first. In GDX, `INT` commits `age` to an integer on the data itself. In the other three, `24` is an integer only by the reader's assumption — JSON happens to render it bare, YAML will infer it, XML can't distinguish it from the string `"24"` — and none of them records the commitment; it lives in a schema or a convention elsewhere.
 
-Now read for the relationship. In GDX, `<@OBJ #schema:knows : @alice>` says three things in the open: this is a link to another entity (`@`), the relationship is the shared predicate `schema:knows` (`#`), and the target is the entity `alice`. In the other three, `knows: "alice"` is just a string whose value happens to be the word "alice." Nothing marks it as a *reference* rather than a literal, nothing says it points at the `bob`-level entity named `alice` rather than holding the text, and nothing carries the predicate that would let another system recognize this as the same `knows` it uses. The relationship is representable only as a convention layered on top — a rule, kept outside the document, that a field named `knows` should be dereferenced as a pointer and aligned to some agreed meaning.
+Now read for the relationship. In GDX, `<@OBJ #schema:knows : @alice>` says three things in the open: this is a link to another entity (`@`), the relationship is the shared predicate `schema:knows` (`#`), and the target is the entity whose Id is `alice`. In the other three, `knows: "alice"` is just a string whose value happens to be the word "alice." Nothing marks it as a *reference* rather than a literal, nothing says it points at a `bob`-level entity identified as `alice` rather than holding the text, and nothing carries the predicate that would let another system recognize this as the same `knows` it uses. The relationship is representable only as a convention layered on top — a rule, kept outside the document, that a field named `knows` should be dereferenced as a pointer and aligned to some agreed meaning.
 
 That is the structural difference the map is meant to show. It is not that the other formats are weaker at their work; it is that the type-commitment and the relationship are, in those formats, things the document *cannot hold on its own* and must defer to an external layer — and in GDX they are stated on the element. Whether that property is worth reaching for is a question only your own data answers: where you need more than one of the things GDX carries, held in one readable place, it earns its keep; where a single-purpose format already does the one thing you need, that format is the honest choice.
 

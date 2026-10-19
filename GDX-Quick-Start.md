@@ -101,17 +101,17 @@ The `*` suffix on the prefix turns it into a Set. `STR*` is "Set of strings." Th
 Objects can carry @-edges to other Objects, forming graph relationships:
 
 ```
-<OBJ alice
+<OBJ &alice
     <STR firstName : "Alice">
     <@OBJ #knows : @bob>
 >
 
-<OBJ bob
+<OBJ &bob
     <STR firstName : "Bob">
 >
 ```
 
-The @-edge `<@OBJ #knows : @bob>` says: from `alice`, there is a `knows` relationship to `bob`. The `@OBJ` prefix declares the target is an Object; the `#` introduces the predicate (`knows`); the `@bob` Resource is a reference to another Object's identifier.
+The @-edge `<@OBJ #knows : @bob>` says: from `alice`, there is a `knows` relationship to `bob`. The `@OBJ` prefix declares the target is an Object; the `#` introduces the predicate (`knows`); the `@bob` Resource names the target root by its Id (`&bob`). Links always bind to an Id, never to a Name, so renaming `bob` does not break the edge.
 
 The predicate can be left out when the relationship's nature isn't known yet: `<@OBJ &link1 : @bob>` says "alice stands in *some* relationship to bob, to be classified later." The edge exists either way — being an edge is what asserts the relationship; the `#` predicate says what it is, and an edge without one is simply undefined as to nature until the field is filled in (spec §6.4.2).
 
@@ -130,7 +130,7 @@ For references to elements that don't have a global identifier — a Record insi
 <%REC residence : $/alice/mailing>
 ```
 
-The `$/alice/mailing` traverses the document tree: into `alice`, then into `mailing`. Path-mode and identifier-mode compose with `$` for cross-document targets — `@bob$/contacts/[1]` resolves the Object `bob` and then takes its first contact. Path expressions are defined in the companion GDX Path Expressions Specification.
+The `$/alice/mailing` traverses the document tree: into `alice`, then into `mailing`. A root reference and a path compose for targets inside another root — `@bob$/contacts/[1]` resolves the root Object whose Id is `bob` and then takes its first contact. Path expressions are defined in the companion GDX Path Expressions Specification.
 
 ## 6. Cross-System Semantic Alignment with Predicates
 
