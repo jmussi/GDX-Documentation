@@ -602,7 +602,7 @@ The two prefixes `%@OBJ` and `%@REL` are the reification forms: a REF whose targ
 
 ## 23. Reference to a Non-Identified Element via Path
 
-When the target of a reference is not a globally identifiable Object — when it's a Record inside an Object, a specific item in a list, or a Qualifier hanging off a Property — the identifier-mode reference cannot reach it. Path-mode references address elements by their structural location.
+When the target of a reference is not a globally identifiable Object — when it's a Record inside an Object, a specific item in a list, or a Qualifier hanging off a Property — a root reference (`@id`) cannot reach it. If the element carries an Id, an Id reference reaches it (Pattern 24); if it does not, a path reference addresses it by its structural location.
 
 ```
 <OBJ orders/2026
@@ -623,13 +623,13 @@ When the target of a reference is not a globally identifiable Object — when it
 
 The Resource `$/orders/2026/shipping` is a path-mode reference literal. The `$` introduces path mode; the `/orders/2026/shipping` traverses from the document root into the Object `orders/2026` and then into its `shipping` Record. The reference resolves to that Record element.
 
-Cross-document targets compose path-mode with identifier-mode:
+Targets inside another root compose a root reference with a path:
 
 ```
 <%REC alicesPreferredAddress : @people/alice$/addresses/[1]>
 ```
 
-The `@people/alice` portion resolves the Object by name (per the resolver's scope walk); the `$/addresses/[1]` portion then traverses from that Object to its `addresses` child and then to that child's first element by document order.
+The `@people/alice` portion resolves the root Object whose Id is `people/alice` (a root reference never matches a Name); the `$/addresses/[1]` portion then traverses from that Object to its `addresses` child and then to that child's first element by document order.
 
 Path segments select by different fields depending on the segment's first character:
 
@@ -643,10 +643,10 @@ Id-based addressing — for elements that carry an `Id` field (their durable mac
 
 ## 24. Reference to an Id-Bearing Element via Base
 
-When an element carries an `Id` field, that Id is its **durable machine identity** — a fixed handle independent of the element's Name and of where it sits in the document tree, and the thing persistence and durable graph links bind to. Because it is location-stable, it is the recommended target for references that must survive document restructuring: long-lived archival references, cross-document audit links, and references into Sets of similar elements (log entries, transactions, events). (An element's `Name`, by contrast, is a *descriptive* handle used for alignment and by-name resolution; renaming an element does not change its identity, but changing its Id does.) When the id-bearing element is a **root-level entity** (a top-level Object, REL, or HEAD), its Id is a *root id* and may also be the target of an `@`-edge — `<@OBJ #knows : &bob-id>` — not only of a `%`-reference; an Id on an interior element is REF-addressable only (Core Specification §4.4.5, §6.4).
+When an element carries an `Id` field, that Id is its **durable machine identity** — a fixed handle independent of the element's Name and of where it sits in the document tree, and the thing persistence and durable graph links bind to. Because it is location-stable, it is the recommended target for references that must survive document restructuring: long-lived archival references, cross-document audit links, and references into Sets of similar elements (log entries, transactions, events). (An element's `Name`, by contrast, is a *descriptive* label used for alignment, path segments and display; no reference resolves by it. Renaming an element does not change its identity, but changing its Id does.) When the id-bearing element is a **root-level entity** (a top-level Object, REL, or HEAD), its Id is a *root id*: a root reference (`@bob-id`) reaches it from any document, and it may be the target of an `@`-edge — `<@OBJ #knows : @bob-id>` — as well as of a `%`-reference; an Id on an interior element is REF-addressable only, by `&id` within its document or `@root&id` from anywhere (Core Specification §4.2.6, §4.4.5, §6.4).
 
 ```
-<OBJ system/audit-log
+<OBJ &system/audit-log
     <REC* entries
         <REC &entry-12345 #log:event
             <STR severity : "warn">
@@ -666,7 +666,7 @@ When an element carries an `Id` field, that Id is its **durable machine identity
 >
 ```
 
-The reference `@system/audit-log&entry-12345` is an `NameIdRef`. The `@system/audit-log` portion resolves the audit-log Object by name; the `&entry-12345` portion then looks up the id-bearing element within that Object's scope. The reference resolves to the Record with that Id.
+The reference `@system/audit-log&entry-12345` is a `RootIdRef`. The `@system/audit-log` portion resolves the audit-log root Object by its Id; the `&entry-12345` portion then looks up the id-bearing element within that Object's scope. The reference resolves to the Record with that Id.
 
 If the audit log is later restructured — entries archived into nested categories, reorganized by severity, etc. — the reference continues to resolve as long as the Id is preserved. A path-based equivalent like `$/system/audit-log/entries/[1]` would break under any such change.
 

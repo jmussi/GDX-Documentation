@@ -362,21 +362,21 @@ The lexical productions for each literal type are inherited from the Standard Gr
 
 **Reference literals.** Five forms are recognized in Resource position, all carried over from Standard Form:
 
-- Identifier-mode: `@identifier` (Core Spec §4.2.6).
-- Path-mode: `$/path/segments` (specified in `GDX-Path.md`).
-- Id-mode: `&target-id` (specified in `GDX-Path.md`; Id uniqueness rules in Core Spec §4.4.5).
-- Composed name + path: `@Base$/path/segments` for cross-document path addressing.
-- Composed name + id: `@Base&target-id` for cross-document id addressing.
+- Root reference: `@root-id`, a root element by its Id (Core Spec §4.2.6). The only form an @-edge Resource may take.
+- Path reference: `$/path/segments` (specified in `GDX-Path.md`).
+- Id reference: `&target-id`, within the current document (specified in `GDX-Path.md`; Id uniqueness rules in Core Spec §4.4.5).
+- Composed root + path: `@Base$/path/segments`, by path inside a root.
+- Composed root + id: `@Base&target-id`, by Id inside a root.
 
-The `@Base` production may carry an optional role marker (`@OBJ:id`, `@REL:id`, `@DEFOBJ:id`, etc.) drawn from the closed prefix vocabulary; when omitted, composed references default to an Object base.
+The `@Base` production may carry an optional role marker (`@OBJ:id`, `@REL:id`, `@DEFOBJ:id`, etc.) drawn from the closed prefix vocabulary; when omitted, the base matches a root of any role carrying the Id, and when present the marker is checked.
 
 ```
-@OBJ #knows : @bob                       // @-edge, identifier-mode target
+@OBJ #knows : @bob                       // @-edge, root reference target
 %REC mailing : $/people/alice/address    // REF, path-mode
-%REC home : @people/bob$/contacts/[1]    // REF, composed name + path (OBJ default)
-%REC shipping : &shippingAddress         // REF, id-mode (current document)
-%REC origEvent : @system/log&entry-12345 // REF, composed name + id (OBJ default)
-%STR desc : @REL:my-rel&description      // REF, composed name + id, REL base
+%REC home : @people/bob$/contacts/[1]    // REF, composed root + path
+%REC shipping : &shippingAddress         // REF, Id reference (current document)
+%REC origEvent : @system/log&entry-12345 // REF, composed root + id
+%STR desc : @REL:my-rel&description      // REF, composed root + id, REL base
 %STR slotDoc : @DEFOBJ:com.acme.Customer&firstName-doc  // REF, Template base
 ```
 

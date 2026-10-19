@@ -1,8 +1,8 @@
 # GDX Standard Form — Grammar Specification
 
-- **Status:** Draft v0.15 (companion to GDX Core Specification v0.27.0, working draft)
-- **Date:** 2026-07-19
-- **Companion to:** GDX Core Specification v0.27.0
+- **Status:** Draft v0.16 (companion to GDX Core Specification v0.30.0, working draft)
+- **Date:** 2026-10-19
+- **Companion to:** GDX Core Specification v0.30.0
 - **Authors:** Julian Mussi
 
 
@@ -23,7 +23,9 @@ Changes from v0.5 (revision v0.6): conformance with Core Specification v0.10.0. 
 Changes from v0.6 (this revision, v0.7): conformance with Core Specification v0.11.0. (1) **§5.6 reference literal grammar normatively specifies path-mode and key-mode.** The placeholder `PathExpression ::= (* reserved; grammar deferred *)` is replaced by a forward reference to the companion GDX Path Expressions Specification (`GDX-Path.md`). Five `ReferenceLiteral` productions are recognized: `NameReference` (`@Base`), `PathReference` (`$PathExpression`), `AnchorReference` (`&AnchorToken`), `NamePathReference` (`@Base$PathExpression`), and `NameAnchorReference` (`@Base&AnchorToken`). The `AnchorReference` and `NameAnchorReference` forms address an element by its location-stable `Anchor` anchor, scoped per Core Specification §4.4.5. The `Base` production extends the identifier portion of `@`-references with an optional `BaseRole` keyword drawn from the closed prefix vocabulary (`OBJ`, `REL`, `DEFOBJ`, `PKG`, etc.) followed by `:`, disambiguating the role of the resolved element. Default anchor role in composed references is `OBJ`. (2) **§6 identifier grammar narrows.** `NameStartChar` no longer admits `/`. Identifiers may continue to contain `/` (`NameContChar` unchanged); only the leading-`/` form is removed. This change is a breaking change for documents conforming to v0.6 or earlier; the migration is mechanical (drop the leading `/` or move to a path-mode reference). (3) Appendix A updated to reflect the new reference-literal productions, the `Base` production, and the narrowed identifier grammar. (4) Cross-references to Core Specification updated to v0.11.0.
 
 
-Changes from v0.14 (this revision, v0.15): conformance with Core Specification v0.27.0. **Terminology rename; no semantic or structural change.** The `Rel` field is renamed `Predicate` (Core Spec v0.27.0, entry 66): productions `Rel`→`Predicate` and `RelContent`→`PredicateContent`, and the `IdentitySection` production now reads `(WS Id)? (WS Predicate)? (WS Name)?`. The `#` sigil is unchanged and continues to introduce the field; the production shape is unchanged and still requires content after the sigil (a bare `#` remains malformed, an empty field is expressed by omitting it). No abbreviated form is introduced — `Predicate` is spelled out in every production. **The `REL` role productions are NOT renamed:** `RelPrefix ::= "REL"`, `RelElement`, and `RelDeclaration` name the Relation Declaration role, not this field, and the rename exists partly to make that distinction lexical rather than case-only.
+Changes from v0.15 (this revision, v0.16): conformance with Core Specification v0.30.0. **Reference literals bind by Id.** The productions `NameReference`, `NamePathReference` and `NameIdReference` are renamed `RootReference`, `RootPathReference` and `RootIdReference` (Core Spec v0.30.0, entry 74), and `Base` now takes an `IdToken` rather than a `Name`, because `@Base` addresses a root element by its Id (entries 71-72). §5.6 states that an @-Edge Resource is a `RootReference` only (entry 73). No other production changes.
+
+Changes from v0.14 (v0.15): conformance with Core Specification v0.27.0. **Terminology rename; no semantic or structural change.** The `Rel` field is renamed `Predicate` (Core Spec v0.27.0, entry 66): productions `Rel`→`Predicate` and `RelContent`→`PredicateContent`, and the `IdentitySection` production now reads `(WS Id)? (WS Predicate)? (WS Name)?`. The `#` sigil is unchanged and continues to introduce the field; the production shape is unchanged and still requires content after the sigil (a bare `#` remains malformed, an empty field is expressed by omitting it). No abbreviated form is introduced — `Predicate` is spelled out in every production. **The `REL` role productions are NOT renamed:** `RelPrefix ::= "REL"`, `RelElement`, and `RelDeclaration` name the Relation Declaration role, not this field, and the rename exists partly to make that distinction lexical rather than case-only.
 
 Changes from v0.13 (this revision, v0.14): conformance with Core Specification v0.26.0. **Terminology rename; no semantic or structural change.** The `Anchor` field is renamed `Id` (Core Spec v0.26.0, entry 60), completing the identity/naming split begun in v0.25.0 (in which the former descriptive `Id` field became `Name`): productions `Anchor`→`Id`, `AnchorToken`→`IdToken`, `AnchorStartChar`→`IdStartChar`, `AnchorReference`→`IdReference`, `NameAnchorReference`→`NameIdReference`. The `&` sigil is unchanged and continues to introduce the field and the `IdReference` reference literal; the reference-base production `Base` (and `BaseRole`) are unaffected. The metadata `MetaKey` production is NOT renamed (a KVP key is not an id).
 
@@ -400,22 +402,22 @@ Base64Char ::= ALPHA | DIGIT | "+" | "/"
 
 ### 5.6 Reference Literals
 
-Reference literals designate addressable elements. Five forms are recognized, combining the three operations of name resolution (`@`), structural traversal (`$`), and id lookup (`&`):
+Reference literals designate addressable elements. Five forms are recognized, combining the three operations of root lookup by Id (`@`), id lookup within a scope (`&`), and structural traversal (`$`):
 
 ```ebnf
-ReferenceLiteral    ::= NameReference
+ReferenceLiteral    ::= RootReference
                       | PathReference
                       | IdReference
-                      | NamePathReference
-                      | NameIdReference
+                      | RootPathReference
+                      | RootIdReference
 
-NameReference ::= "@" Base
+RootReference ::= "@" Base
 PathReference       ::= "$" PathExpression
 IdReference     ::= "&" IdToken
-NamePathReference     ::= "@" Base "$" PathExpression
-NameIdReference   ::= "@" Base "&" IdToken
+RootPathReference     ::= "@" Base "$" PathExpression
+RootIdReference   ::= "@" Base "&" IdToken
 
-Base                ::= (BaseRole ":")? Name
+Base                ::= (BaseRole ":")? IdToken
 BaseRole            ::= "OBJ"  | "REL"  | "PKG"  | "GRP"  | "HEAD"
                       | "DEFOBJ" | "DEFREC" | "DEFSTR"
                       | "DEFINT" | "DEFFLOAT" | "DEFBOOL" | "DEFBYTE" | "DEFHEAD"
@@ -424,21 +426,23 @@ PathExpression      ::= (* specified in GDX-Path.md §3-§4 *)
 IdToken         ::= IdStartChar NameContChar*   (* Core Spec §4.4.3; = §4.1 *)
 ```
 
-**Identifier-mode** (`@Base`) is normatively defined. The `@` sigil MUST be immediately followed by the base identifier with no intervening whitespace. The identifier portion may be in any of the forms permitted by §6 (CURIEs, GUIDs, IRIs, local names, or hierarchical local names). The optional `BaseRole` prefix carries a role-disambiguation keyword from the closed Core Specification §5.2 vocabulary.
+**Root reference** (`@Base`) is normatively defined. The `@` sigil MUST be immediately followed by the base Id with no intervening whitespace. The `Base` is the Id of a root element (Core Specification §4.2.6, §6.4.1), written as an `IdToken`, so it may be in any of the forms permitted by §6 (CURIEs, GUIDs, IRIs, local names, or hierarchical local names), including a leading digit. It never matches an element's Name. The optional `BaseRole` prefix carries a role-disambiguation keyword from the closed Core Specification §5.2 vocabulary.
 
-**Path-mode** (`$PathExpression`) is normatively defined by the companion GDX Path Expressions Specification (`GDX-Path.md`). The `$` sigil introduces a path expression addressing an element by its structural location in the document tree. The `$` sigil MUST be immediately followed by the `/` of the path with no intervening whitespace.
+**Path reference** (`$PathExpression`) is normatively defined by the companion GDX Path Expressions Specification (`GDX-Path.md`). The `$` sigil introduces a path expression addressing an element by its structural location in the document tree. The `$` sigil MUST be immediately followed by the `/` of the path with no intervening whitespace.
 
-**Id-mode** (`&IdToken`) uses the `IdToken` grammar defined in §4.1 (authority: Core Spec §4.4.3); its resolution semantics are defined by `GDX-Path.md`. The `&` sigil introduces an id lookup; the Id is resolved within the scope of the reference (the enclosing Object, or the document at transport-layer position; see Core Specification §4.4.5). The `&` sigil MUST be immediately followed by the Id token with no intervening whitespace.
+**Id reference** (`&IdToken`) uses the `IdToken` grammar defined in §4.1 (authority: Core Spec §4.4.3); its resolution semantics are defined by `GDX-Path.md`. The `&` sigil introduces an id lookup within the current document, searching outward from the reference to the document root (Core Specification §4.4.5); it never reaches another document. The `&` sigil MUST be immediately followed by the Id token with no intervening whitespace.
 
-**Composed name + path** (`@Base$PathExpression`) expresses cross-document addressing by structural traversal. The `@Base` portion resolves to a starting element by scope walk (per Core Specification §6.16), and the `$PathExpression` portion is then evaluated rooted at that starting element. No whitespace is permitted between `@`, the base, `$`, and the path. When the base carries no role marker, the starting element defaults to an Object.
+**Composed root + path** (`@Base$PathExpression`) reaches inside a root element, in this document or another, by structural traversal. The `@Base` portion resolves to a root element by its Id (Core Specification §6.4.1), and the `$PathExpression` portion is then evaluated rooted at that element. No whitespace is permitted between `@`, the base, `$`, and the path.
 
-**Composed name + id** (`@Base&IdToken`) expresses cross-document addressing by id. The `@Base` portion resolves to a starting element, and the `&IdToken` portion is then looked up within that element's scope. No whitespace is permitted. When the base carries no role marker, the starting element defaults to an Object.
+**Composed root + id** (`@Base&IdToken`) reaches inside a root element, in this document or another, by id. The `@Base` portion resolves to a root element by its Id, and the `&IdToken` portion is then looked up within that root's scope. No whitespace is permitted.
 
-**Base role markers.** The optional `BaseRole` prefix is distinguished from a CURIE prefix by lookup against the closed `BaseRole` set defined above. The parser MUST reject an unknown role keyword. At resolution time, the resolver MUST verify that the named element actually has the claimed role; mismatch yields an unresolved reference. Role markers are most useful in composed references where the base's role differs from the terminal target's role (for example, a `@STR` reference targeting an annotation child of a REL: `<@STR x : @REL:my-rel&annotation>`); in plain references and Object-based composed references, the marker is optional.
+**Base role markers.** The optional `BaseRole` prefix is distinguished from a CURIE prefix by lookup against the closed `BaseRole` set defined above; when the part of a `Base` before its first `:` is a `BaseRole` keyword, that `:` is always the role separator. An unmarked base matches a root of any root-eligible role carrying the Id; a marker, when present, is checked. The parser MUST reject an unknown role keyword. At resolution time, the resolver MUST verify that the named element actually has the claimed role; mismatch yields an unresolved reference. Role markers are most useful in composed references where the base's role differs from the terminal target's role (for example, a `%STR` reference targeting an annotation child of a REL: `<%STR x : @REL:my-rel&annotation>`); in plain references and Object-based composed references, the marker is optional.
 
-The `$` and `&` operators do not combine within a single reference literal. The form `@Base$PathExpression&IdToken` is malformed; an author chooses one of `NamePathReference` or `NameIdReference` for the composed reference.
+The `$` and `&` operators do not combine within a single reference literal. The form `@Base$PathExpression&IdToken` is malformed; an author chooses one of `RootPathReference` or `RootIdReference` for the composed reference.
 
-When a reference literal appears as the Resource of a `@KIND` reference element (Core Specification §6.16), it MUST resolve to exactly one element of the matching role. See `GDX-Path.md` §7 for the normative address-mode singularity rule.
+When a reference literal appears as the Resource of a `%KIND` REF element (Core Specification §6.16), it MUST resolve to exactly one element of the matching role. See `GDX-Path.md` §7 for the normative address-mode singularity rule.
+
+The Resource of an `@KIND` @-Edge element (Core Specification §6.4) MUST be a `RootReference`. An @-Edge whose Resource is a `PathReference`, `IdReference`, `RootPathReference` or `RootIdReference` is malformed; the restriction is a property of the element, checked against the literal's form, not a separate production.
 
 
 ---
@@ -980,17 +984,17 @@ HexBytes             ::= "0x" HexDigit+
 Base64Bytes          ::= "0z" Base64Char+ "="*
 BytesLiteral         ::= HexBytes | Base64Bytes
 
-ReferenceLiteral     ::= NameReference
+ReferenceLiteral     ::= RootReference
                        | PathReference
                        | IdReference
-                       | NamePathReference
-                       | NameIdReference
-NameReference  ::= "@" Base
+                       | RootPathReference
+                       | RootIdReference
+RootReference  ::= "@" Base
 PathReference        ::= "$" PathExpression
 IdReference      ::= "&" IdToken
-NamePathReference      ::= "@" Base "$" PathExpression
-NameIdReference    ::= "@" Base "&" IdToken
-Base                 ::= (BaseRole ":")? Name
+RootPathReference      ::= "@" Base "$" PathExpression
+RootIdReference    ::= "@" Base "&" IdToken
+Base                 ::= (BaseRole ":")? IdToken
 BaseRole             ::= "OBJ"  | "REL"  | "PKG"  | "GRP"
                        | "DEFOBJ" | "DEFREC" | "DEFSTR"
                        | "DEFINT" | "DEFFLOAT" | "DEFBOOL" | "DEFBYTE"
