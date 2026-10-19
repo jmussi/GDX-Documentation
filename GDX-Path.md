@@ -321,7 +321,7 @@ A `%KIND` REF element (Core Spec §6.16) MAY use any of the five reference liter
 | Reference to an id-bearing element anywhere in this document                                     | `IdRef`       |
 | Reference to an element with no Id inside another root, by structural location                   | `RootPathRef` |
 | Reference to an id-bearing element inside a given root, in this document or another              | `RootIdRef`   |
-| Reference to a child of a non-Object root (REL, Template, transport container)                   | `RootPathRef` or `RootIdRef` with explicit `BaseRole` |
+| Reference to a child of a non-Object root (REL, Template, transport container)                   | `RootPathRef` or `RootIdRef`; a `BaseRole` marker, if given, checks the root's role |
 
 When both an Id and a structural path could address the target, prefer the Id form. Ids are location-stable; paths break when intervening structure changes.
 

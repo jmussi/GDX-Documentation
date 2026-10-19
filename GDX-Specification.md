@@ -376,11 +376,11 @@ When the `:` separator appears with no identity field on the left in a context w
 Tokens within an element are separated by whitespace. The following rules apply:
 
 - Whitespace MUST separate the Prefix from a following Name when no sigil-introduced field intervenes (so `<REC address>` not `<Raddress>`).
-- The `:` separator MAY have whitespace on either side. The forms `<STR name:"Alice">`, `<STR name :"Alice">`, `<STR name: "Alice">`, and `<STR name : "Alice">` are all valid and equivalent.
+- Whitespace MUST precede the `:` separator (§4.1.1). Whitespace after it is optional: `<STR name : "Alice">` and `<STR name :"Alice">` are valid and equivalent. In `<STR name:"Alice">` and `<STR name: "Alice">` the `:` continues the identifier (§4.4.1), so neither is the element named `name` with the value `"Alice"`.
 - Whitespace MAY appear immediately after `<` and immediately before `>`.
 - Whitespace within an element is otherwise not significant.
 
-The canonical form used in this specification's examples places a single space between adjacent fields and around the `:` separator. Implementations producing GDX text MAY choose more compact forms (e.g., `<STR name:"Alice">`) where appropriate to context.
+The canonical form used in this specification's examples places a single space between adjacent fields and around the `:` separator. Implementations producing GDX text MAY omit the space after `:` (e.g., `<STR name :"Alice">`) where appropriate to context; the space before it is never optional.
 
 #### 4.1.3 Null Forms
 
@@ -632,10 +632,10 @@ The `&` sigil MUST be immediately followed by the Id token with no intervening w
 **Composed root + id** (`RootIdRef`) concatenates a root reference with an Id reference. The `@Base` portion resolves to a root element; the `&Id` portion is then looked up within that root's scope. The `Base` may carry a role marker, which is then checked:
 
 ```
-@gdx:bob&shippingAddress                 // root gdx:bob, any role
-@system/audit-log&entry-12345            // root system/audit-log, any role
-@REL:gdx:knows&annotation-3              // root gdx:knows, checked to be a REL
-@DEFOBJ:com.acme.Customer&firstName-doc  // root com.acme.Customer, checked to be a Template
+@gdx:bob&shippingAddress                 ← root gdx:bob, any role
+@system/audit-log&entry-12345            ← root system/audit-log, any role
+@REL:gdx:knows&annotation-3              ← root gdx:knows, checked to be a REL
+@DEFOBJ:com.acme.Customer&firstName-doc  ← root com.acme.Customer, checked to be a Template
 ```
 
 The two composed forms are the canonical mechanisms for reaching inside another root, in this document or another. The `$` and `&` operators do not combine within a single reference literal; pick `RootPathRef` for structural traversal or `RootIdRef` for id-based addressing.
@@ -671,13 +671,13 @@ A Type reference attaches to an element via the `--` sigil and follows the Resou
     <INT number : 100>
 >
 
-<DEFOBJ MyAddress --schema:address
+<DEFOBJ &MyAddress --schema:address
     <STR street : "Broadway">
     <STR city : "Oakland">
 >
 ```
 
-In the first element, `--com.acme.Address` resolves to the Template whose Id is `com.acme.Address`. In the second, the declaring Template's own identifier `MyAddress` is its **Id** — the token by which instances will reference it — and the Template additionally `--type`-claims `schema:address`. A bare leading identifier on a Template or REL declaration is read as that declaration's Id (§3.2); no distinct sigil is required.
+In the first element, `--com.acme.Address` resolves to the Template whose Id is `com.acme.Address`. In the second, the declaring Template's Id `&MyAddress` is the token by which instances will reference it, and the Template additionally `--type`-claims `schema:address`. A Template or REL declaration carries its Id in the `&` field like any other element; a bare identifier on it is its Name, which nothing resolves (§3.1, §4.2.6).
 
 The `--` sigil MUST be preceded by whitespace separating it from the previous token, and MUST be immediately followed by a Type identifier with no intervening whitespace. The Type identifier follows the lexical rules in §4.4.
 
@@ -927,7 +927,7 @@ Both forms are equivalent at the data-model level. Conversion is deterministic; 
 
 **Strict canonical for content addressing.** The strict canonical form (Appendix A.5), used for content addressing and signing, uses canonical prefix names. Minified output is valid GDX but does not produce strict canonical bytes.
 
-**Prefixes without minified forms.** Some prefixes are canonical-only — they are already three or more letters and represent infrequent declarative items where minification would save little: `REL`, `REM`, `PKG`, `BLK`, `GRP`, and all `DEF…` Template prefixes. These are identity-mapped between canonical and minified output: a minified document still contains `<REL gdx:knows>` and `<DEFREC Customer>`.
+**Prefixes without minified forms.** Some prefixes are canonical-only — they are already three or more letters and represent infrequent declarative items where minification would save little: `REL`, `REM`, `PKG`, `BLK`, `GRP`, and all `DEF…` Template prefixes. These are identity-mapped between canonical and minified output: a minified document still contains `<REL &gdx:knows>` and `<DEFREC &Customer>`.
 
 ### 5.2 Base Vocabulary
 
@@ -1096,7 +1096,7 @@ Examples:
     <.STR unit : "celsius">             ← Qualifier refining what 21.5 means
 >
 
-<DEFSTR Email
+<DEFSTR &Email
     <_STR pattern : "^[^@]+@[^@]+$">    ← Extension carrying a constraint
 >
 
@@ -1437,7 +1437,7 @@ See §6.9 for the contrast with Qualifier — both attach to elements, but Quali
 A schema constraint on a Template (Extensions' most common use):
 
 ```
-<DEFSTR Email
+<DEFSTR &Email
     <_BOOL required : true>
     <_STR pattern : "^[^@]+@[^@]+$">
 >
@@ -1493,7 +1493,7 @@ In each case, GDX records the Extension as a well-formed element; what (if anyth
     <_STR acme:precision : "high">   ← Extension (adjunct): an assertion about the measurement
 >
 
-<DEFFLOAT TemperatureReading
+<DEFFLOAT &TemperatureReading
     <_STR unit : "celsius">          ← Extension on Template (incorporated into validation by the validator)
 >
 ```
@@ -1694,17 +1694,17 @@ A `DEFHEAD` Template (§6.17) declares the shape of a persistent aggregate: its 
 A Template's *fields* are described using regular prefixes (not `DEF…` prefixes). The DEF prefix appears only at the Template's declaration root; the children are field descriptions using the standard structural and value prefixes.
 
 ```
-<DEFREC com.acme.Address
+<DEFREC &com.acme.Address
     <STR street>
     <INT number>
 >
 
-<DEFSTR schema:csv
+<DEFSTR &schema:csv
     <_STR separator : ",">
     <_BOOL hasHeader : true>
 >
 
-<DEFINT gdx:i8
+<DEFINT &gdx:i8
     <_INT gdx:min : -128>
     <_INT gdx:max : 127>
 >
@@ -2217,7 +2217,7 @@ This layered model is what makes GDX a structural schema with pluggable constrai
 A Template is an element with a `DEF…` prefix. It declares an *interface* — a set of properties, records, edges, and constraints — that an instance element claims to satisfy via its `--type` field.
 
 ```
-<DEFREC com.acme.Address
+<DEFREC &com.acme.Address
     <STR street>
     <INT number>
     <STR country
@@ -2307,7 +2307,7 @@ This creates a real difference between the instance's logical content and its pe
 
 ```
 # Template:
-<DEFREC com.acme.Customer
+<DEFREC &com.acme.Customer
     <STR firstName #schema:givenName>
     <STR locale : "en-US">
 >
@@ -2338,7 +2338,7 @@ Property Templates (`DEFSTR`, `DEFINT`, `DEFFLOAT`, `DEFBOOL`, `DEFBYTE`) declar
 A typical Property Template uses Extensions to express constraints:
 
 ```
-<DEFSTR gdx:email
+<DEFSTR &gdx:email
     <_STR gdx:pattern : "^[^@]+@[^@]+$">
     <_INT gdx:maxLength : 254>
 >
@@ -2346,7 +2346,7 @@ A typical Property Template uses Extensions to express constraints:
 <STR contact : "alice@example.com" --gdx:email>
 ```
 
-The same pattern serves several common needs: width-bounded numerics (`<DEFINT gdx:i8>` with min/max constraints), format-bounded strings (patterns, length limits), semantic interpretation (a `gdx:csv` Template signaling structured string content), and domain typing (a `gdx:uuid` Template constraining a string to UUID format). The constraint vocabulary on the Template determines what each Template means.
+The same pattern serves several common needs: width-bounded numerics (`<DEFINT &gdx:i8>` with min/max constraints), format-bounded strings (patterns, length limits), semantic interpretation (a `gdx:csv` Template signaling structured string content), and domain typing (a `gdx:uuid` Template constraining a string to UUID format). The constraint vocabulary on the Template determines what each Template means.
 
 The interpretation rules are carried by Extensions on the Template. The Extension vocabulary is application-extensible; the GDX Common Vocabulary defines a base set (§8.6).
 
@@ -2367,7 +2367,7 @@ This discipline is structural: by holding constraint semantics out of the core, 
 The general form of a Constraint Extension on a Template slot is:
 
 ```
-<DEFX TemplateName
+<DEFX &TemplateName
     <X slotName
         <_X constraintIdentifier : constraintValue>
     >
@@ -2383,7 +2383,7 @@ Because constraint identifiers are opaque to GDX, multiple constraint vocabulari
 A worked example showing XSD, JSON Schema, and a bespoke vendor vocabulary on the same Template:
 
 ```
-<DEFSTR UserHandle
+<DEFSTR &UserHandle
     <_STR xsd:pattern : "^[a-z0-9_]+$">
     <_INT xsd:minLength : 3>
     <_INT xsd:maxLength : 32>
@@ -2433,7 +2433,7 @@ Implementations declare their default mode and provide configuration to override
 
 A `--type` reference is resolved to a Template by matching the reference token against Template **Ids**, walking a defined sequence of resolution scopes. Resolution keys on the Template's `Id`, never on its descriptive `Name`: a Template's Name may change over its lifetime (relabeling, localization) without breaking references, exactly as an Object's Name may; the Id is the stable resolution target. The default resolution order is normative:
 
-1. **Local document.** Templates declared within the same document as the reference are checked first. A `--gdx:Person` reference is satisfied by a `<DEFREC gdx:Person>` declaration in the same document if one exists — matching the reference token against the Template's Id.
+1. **Local document.** Templates declared within the same document as the reference are checked first. A `--gdx:Person` reference is satisfied by a `<DEFREC &gdx:Person>` declaration in the same document if one exists — matching the reference token against the Template's Id.
 2. **Loaded vocabularies.** Templates from explicitly-loaded vocabularies are checked next, in the order the vocabularies were loaded. CURIE prefixes (`gdx:`, `vocab:`) expand to their declared IRI bases via the resolver's vocabulary mapping table.
 3. **Globally-resolvable IRIs.** Templates whose Id is a full IRI (e.g., `--https://acme.com/vocab/Person`) MAY be resolved by a network-aware resolver if the implementation supports it. Implementations are not required to perform network resolution.
 4. **Resolution failure.** If no scope yields a Template whose Id matches, the reference is unresolved.
@@ -2518,14 +2518,14 @@ A vocabulary export Package carrying Templates and RELs:
     <STR vocabName : "color-science">
     <STR version : "1.0.0">
     
-    <DEFREC ColorReading
+    <DEFREC &ColorReading
         <FLOAT l>
         <FLOAT a>
         <FLOAT b>
     >
     
-    <REL color:measuredBy>
-    <REL color:hasReading>
+    <REL &color:measuredBy>
+    <REL &color:hasReading>
 >
 ```
 
@@ -2897,9 +2897,11 @@ This appendix records the per-revision change descriptions accumulated during th
 
 **(77) An unmarked `Base` matches a root of any root-eligible role (§4.2.6, §4.4.5, `GDX-Path.md` §5).** v0.29.0 defaulted the base of a composed reference to an Object, so `@my-rel&x` failed to resolve when `my-rel` was a REL unless the author wrote `@REL:my-rel&x`. Now that a base is found by its Id, the default has no work to do: root Ids are unique within a document, so the Id alone picks the root; an unmarked base matches whatever root carries it, and a marker, when present, is a check that the root has the named role.
 
+**(78) Template and REL declarations carry their Id in the `&` field; whitespace before `:` is restated in §4.1.2 (§4.1.2, §4.3, §5.1, §6.14, §8).** §4.3 still said that a bare leading identifier on a Template or REL declaration is read as that declaration's Id, and the declarations in §4.3, §5.1, §6.14 and §8 were written that way (`<DEFREC com.acme.Address …>`, `<REL color:measuredBy>`). That was a leftover of the field model before v0.25.0, when the leading identifier was the identity. Since then `Name` and `Id` are separate fields read the same way on every element, and since (71) a Name is never resolved, so a declaration written that way had a Name and no Id, and nothing could reach it: neither `--type`, `#predicate`, an @-edge nor a REF. The special reading is withdrawn and the examples carry `&` (`<DEFREC &com.acme.Address …>`, `<REL &color:measuredBy>`). §4.1.2 still said the `:` separator MAY have whitespace on either side and offered `<STR name:"Alice">` as a compact form, which (67) had already made a different element; it now restates (67).
+
 Supersedes: (65)'s statement that `@` resolves by Name and its §6.4.1 nudge; the default-Object rule for unmarked bases in composed references.
 
-Migration: a reference written `@x` whose target carries `x` only as a Name must give the target the Id `x` (or be rewritten to the target's existing Id). An @-edge written with an `&rootid` Resource becomes `@rootid`. A reference to a globally-resolvable Id written `&https://…` or `&prefix:local`, meant to reach another document, becomes `@https://…` or `@prefix:local`. An @-edge whose Resource reached inside a root (a path, an interior Id, or a composed form) was already outside E5 and is now malformed; if it was meant to reach inside, it becomes a REF of the target's role (`%REC`, `%OBJ`, …) with the same literal. A bare `&id` that resolved within its own document is unaffected. A REF to a non-root role written with a bare `@x` (for example `%STR* tags : @tag-set`) becomes `&x` within the document or `@root&x` across documents. A composed reference that relied on the default-Object rule to fail on a non-Object root now resolves to that root; add a role marker to keep the check.
+Migration: a reference written `@x` whose target carries `x` only as a Name must give the target the Id `x` (or be rewritten to the target's existing Id). An @-edge written with an `&rootid` Resource becomes `@rootid`. A reference to a globally-resolvable Id written `&https://…` or `&prefix:local`, meant to reach another document, becomes `@https://…` or `@prefix:local`. An @-edge whose Resource reached inside a root (a path, an interior Id, or a composed form) was already outside E5 and is now malformed; if it was meant to reach inside, it becomes a REF of the target's role (`%REC`, `%OBJ`, …) with the same literal. A bare `&id` that resolved within its own document is unaffected. A REF to a non-root role written with a bare `@x` (for example `%STR* tags : @tag-set`) becomes `&x` within the document or `@root&x` across documents. A composed reference that relied on the default-Object rule to fail on a non-Object root now resolves to that root; add a role marker to keep the check. A Template or REL declared with a bare leading identifier (`<DEFREC com.acme.Address …>`) writes it as its Id (`<DEFREC &com.acme.Address …>`), or keeps it as a Name and adds an Id.
 
 ### v0.29.0 — Empty identity fields are absent; strings are Unicode scalar values
 
