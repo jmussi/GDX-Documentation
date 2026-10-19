@@ -23,7 +23,7 @@ Changes from v0.5 (revision v0.6): conformance with Core Specification v0.10.0. 
 Changes from v0.6 (this revision, v0.7): conformance with Core Specification v0.11.0. (1) **§5.6 reference literal grammar normatively specifies path-mode and key-mode.** The placeholder `PathExpression ::= (* reserved; grammar deferred *)` is replaced by a forward reference to the companion GDX Path Expressions Specification (`GDX-Path.md`). Five `ReferenceLiteral` productions are recognized: `NameReference` (`@Base`), `PathReference` (`$PathExpression`), `AnchorReference` (`&AnchorToken`), `NamePathReference` (`@Base$PathExpression`), and `NameAnchorReference` (`@Base&AnchorToken`). The `AnchorReference` and `NameAnchorReference` forms address an element by its location-stable `Anchor` anchor, scoped per Core Specification §4.4.5. The `Base` production extends the identifier portion of `@`-references with an optional `BaseRole` keyword drawn from the closed prefix vocabulary (`OBJ`, `REL`, `DEFOBJ`, `PKG`, etc.) followed by `:`, disambiguating the role of the resolved element. Default anchor role in composed references is `OBJ`. (2) **§6 identifier grammar narrows.** `NameStartChar` no longer admits `/`. Identifiers may continue to contain `/` (`NameContChar` unchanged); only the leading-`/` form is removed. This change is a breaking change for documents conforming to v0.6 or earlier; the migration is mechanical (drop the leading `/` or move to a path-mode reference). (3) Appendix A updated to reflect the new reference-literal productions, the `Base` production, and the narrowed identifier grammar. (4) Cross-references to Core Specification updated to v0.11.0.
 
 
-Changes from v0.16 (this revision, v0.17): conformance with Core Specification v0.31.0. **Terminology rename; no grammar-shape change.** The value an @-Edge or a REF element carries in its Resource is a *target*, and its literal a *target literal* (Core Spec v0.31.0, entry 80); "reference" names only the `%KIND` REF family. The production `ReferenceLiteral` is renamed `TargetLiteral` (§4.4, §4.5, §5.6, Appendix A), §5.6 is retitled "Target Literals", and its prose calls the five forms the root, path and Id forms and the composed forms. The productions `RootReference`, `PathReference`, `IdReference`, `RootPathReference` and `RootIdReference` keep their names: they name the forms a target literal takes. No production's shape changes, and every document parses as before.
+Changes from v0.16 (this revision, v0.17): conformance with Core Specification v0.31.0. **Terminology rename; no grammar-shape change.** The value an @-Edge or a REF element carries in its Resource is a *target*, and its literal a *target literal* (Core Spec v0.31.0, entry 80); "reference" names only the `%KIND` REF family. The production `ReferenceLiteral` is renamed `TargetLiteral` (§4.4, §4.5, §5.6, Appendix A), §5.6 is retitled "Target Literals", and its prose calls the five forms the root, path and Id forms and the composed forms. The productions `RootReference`, `PathReference`, `IdReference`, `RootPathReference` and `RootIdReference` keep their names: they name the forms a target literal takes. No production's shape changes, and every document parses as before. The §3.1 documentation alias `ReferenceElement` (`"<" "@" ModifierBase SetSuffix? …`), left over from before Core v0.13.0, named the @-edge a reference and admitted `@` on any base with a Set suffix; it is replaced by `EdgeElement` (`EdgeSigil` with `ObjectPrefix`, `RelPrefix` or `HeadPrefix`, no Set suffix) and a new `RefElement` (`RefSigil RolePrefix`), matching §7.1 and Core Spec §5.3 and §6.16, the §3.1 note that called `@STR*` a reference to a Set and the §7.1 comment that had references produced by `@` are corrected. These are documentation aliases of `Element`; the `Prefix` productions of §7.1, which a parser uses, are unchanged.
 
 Changes from v0.15 (v0.16): conformance with Core Specification v0.30.0. **Reference literals bind by Id.** The productions `NameReference`, `NamePathReference` and `NameIdReference` are renamed `RootReference`, `RootPathReference` and `RootIdReference` (Core Spec v0.30.0, entry 74), and `Base` now takes an `IdToken` rather than a `Name`, because `@Base` addresses a root element by its Id (entries 71-72). §5.6 states that an @-Edge Resource is a `RootReference` only (entry 73). No other production changes.
 
@@ -153,10 +153,6 @@ AnnotationElement ::= "<" WS? AnnotationPrefix ElementBody WS? ">"
    composition-level, defined in Core Specification §6.17 (H1, H3), not in the
    surface grammar. *)
 
-(* @-Edge elements (@OBJ, @REL, @HEAD) are produced by the Edge sigil
-   composing with ObjectPrefix, RelPrefix, or HeadPrefix and follow §6.4 of the
-   Core Specification. They do not have a separate EdgeElement production. *)
-
 (* Refinement-modifier compositions *)
 QualifierElement  ::= "<" WS? QualifierComposition ElementBody WS? ">"
 ExtensionElement  ::= "<" WS? ExtensionComposition ElementBody WS? ">"
@@ -167,8 +163,14 @@ NodeElement       ::= "<" WS? NodeComposition ElementBody WS? ">"
 TemplateElement   ::= "<" WS? TemplatePrefix ElementBody WS? ">"
 RelElement        ::= "<" WS? RelPrefix ElementBody WS? ">"
 
-(* Reference operator — composes with any of the above except itself *)
-ReferenceElement  ::= "<" WS? "@" ModifierBase SetSuffix? ElementBody WS? ">"
+(* @-Edge elements (@OBJ, @REL, @HEAD): the Edge sigil composes only with
+   ObjectPrefix, RelPrefix or HeadPrefix and takes no Set suffix (Core Spec
+   §5.3.2, §6.4 E5) *)
+EdgeElement       ::= "<" WS? EdgeSigil (ObjectPrefix | RelPrefix | HeadPrefix) ElementBody WS? ">"
+
+(* %-Reference (REF) elements: the REF sigil wraps any layer-1 role-prefix,
+   including Set forms (Core Spec §5.3.3, §6.16) *)
+RefElement        ::= "<" WS? RefSigil RolePrefix ElementBody WS? ">"
 
 (* Set suffix — composes with most bases and refinement modifiers *)
 SetElement        ::= "<" WS? ModifierBase "*" ElementBody WS? ">"
@@ -180,7 +182,7 @@ GroupElement      ::= "<" WS? GroupPrefix ElementBody WS? ">"
 
 These are aliases of the general Element production for documentation purposes. A parser may match the general Element form and then determine the role from the prefix; the role-specific aliases are not required at the lexical level.
 
-`ReferenceElement` and `SetElement` are not mutually exclusive: a prefix may have both a leading `@` and a trailing `*` (a reference to a Set, e.g., `@STR*`). The composition pattern in §7.1 governs which prefix forms are valid.
+`EdgeElement` and `SetElement` are mutually exclusive: an @-edge takes no Set suffix (no `@OBJ*`, Core Spec §6.4 E5). A `RefElement` may wrap a Set form: `%STR*` is a REF to a Set of strings (Core Spec §5.3.3). The composition pattern in §7.1 governs which prefix forms are valid.
 
 
 ---
@@ -599,9 +601,9 @@ RecordBase           ::= "REC"   | "R"
 
 (* The EDGE/E prefix used through Core Spec v0.11.0 is removed in v0.12.0;
    the @-Edge family (@OBJ, @REL — see Core Spec §6.4) replaces it. The
-   `E` minified slot is currently unassigned. @-Edges and References are
-   produced by the `@` operator (§7.2 below) composing with the @-Edge
-   family members or with other base prefixes respectively. *)
+   `E` minified slot is currently unassigned. @-edges are produced by the
+   `@` EdgeSigil composing with ObjectPrefix, RelPrefix or HeadPrefix, and
+   REFs by the `%` RefSigil wrapping a role-prefix (§7.1). *)
 
 (* Template prefixes — canonical only, no minified form *)
 

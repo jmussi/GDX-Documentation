@@ -142,7 +142,7 @@ This section defines the terms used throughout the specification. The key words 
 
 - **Core** — the structural and semantic content normatively defined by this specification: the prefix vocabulary, the element model, the identifier and literal grammars, the composition axioms, the Template structure and instance-alignment mechanism, the universal claim rule, and the primitive value-kind axioms. The core is what GDX *is*; it is fixed by this specification and does not change when extensions are added. (Distinguish "the core" — the concept — from "the Core Specification" — the document name. The latter is this document.)
 
-- **Extension** — vocabulary-defined material that rides on top of the core through GDX's extension-point mechanisms. Extensions include: predicate identifiers in the `Predicate` field, Template Ids in the `Type` field (the durable identity a `--type` reference resolves to, §8.5.2), and Constraint Extension elements (§8.4) carrying constraint identifiers from external vocabularies. The core records extensions structurally and validates their well-formedness; their *semantic content* is interpreted externally by consumers that understand the vocabulary in question. The core/extension distinction is the **interpretation** boundary between what GDX knows and what GDX merely carries.
+- **Extension** — vocabulary-defined material that rides on top of the core through GDX's extension-point mechanisms. Extensions include: predicate identifiers in the `Predicate` field, Template Ids in the `Type` field (the durable identity a `--type` token resolves to, §8.5.2), and Constraint Extension elements (§8.4) carrying constraint identifiers from external vocabularies. The core records extensions structurally and validates their well-formedness; their *semantic content* is interpreted externally by consumers that understand the vocabulary in question. The core/extension distinction is the **interpretation** boundary between what GDX knows and what GDX merely carries.
 
 - **Core layer / Extension layer** — when a discussion needs to distinguish what GDX understands from what GDX hosts, the terms *core layer* and *extension layer* refer to those two sides of the interpretation boundary. The core layer is owned by this specification; the extension layer is owned by external vocabularies and their consumers.
 
@@ -153,7 +153,7 @@ GDX defines a layered conformance model: each layer is independent, evaluated by
 In outline, there are three rungs with three owners:
 
 - **Layer 1 — Representation Conformance** — how a value is encoded (prefix-to-value-kind matching, literal grammar, representation tags, round-trip text equivalence). Owned by GDX; evaluable at parse time; errors are *malformed document* errors and are absolute.
-- **Layer 2 — Structural Conformance** — whether targets resolve and instances align to declared shapes: @-Edge and REF target resolution (§6.4.1, §6.15), `--type`/`#predicate` resolution to a Template/REL by **Id** (§8.5.2), and whether an instance's children align to a referenced Template's declared slots by **Name** (§8.1–§8.3). Owned by GDX; evaluable by any consumer that can resolve Templates and targets, without external vocabulary knowledge.
+- **Layer 2 — Structural Conformance** — whether targets resolve and instances align to declared shapes: @-Edge and REF target resolution (§6.4.1, §6.16), `--type`/`#predicate` resolution to a Template/REL by **Id** (§8.5.2), and whether an instance's children align to a claimed Template's declared slots by **Name** (§8.1–§8.3). Owned by GDX; evaluable by any consumer that can resolve Templates and targets, without external vocabulary knowledge.
 - **Layer 3 — Constraint Conformance** — whether values satisfy a particular constraint vocabulary's constraints (`xsd:`, `json:`, a domain vocabulary). Owned by the constraint vocabulary, not GDX; evaluable only by a consumer that understands that vocabulary. GDX records Constraint Extension elements (§8.4) but renders no verdict on them.
 
 The layers are independent and the verdicts are vocabulary-relative above the primitive floor; Appendix A.1 states the conformance combinations and the reporting requirement normatively.
@@ -205,7 +205,7 @@ An element has six model fields plus an out-of-model metadata channel. The Prefi
 | `Predicate`      | A predicate-style label naming the relationship between this element and its parent. |
 | `Name`       | The element's **descriptive name** — a local or resource name used for Template slot alignment (§8.2), for path segments (`GDX-Path.md`), and for display. A Name is a label, not an address: no target literal resolves by Name except through a path (§4.2.6). Names are **not durable**: renaming an element does not change its machine identity. |
 | `Resource` | The element's typed scalar value. |
-| `Type`     | A reference to a Template the element claims to satisfy. The reference resolves to the Template by the Template's **Id** (§8.5.2), not its descriptive Name. |
+| `Type`     | A Type claim: the Id of a Template the element claims to satisfy. The `--type` token resolves to the Template by the Template's **Id** (§8.5.2), not its descriptive Name. |
 | `Metadata` | *(Out-of-model.)* Realization-layer carriage annotation — flat key/value pairs about how the element is stored or transmitted, not about what it means. Not model content; see §4.8. |
 
 All identity fields (`Name`, `Id`, `Predicate`) use case-sensitive ordinal comparison.
@@ -230,7 +230,7 @@ The following roles, when in named-attribute position, MUST carry at least one o
 - Template (any `DEF…`)
 - VAL (`VAL`/`V`) when not in Set member position (rare; VAL is typically a named slot)
 
-A **Template (`DEF…`) and a REL** at declaration position MUST additionally carry an `Id` (not merely a Name or Predicate): the `Id` is the token that `--type` and `#predicate` references resolve to (§8.5.2), so a Template or REL without one cannot be a resolution target. A descriptive `Name` MAY accompany the `Id` but does not satisfy the resolvability requirement. (Migration note: a pre-existing Template or REL whose sole identifier was previously written in Name position is read under this model as carrying that identifier as its `Id`; see Appendix B, v0.26.0.)
+A **Template (`DEF…`) and a REL** at declaration position MUST additionally carry an `Id` (not merely a Name or Predicate): the `Id` is the token that `--type` and predicate tokens resolve to (§8.5.2), so a Template or REL without one cannot be a resolution target. A descriptive `Name` MAY accompany the `Id` but does not satisfy the resolvability requirement. (Migration note: a pre-existing Template or REL whose sole identifier was previously written in Name position is read under this model as carrying that identifier as its `Id`; see Appendix B, v0.26.0.)
 
 Elements appearing as members of a Set (§6.13) are in *positional* rather than named-attribute position. They are not required to carry identifiers; they identify themselves by position and value within the Set. Identifiers on Set members are valid and MAY be used when meaningful (for example, to identify individual Records within a Record Set).
 
@@ -244,7 +244,7 @@ The lexical grammar for identifiers is uniform across all identifier-bearing pos
 
 - Identifiers on Property and Record elements name a relationship within the document — a slot within the parent's shape. They are functionally equivalent to a field name, label, or variable name in a programming language, and are the key an instance child aligns to a Template slot by (§8.2.1). The relevant field for this role is `Name`.
 
-- Identifiers on Object, HEAD, Template (`DEF…`), and REL elements **identify an entity** and are used to resolve references to it. An Object identifier resolves `@OBJ` edges and `%`-REFs; a Template's identifier resolves `--type` references; a REL's identifier resolves `#predicate` references and `@REL` edges. Because these identifiers are durable reference targets, the field that carries the resolvable identity is the `Id` (§3.1, §4.4.5), and resolution keys on the Id, never on the descriptive Name (§8.5.2). The specification places no constraint on the identifier scheme; paths (`/people/alice`), CURIEs (`gdx:Person`), GUIDs, and IRIs (`https://acme.com/people/alice`) are all valid Id forms, and a namespace-qualified form (`ns:localname`) is idiomatic for published, cross-document entities.
+- Identifiers on Object, HEAD, Template (`DEF…`), and REL elements **identify an entity** and are what links to it resolve to. An Object identifier resolves `@OBJ` edges and `%`-REFs; a Template's identifier resolves `--type` claims; a REL's identifier resolves predicate tokens and `@REL` edges. Because these identifiers are durable resolution targets, the field that carries the resolvable identity is the `Id` (§3.1, §4.4.5), and resolution keys on the Id, never on the descriptive Name (§8.5.2). The specification places no constraint on the identifier scheme; paths (`/people/alice`), CURIEs (`gdx:Person`), GUIDs, and IRIs (`https://acme.com/people/alice`) are all valid Id forms, and a namespace-qualified form (`ns:localname`) is idiomatic for published, cross-document entities.
 
 This semantic distinction is not reflected in the grammar. A property identifier and an entity identifier draw from the same lexical production (§4.4); they differ only in which field carries them and how consumers interpret them. In particular, a Template or REL MAY carry a descriptive `Name` in addition to its `Id` — the `Id` is what `--type`/`#predicate` resolve on; the `Name`, if present, is a human-facing label free to change without breaking references (§8.5.2).
 
@@ -392,7 +392,7 @@ The null state of a Property element (§3.3.3) has two equivalent textual forms:
 
 Both forms denote the same null state. The bare form is canonical for serialization (Appendix A.5); a conforming parser MUST accept either input form, but a conforming serializer SHOULD output the bare form. The empty-value form exists primarily to support natural human editing — when a user removes a value from a present element by deleting the literal but not the separator, the element remains valid rather than becoming malformed.
 
-The same equivalence applies when a Type reference is present with no Resource value: `<STR name --gdx:string>` and `<STR name : --gdx:string>` are equivalent. The bare form (no `:`) is canonical.
+The same equivalence applies when a Type claim is present with no Resource value: `<STR name --gdx:string>` and `<STR name : --gdx:string>` are equivalent. The bare form (no `:`) is canonical.
 
 ### 4.2 Resource Literals
 
@@ -662,9 +662,9 @@ Target literals are the Resource of @-Edge elements (`@OBJ`, `@REL`, `@HEAD`, §
 
 The five forms of a target literal serve different addressing strategies. The root form addresses a whole root element by its Id. The Id form addresses any id-bearing element of the current document. A path traverses the structure to reach an element that has no Id. The composed forms reach inside a root, by Id or by path. The choice among them follows from what the target is and where it lives; the reach of each is fixed by its form. When both an Id and a path could address the target, prefer the Id form — Ids are location-stable, paths break under restructuring. An element that must be linked to durably needs an Id: a Name alone makes it reachable only by path.
 
-### 4.3 Type References
+### 4.3 Type Claims
 
-A Type reference attaches to an element via the `--` sigil and follows the Resource (or the Name, if no Resource is present):
+A Type claim attaches to an element via the `--` sigil and follows the Resource (or the Name, if no Resource is present):
 
 ```
 <REC address : --com.acme.Address
@@ -678,11 +678,11 @@ A Type reference attaches to an element via the `--` sigil and follows the Resou
 >
 ```
 
-In the first element, `--com.acme.Address` resolves to the Template whose Id is `com.acme.Address`. In the second, the declaring Template's Id `&MyAddress` is the token by which instances will reference it, and the Template additionally `--type`-claims `schema:address`. A Template or REL declaration carries its Id in the `&` field like any other element; a bare identifier on it is its Name, which nothing resolves (§3.1, §4.2.6).
+In the first element, `--com.acme.Address` resolves to the Template whose Id is `com.acme.Address`. In the second, the declaring Template's Id `&MyAddress` is the token by which instances will claim it, and the Template additionally `--type`-claims `schema:address`. A Template or REL declaration carries its Id in the `&` field like any other element; a bare identifier on it is its Name, which nothing resolves (§3.1, §4.2.6).
 
 The `--` sigil MUST be preceded by whitespace separating it from the previous token, and MUST be immediately followed by a Type identifier with no intervening whitespace. The Type identifier follows the lexical rules in §4.4.
 
-A Type reference asserts that the element's contents satisfy the named Template. The identifier after `--` is resolved to a Template by matching the Template's **Id** (§8.5.2) — not its descriptive Name. Resolution locates the Template entity; the subsequent structural check (does the instance's children align to the located Template's slots) is a distinct operation keyed on `Name` (§8.2.1). These are two steps — *resolve the reference by Id, then align by Name* — described together in §8.
+A Type claim asserts that the element's contents satisfy the named Template. The identifier after `--` is resolved to a Template by matching the Template's **Id** (§8.5.2) — not its descriptive Name. Resolution locates the Template entity; the subsequent structural check (does the instance's children align to the located Template's slots) is a distinct operation keyed on `Name` (§8.2.1). These are two steps — *resolve the token by Id, then align by Name* — described together in §8.
 
 ### 4.4 Identifier Lexical Rules
 
@@ -726,7 +726,7 @@ The grammar is uniform but admits several conventional forms. The following are 
 | GUID / opaque      | `7f3a2b9c-4e21-4f88-91d5-abcdef012345` | System-generated identifiers                |
 | IRI                | `https://acme.com/people/alice`        | Globally resolvable identifiers             |
 
-All forms work in any identifier position because the grammar accepts the union of their characters. An identifier `gdx:Person` may appear as a Property identifier (unusual but valid), an entity Id, a Type reference, or a Predicate reference. Consumers interpret the identifier in context. A Type reference (`--gdx:Person`) and a Predicate reference (`#gdx:knows`) resolve to the target's **Id** (§8.5.2), not its descriptive Name; the CURIE the author writes after `--` or `#` is read as an Id token. Target literals bind by Id too (`@` a root by its Id, `&` an Id within a scope, `$` a structural path); the two mechanisms and their relationship are stated in §4.2.6.
+All forms work in any identifier position because the grammar accepts the union of their characters. An identifier `gdx:Person` may appear as a Property identifier (unusual but valid), an entity Id, a Type claim, or a predicate token. Consumers interpret the identifier in context. A Type claim (`--gdx:Person`) and a predicate token (`#gdx:knows`) resolve to the target's **Id** (§8.5.2), not its descriptive Name; the CURIE the author writes after `--` or `#` is read as an Id token. Target literals bind by Id too (`@` a root by its Id, `&` an Id within a scope, `$` a structural path); the two mechanisms and their relationship are stated in §4.2.6.
 
 CURIEs are typically expanded to full IRIs by the resolver. The choice between IRI and CURIE is a tradeoff between explicitness (IRI) and compactness (CURIE):
 
@@ -1677,7 +1677,7 @@ When emptiness itself is meaningful for the application, the Template MAY use `g
 
 A Template is a **type contract** — a declaration of the shape and constraints an instance must satisfy to claim conformance to a named type (§8). Conceptually, a Template is written in instance vocabulary: it looks like the elements it describes, with the same prefixes and the same composition rules, but with `DEF` declaring "this is the contract, not the data." A Template is what an instance points to through its `--type` field; the instance asserts identity, the Template defines what that identity means structurally.
 
-Structurally, the `DEF` prefix-fragment marks an element as a Template definition. A Template MUST carry an `Id` (its type identity — the token `--type` references resolve to, §8.5.2) and follows the composition rules of its base role. Like most roles, Templates admit Extension children (§6.10); on a Template, Extensions carry the constraints a validator enforces against instances (§8.4). Template prefixes are canonical-only; they have no minified form.
+Structurally, the `DEF` prefix-fragment marks an element as a Template definition. A Template MUST carry an `Id` (its type identity — the token a `--type` claim resolves to, §8.5.2) and follows the composition rules of its base role. Like most roles, Templates admit Extension children (§6.10); on a Template, Extensions carry the constraints a validator enforces against instances (§8.4). Template prefixes are canonical-only; they have no minified form.
 
 | Canonical  | Base role |
 |------------|-----------|
@@ -1721,7 +1721,7 @@ A Template's *fields* are described using regular prefixes (not `DEF…` prefixe
 
 A Relation Declaration is a **predicate as a first-class entity** — the published counterpart to the `#predicate` fields that @-edges and other elements carry. Conceptually, a REL says "this predicate has its own identity, and the metadata describing it lives here": its domain and range, its inverse, whether it is symmetric or transitive, what vocabulary it participates in, what concepts it connects, what humans should read about it. Without RELs, predicates would be opaque identifiers used inline; with RELs, the predicate vocabulary itself becomes part of the data model.
 
-Structurally, a `REL` element declares a predicate as a first-class entity. The `REL` element's `Id` is the predicate identity itself (typically a CURIE such as `gdx:knows` or `schema:givenName`) — the token that `#predicate` references and `@REL` edges resolve to (§6.4.1, §8.5.2). A REL MAY additionally carry a descriptive `Name` (a human label); the `Name` is never what `#predicate` resolves on. REL has no minified form.
+Structurally, a `REL` element declares a predicate as a first-class entity. The `REL` element's `Id` is the predicate identity itself (typically a CURIE such as `gdx:knows` or `schema:givenName`) — the token that predicate tokens and `@REL` edges resolve to (§6.4.1, §8.5.2). A REL MAY additionally carry a descriptive `Name` (a human label); the `Name` is never what `#predicate` resolves on. REL has no minified form.
 
 **Defined by purpose, not by structure.** A REL's function — naming a first-class predicate — is fully discharged by its identifier. It needs no particular children to be well-formed; the predicate-as-named-entity exists once the REL is declared. Children, when present, supply metadata *about* the predicate: data carriers (labels, descriptions, version info), graph-statement axioms about how the predicate relates to concepts and other predicates, primitive-valued semantic claims (symmetry, cardinality), and handles to vocabulary-layer artifacts. None is required; each contributes only what its consumer interprets. A REL is held to no stricter standard than any other element — Properties stand on a REL exactly as they stand on any Object, with meaning conferred by interpreting consumers and meaninglessness never disqualifying.
 
@@ -1768,11 +1768,11 @@ The mechanical version: would a validator or reasoner act on it? → Extension. 
 
 The interplay among the three vocabulary-related constructs is:
 
-- The `#predicate` field on any element names a predicate by identifier (§6.15). The reference is lightweight — it asserts "this element represents this predicate" without requiring the predicate to be declared anywhere. An undeclared `#predicate` is well-formed and simply does not resolve (there is no REL to resolve to); this is the well-formed-but-undefined posture GDX takes throughout.
+- The `#predicate` field on any element names a predicate by identifier (§6.15). The token is lightweight — it asserts "this element represents this predicate" without requiring the predicate to be declared anywhere. An undeclared `#predicate` is well-formed and simply does not resolve (there is no REL to resolve to); this is the well-formed-but-undefined posture GDX takes throughout.
 - A `REL` element declares the predicate with its metadata, making the predicate's semantics part of the data model. The REL's `Id` is the predicate identity.
 - An `@REL` @-edge from one REL declaration to another expresses a first-class predicate-to-predicate axiom (inverse, subPropertyOf, etc.).
 
-The three are coordinated by identity: **when** a `#predicate` token matches the `Id` of a REL declaration in scope, that REL's metadata applies to the predicate. When an `@REL` @-edge's target matches a REL's `Id`, the edge resolves to that declaration as a graph-statement-level link between two predicates. Resolution keys on the REL's `Id`, not its descriptive Name — so a `#predicate` reference survives a REL being relabeled, and a predicate versioned `acme:pref.v1` → `acme:pref.v2` is a new identity (new Id), not a rename of the old one. A `#predicate` token that matches no REL Id in scope remains a valid, unresolved predicate reference; declaration is what enables resolution, not what `#predicate` requires.
+The three are coordinated by identity: **when** a `#predicate` token matches the `Id` of a REL declaration in scope, that REL's metadata applies to the predicate. When an `@REL` @-edge's target matches a REL's `Id`, the edge resolves to that declaration as a graph-statement-level link between two predicates. Resolution keys on the REL's `Id`, not its descriptive Name — so a predicate token survives a REL being relabeled, and a predicate versioned `acme:pref.v1` → `acme:pref.v2` is a new identity (new Id), not a rename of the old one. A `#predicate` token that matches no REL Id in scope remains a valid, unresolved predicate token; declaration is what enables resolution, not what `#predicate` requires.
 
 **Concept-as-Object.** GDX deliberately has no separate Class or Concept role. When a vocabulary needs to name a concept (a type of entity, an enumeration value, a category), an Object with a conceptual identifier serves that role. RELs reference concepts as Objects (`@gdx:Person`, `@gdx:Organization`), and concept Objects may carry their own properties, labels, and relationships like any other Object. This keeps the data model uniform — vocabulary, schema, and data all use the same element form.
 
@@ -1817,7 +1817,7 @@ The three are coordinated by identity: **when** a `#predicate` token matches the
 
 This document defines a small vocabulary: two concept Objects (`gdx:Person`, `gdx:Organization`), three predicates with declared domain/range, inverse relationships, and human-facing labels, and one Template (`gdx:PersonShape`) giving the shape of a Person instance. The Template carries its own Id: root Ids share one document scope (§4.4.5), so it cannot reuse the concept's. The entire vocabulary is GDX; consumers parse it with the same parser they use for instances. The labels on each REL are Properties (data carried for downstream consumers like documentation tools); the domain/range/inverse are @-edges (graph statements); the symmetry flag is an Extension (a vocabulary-defined axiom a reasoner may act on).
 
-A REL declaration MAY appear at the document root (alongside or instead of primary Objects) or within a vocabulary document. Resolution of `#predicate` references follows the same Id-based mechanism as Type reference resolution (§8.5.2): the `#predicate` token is matched against REL `Id`s across the same scope sequence (local document, loaded vocabularies, globally-resolvable IRIs).
+A REL declaration MAY appear at the document root (alongside or instead of primary Objects) or within a vocabulary document. Resolution of predicate tokens follows the same Id-based mechanism as Type claim resolution (§8.5.2): the `#predicate` token is matched against REL `Id`s across the same scope sequence (local document, loaded vocabularies, globally-resolvable IRIs).
 
 ### 6.16 The %-Reference Family — `%KIND`
 
@@ -2093,7 +2093,7 @@ The following rules are consequences of the matrix and are repeated here for cla
 
     (b) **REL does not admit Templates.** Although REL admits Record, Property, Set, Block, and VAL (§6.15), the Template (`DEF…`) forms of those roles are NOT admitted under REL. This is an explicit carve-out: vocabulary entities (REL declarations, Template declarations) do not nest within REL declarations, even when modifier transparency would otherwise permit it. The same principle excludes nested `REL` children (already absent from the matrix REL row). The carve-out is principled rather than mechanical: a nested vocabulary declaration inside a REL would make a contextually false claim about what the REL is (§6.15).
 
-    (c) **Template placement is not transparent.** The `DEF` construct's transparency covers a Template's *children* (validated by the base role's row), not its *placement*. `DEF…` elements are vocabulary declarations: they are admitted as children only of Package and Group (payload) and at the document root (the Template column in §7.1). They are NOT admitted in data-layer positions — a `DEFREC` may not sit inside an Object or Record the way a `REC` may — nor under REL (clause b), nor as a VAL occupant (§6.11). Declarations live at declaration positions; instances reference them by Id (`--type`, §8.5.2).
+    (c) **Template placement is not transparent.** The `DEF` construct's transparency covers a Template's *children* (validated by the base role's row), not its *placement*. `DEF…` elements are vocabulary declarations: they are admitted as children only of Package and Group (payload) and at the document root (the Template column in §7.1). They are NOT admitted in data-layer positions — a `DEFREC` may not sit inside an Object or Record the way a `REC` may — nor under REL (clause b), nor as a VAL occupant (§6.11). Declarations live at declaration positions; instances claim them by Id (`--type`, §8.5.2).
 
     VAL is not a modifier of a base role — it is its own role (§6.11) and is governed by its own row in the composition matrix.
 
@@ -2209,7 +2209,7 @@ Schemas in GDX are themselves GDX documents. This section defines the schema mec
 
 - **Template structure (§8.1, §8.3).** Templates are GDX elements with `DEF…` prefixes. They declare the structural shape an instance is expected to satisfy: which child slots exist, what role each carries, what Predicate each aligns to, what Type each claims. Templates are GDX-native: this specification defines their grammar, their composition rules, and how they are resolved.
 
-- **Template-instance alignment (§8.2).** An instance carrying a `--type` reference asserts that its structure aligns to the referenced Template. Conformance is two steps: the `--type` reference is first resolved to a Template by the Template's `Id` (§8.5.2), then the instance's children are aligned to that Template's slots by `Name`, with `Predicate` as a cross-vocabulary bridge. The universal claim rule (§8.2.3) governs how Template-declared and instance-declared values reconcile on aligned slots; materialization (§8.2.4) is the recommended persistence form. Both steps are part of Layer 2 — Structural Conformance (§2.2).
+- **Template-instance alignment (§8.2).** An instance carrying a Type claim asserts that its structure aligns to the claimed Template. Conformance is two steps: the `--type` token is first resolved to a Template by the Template's `Id` (§8.5.2), then the instance's children are aligned to that Template's slots by `Name`, with `Predicate` as a cross-vocabulary bridge. The universal claim rule (§8.2.3) governs how Template-declared and instance-declared values reconcile on aligned slots; materialization (§8.2.4) is the recommended persistence form. Both steps are part of Layer 2 — Structural Conformance (§2.2).
 
 - **Constraint Extensions (§8.4).** Constraint vocabularies — XSD, JSON Schema, OWL profiles, bespoke domain vocabularies — are expressed as Extension elements on Template slots. The Extension carriers (`_STR`, `_INT`, etc.) are GDX-native. The constraint identifiers they carry (`xsd:minInclusive`, `json:pattern`, etc.) are vocabulary-defined and opaque to GDX. This is Layer 3 — Constraint Conformance (§2.2). Multiple constraint vocabularies MAY coexist on the same Template; each is interpreted independently by consumers that understand its identifiers.
 
@@ -2233,11 +2233,11 @@ A Template's children describe the *expected shape* of conforming instances. By 
 
 Templates are themselves GDX elements. They use the same composition rules, the same identifier grammar, and the same syntactic conventions as data elements. The schema is data. Tools that read GDX read Templates the same way they read instances; tools that write GDX write Templates the same way they write instances. There is no separate schema language.
 
-A Template MUST carry an `Id` — the Template's durable identity, and the token that `--type` references resolve to (§8.5.2). The Id follows the same lexical rules as any other identifier (§4.4) and typically takes a namespace-qualified CURIE form (`gdx:Address`, `com.acme.Person`) for cross-vocabulary clarity and to encode publisher/namespace as a resolution hint. A Template MAY additionally carry a descriptive `Name`; the `Name` is a human-facing label and is never what `--type` resolves on.
+A Template MUST carry an `Id` — the Template's durable identity, and the token a `--type` claim resolves to (§8.5.2). The Id follows the same lexical rules as any other identifier (§4.4) and typically takes a namespace-qualified CURIE form (`gdx:Address`, `com.acme.Person`) for cross-vocabulary clarity and to encode publisher/namespace as a resolution hint. A Template MAY additionally carry a descriptive `Name`; the `Name` is a human-facing label and is never what `--type` resolves on.
 
 ### 8.2 Conformance via `--type`
 
-An instance element references a Template by the Template's `Id` in its `--type` field. The validator resolves the reference (§8.5.2) to locate the Template, then checks that the instance's children satisfy the located Template's declared shape (§8.2.1). Resolution keys on the Template's Id; the subsequent slot alignment keys on `Name`.
+An instance element claims a Template by writing the Template's `Id` in its `--type` field. The validator resolves the token (§8.5.2) to locate the Template, then checks that the instance's children satisfy the located Template's declared shape (§8.2.1). Resolution keys on the Template's Id; the subsequent slot alignment keys on `Name`.
 
 ```
 <REC address --com.acme.Address
@@ -2246,7 +2246,7 @@ An instance element references a Template by the Template's `Id` in its `--type`
 >
 ```
 
-The `--type` reference is a Layer 2 (structural) assertion (§2.2). Resolving the reference and validating the instance against the Template are operations performed after parsing and representation validation. An instance may be representation-conforming (Layer 1) without being structurally conforming (Layer 2): the structure is well-formed, but the contents may not satisfy the claimed Template.
+The Type claim is a Layer 2 (structural) assertion (§2.2). Resolving the token and validating the instance against the Template are operations performed after parsing and representation validation. An instance may be representation-conforming (Layer 1) without being structurally conforming (Layer 2): the structure is well-formed, but the contents may not satisfy the claimed Template.
 
 **Type identity is nominal, not structural.** An instance carrying `--com.acme.Customer` asserts that it is of type `com.acme.Customer` — the identity is the Template's Id, resolved as such (§8.5.2). Two Templates that happen to declare the same shape are nonetheless distinct types, because their Ids differ; an instance of one is not silently an instance of the other. Nominal typing is exactly what Id-based resolution provides: identity travels as a durable token, independent of structural coincidence and independent of any descriptive Name either Template carries.
 
@@ -2254,7 +2254,7 @@ The `--type` reference is a Layer 2 (structural) assertion (§2.2). Resolving th
 
 #### 8.2.1 Slot Alignment
 
-Slot alignment is the second step of Template conformance: it applies *after* the `--type` reference has been resolved to a Template by Id (§8.5.2). Resolution answers "which Template"; alignment answers "do this instance's children fill that Template's slots." The two steps use different keys — resolution keys on the Template's Id, alignment keys on `Name`.
+Slot alignment is the second step of Template conformance: it applies *after* the `--type` token has been resolved to a Template by Id (§8.5.2). Resolution answers "which Template"; alignment answers "do this instance's children fill that Template's slots." The two steps use different keys — resolution keys on the Template's Id, alignment keys on `Name`.
 
 An instance child satisfies a Template slot by matching the slot's `Name` field, using case-sensitive ordinal comparison (§3.2). When a Template slot declares a `Predicate`, an instance child carrying the same `Predicate` MAY align to the slot even if its local `Name` differs; in that case the `Predicate` is the alignment key, supporting cross-vocabulary instances whose local names differ from the Template's slot names.
 
@@ -2264,17 +2264,17 @@ The `Id` field plays no role in Template-instance alignment. Ids are an independ
 
 #### 8.2.2 Cross-Role and Transport Restrictions
 
-A `--type` reference MUST resolve to a Template whose base role matches the instance's role:
+A `--type` token MUST resolve to a Template whose base role matches the instance's role:
 
-- An `STR`/`S` instance may reference `DEFSTR` only.
-- An `INT`/`I` instance may reference `DEFINT` only.
-- A `FLOAT`/`F` instance may reference `DEFFLOAT` only.
-- A `BOOL`/`L` instance may reference `DEFBOOL` only.
-- A `BYTE`/`B` instance may reference `DEFBYTE` only.
-- A `REC`/`R` instance may reference `DEFREC` only.
-- An `OBJ`/`O` instance may reference `DEFOBJ` only.
+- An `STR`/`S` instance may claim `DEFSTR` only.
+- An `INT`/`I` instance may claim `DEFINT` only.
+- A `FLOAT`/`F` instance may claim `DEFFLOAT` only.
+- A `BOOL`/`L` instance may claim `DEFBOOL` only.
+- A `BYTE`/`B` instance may claim `DEFBYTE` only.
+- A `REC`/`R` instance may claim `DEFREC` only.
+- An `OBJ`/`O` instance may claim `DEFOBJ` only.
 
-Cross-role references (e.g., a Record instance referencing an Object Template) are Layer 2 structural-conformance failures.
+Cross-role claims (e.g., a Record instance claiming an Object Template) are Layer 2 structural-conformance failures.
 
 Transport-layer roles (Package, Group) are not subjects of Templates in the core specification. Their structure is defined entirely by §7 composition rules and §9 transport semantics. Vocabularies MAY define Templates for transport-construct validation purposes, but support for such Templates is a vocabulary concern, not a core requirement.
 
@@ -2434,12 +2434,12 @@ Implementations declare their default mode and provide configuration to override
 
 #### 8.5.2 Type Resolution
 
-A `--type` reference is resolved to a Template by matching the reference token against Template **Ids**, walking a defined sequence of resolution scopes. Resolution keys on the Template's `Id`, never on its descriptive `Name`: a Template's Name may change over its lifetime (relabeling, localization) without breaking references, exactly as an Object's Name may; the Id is the stable resolution target. The default resolution order is normative:
+A `--type` token is resolved to a Template by matching it against Template **Ids**, walking a defined sequence of resolution scopes. Resolution keys on the Template's `Id`, never on its descriptive `Name`: a Template's Name may change over its lifetime (relabeling, localization) without breaking the claims that name it, exactly as an Object's Name may; the Id is the stable resolution target. The default resolution order is normative:
 
-1. **Local document.** Templates declared within the same document as the reference are checked first. A `--gdx:Person` reference is satisfied by a `<DEFREC &gdx:Person>` declaration in the same document if one exists — matching the reference token against the Template's Id.
+1. **Local document.** Templates declared within the same document as the claim are checked first. A `--gdx:Person` claim is satisfied by a `<DEFREC &gdx:Person>` declaration in the same document if one exists — matching the token against the Template's Id.
 2. **Loaded vocabularies.** Templates from explicitly-loaded vocabularies are checked next, in the order the vocabularies were loaded. CURIE prefixes (`gdx:`, `vocab:`) expand to their declared IRI bases via the resolver's vocabulary mapping table.
 3. **Globally-resolvable IRIs.** Templates whose Id is a full IRI (e.g., `--https://acme.com/vocab/Person`) MAY be resolved by a network-aware resolver if the implementation supports it. Implementations are not required to perform network resolution.
-4. **Resolution failure.** If no scope yields a Template whose Id matches, the reference is unresolved.
+4. **Resolution failure.** If no scope yields a Template whose Id matches, the claim is unresolved.
 
 Implementations MUST follow this order by default. Implementations MAY provide configuration to alter the order — for example, to disable network resolution, to prepend an in-memory registry, or to invert the local/vocabulary precedence — but the spec-defined default applies when no explicit configuration is provided.
 
@@ -2447,17 +2447,17 @@ The default order (local first, then declared vocabularies, then global) reflect
 
 Resolvers SHOULD cache resolved Templates to avoid repeated lookups. Cache invalidation is implementation-defined; resolvers MAY treat resolved Templates as stable for the lifetime of a process or until an explicit reload.
 
-**Why Id, not Name.** The reference resolves on the Template's durable Id rather than its descriptive Name because a reference is, by definition, a pointer to an identity — the same reasoning that makes an @-edge resolve to an Object's Id (§6.4.1). Anchoring resolution to Name would put the one mechanism that most requires stability on top of the one field the model defines as non-durable (§3.1, §4.4.2). It would also force an asymmetry under versioning: a published Template evolving `acme:swatch.v2` → `acme:swatch.v3` mints a new identity, and if identity and descriptive label were the same field, the "don't rename referenced identities" discipline and the "version by minting a new identifier" discipline would collide on one token. Splitting them dissolves the collision — the Id carries versioned identity, the Name carries whatever human label the author wants, and the two evolve on their own schedules. This mirrors established practice: RDF/OWL resolve on IRI while `rdfs:label` floats; Protocol Buffers bind the wire contract to field numbers while field names change freely; capability and content-addressed systems bind to identity tokens, never mutable labels.
+**Why Id, not Name.** The `--type` token resolves on the Template's durable Id rather than its descriptive Name because a Type claim, like every link, points at an identity — the same reasoning that makes an @-edge resolve to an Object's Id (§6.4.1). Anchoring resolution to Name would put the one mechanism that most requires stability on top of the one field the model defines as non-durable (§3.1, §4.4.2). It would also force an asymmetry under versioning: a published Template evolving `acme:swatch.v2` → `acme:swatch.v3` mints a new identity, and if identity and descriptive label were the same field, the "don't rename referenced identities" discipline and the "version by minting a new identifier" discipline would collide on one token. Splitting them dissolves the collision — the Id carries versioned identity, the Name carries whatever human label the author wants, and the two evolve on their own schedules. This mirrors established practice: RDF/OWL resolve on IRI while `rdfs:label` floats; Protocol Buffers bind the wire contract to field numbers while field names change freely; capability and content-addressed systems bind to identity tokens, never mutable labels.
 
 #### 8.5.3 Resolution Failure Behavior
 
-When a `--type` reference cannot be resolved:
+When a `--type` token cannot be resolved:
 
-- The element carrying the reference is reported as structurally non-conforming (Layer 2).
-- The error MUST identify the unresolved reference and the element that carries it.
+- The element carrying the claim is reported as structurally non-conforming (Layer 2).
+- The error MUST identify the unresolved Type claim and the element that carries it.
 - Validation of the rest of the document continues; resolution failures do not halt validation.
 
-A resolution failure is distinct from a Template-mismatch error. The former means "the reference token matches no known Template Id"; the latter means "the reference resolves to a Template, but the instance does not align to it." Implementations should distinguish these in error reports.
+A resolution failure is distinct from a Template-mismatch error. The former means "the `--type` token matches no known Template Id"; the latter means "the token resolves to a Template, but the instance does not align to it." Implementations should distinguish these in error reports.
 
 #### 8.5.4 Error Accumulation
 
@@ -2482,7 +2482,7 @@ GDX Templates are flat shape declarations. A Template's effective contract is ex
 
 This decision is deliberate. Inheritance in distributed-vocabulary environments — where Templates from different vocabularies may reference each other across publication boundaries, without compile-time checking to catch breaks — creates failure modes (silent constraint propagation, transitive dependency brittleness, schema-evolution surprises) that outweigh the authoring conveniences inheritance provides. Applications needing shared structure across Templates should publish Templates as flat declarations, possibly generated by tooling from a common source.
 
-A Template's relationship to other Templates is expressed through `--type` references on its child elements. A Customer Template that has an `address` Record whose shape conforms to an Address Template uses `<REC address --Address>` — a structural reference at the field level, not at the Template level. This composition pattern at the field level provides the shared-shape benefit without the propagation problems that Template-level inheritance would introduce.
+A Template's relationship to other Templates is expressed through Type claims on its child elements. A Customer Template that has an `address` Record whose shape conforms to an Address Template uses `<REC address --Address>` — a structural claim at the field level, not at the Template level. This composition pattern at the field level provides the shared-shape benefit without the propagation problems that Template-level inheritance would introduce.
 
 **The GDX Common Vocabulary.** The GDX Common Vocabulary is a companion specification, separately versioned from this core specification. It defines a base set of widely useful Templates and Constraint Extensions covering numeric width and representation refinements, common semantic types (identifiers, dates, durations, currency), cryptographic and hash types, constraint identifiers, and predicate refinement extensions for use on REL declarations.
 
@@ -2632,13 +2632,13 @@ A single table can store an arbitrary GDX document with the following column str
 | `Name`           | The element's Name field (NULL if not present)                       |
 | `ValueKind`    | The value-kind of the Resource (NULL if not present)               |
 | `ResourceValue`| The Resource value, encoded per the value-kind                     |
-| `Type`         | The element's Type reference (NULL if not present)                 |
+| `Type`         | The element's Type claim (NULL if not present)                     |
 
 This single-schema approach allows GDX storage without per-document schema migration. Adding a new Object role, Property, or Template requires no schema changes — just additional rows.
 
 Store-native columns beyond those above (a persistence identifier, a row version, delta-handling state) are the at-rest form of an element's metadata channel (§4.8): they annotate how the element is stored, not what it means, and they are the natural source and sink for the `{...}` block when the element is serialized out or parsed in. Because metadata is out-of-model, these columns are outside the round-trip contract (§A.2) — a backend MAY carry, add, or drop them without affecting model-conforming round-trip.
 
-@-Edge and Reference targets stored as `ResourceValue` strings can be resolved at query time by joining against the `Name` column. For systems where the target is known at write time, it can be denormalized to a `TargetRowId` column for direct lookup. The resolution strategy is implementation choice; both approaches are conforming. Per §6.4 axiom E2′, @-edges are owned by their source element and SHOULD be modeled with `ON DELETE CASCADE` on the source foreign key so that deleting a source removes its edges.
+@-Edge and REF targets stored as `ResourceValue` strings can be resolved at query time by Id, never by `Name`: the `@Base` of a target literal is joined against the `Id` column of root elements, an `&Id` against the `Id` column of the rows inside the root it searches (§4.4.5), and a path is walked over `ParentId` and `Name` (`GDX-Path.md`). For systems where the target is known at write time, it can be denormalized to a `TargetRowId` column for direct lookup. The resolution strategy is implementation choice; both approaches are conforming. Per §6.4 axiom E2′, @-edges are owned by their source element and SHOULD be modeled with `ON DELETE CASCADE` on the source foreign key so that deleting a source removes its edges.
 
 Other persistence strategies (document store, graph database, key-value store) follow analogous principles: preserve the data model, preserve element ordering, and preserve the round-trip contract (§10.4).
 
@@ -2652,7 +2652,7 @@ Side-by-side comparisons between GDX and other formats, along with discussion of
 
 A persistence layer is *round-trip conforming* if a document parsed, stored, and serialized back produces a document equivalent to the original. The normative round-trip contract — what MUST be preserved, what MAY be normalized, and what MUST NOT be altered — is the serialization-conformance contract of Appendix A.2; a round-trip-conforming persistence layer is one that satisfies A.2 across the parse-store-serialize cycle. This section does not restate those requirements; Appendix A.2 is authoritative.
 
-What persistence adds over plain serialization is only that the round-trip passes *through storage* rather than directly between two serializations. A relational backend (§10.2) satisfies A.2 by giving each preserved field (prefix, the identity fields, resource value-kind and value with its representation tag, type reference, child order, and REM annotations) a faithful column or row representation, and by reconstructing the document in original child order on read. A document store satisfies it by storing and returning the serialized form unaltered. The mechanism differs by backend; the contract does not.
+What persistence adds over plain serialization is only that the round-trip passes *through storage* rather than directly between two serializations. A relational backend (§10.2) satisfies A.2 by giving each preserved field (prefix, the identity fields, resource value-kind and value with its representation tag, Type claim, child order, and REM annotations) a faithful column or row representation, and by reconstructing the document in original child order on read. A document store satisfies it by storing and returning the serialized form unaltered. The mechanism differs by backend; the contract does not.
 
 Transport-layer roles (Package, Group) are not subjects of the round-trip contract; see §9.4.
 
@@ -2707,11 +2707,11 @@ This subsection is the authoritative normative statement of GDX's layered confor
 
 **Layer 1 — Representation Conformance** addresses how data is encoded. It covers the structural rules of §3 through §7: prefix vocabulary, identifier grammar, literal forms, composition rules, and resource value-kind matching. Owned by GDX. Decidable at parse time without external context.
 
-**Layer 2 — Structural Conformance** addresses whether targets resolve and whether data aligns to declared shapes. It covers: @-Edge and REF target resolution (§6.4.1, §6.15) — including role-mismatch detection; `--type` and `#predicate` resolution to a Template or REL by that declaration's **Id** (§8.5.2); and Template-based alignment (§8.1, §8.2, §8.3) — instance children align to Template slots by **Name** (with `Predicate` as cross-vocabulary bridge). Resolution (by Id) and alignment (by Name) are distinct steps: resolution answers "which Template," alignment answers "do the instance's children fill its slots." Owned by GDX. Decidable by any consumer that can resolve Templates and targets, without external vocabulary knowledge.
+**Layer 2 — Structural Conformance** addresses whether targets resolve and whether data aligns to declared shapes. It covers: @-Edge and REF target resolution (§6.4.1, §6.16) — including role-mismatch detection; `--type` and `#predicate` resolution to a Template or REL by that declaration's **Id** (§8.5.2); and Template-based alignment (§8.1, §8.2, §8.3) — instance children align to Template slots by **Name** (with `Predicate` as cross-vocabulary bridge). Resolution (by Id) and alignment (by Name) are distinct steps: resolution answers "which Template," alignment answers "do the instance's children fill its slots." Owned by GDX. Decidable by any consumer that can resolve Templates and targets, without external vocabulary knowledge.
 
 **Layer 3 — Constraint Conformance** addresses whether instance values satisfy the constraints expressed by a particular constraint vocabulary. Covers the Constraint Extensions of §8.4 (XSD, JSON Schema, the GDX Common Vocabulary, or any other). Owned by the constraint vocabulary, not by GDX. Decidable only by a consumer that understands the vocabulary's constraint identifiers. A document MAY be Layer 3-conforming with respect to one vocabulary and Layer 3-non-conforming with respect to another; the verdicts are independent and vocabulary-relative.
 
-A document is **fully conforming** at Layer 1 + Layer 2 if it is representation-conforming and structurally conforming with respect to all Templates referenced via `--type` and all @-Edge/REF targets it carries. A document with no Template references and no unresolved targets is fully conforming at Layer 1 + Layer 2 if it is representation-conforming. **Layer 3 conformance is always vocabulary-qualified**: a document is "Layer 3-conforming with respect to vocabulary V" when consumed by a V-aware consumer that finds no constraint violations. Claims of Layer 3 conformance MUST name the vocabulary against which the claim is made.
+A document is **fully conforming** at Layer 1 + Layer 2 if it is representation-conforming and structurally conforming with respect to all Templates referenced via `--type` and all @-Edge/REF targets it carries. A document with no Type claims and no unresolved targets is fully conforming at Layer 1 + Layer 2 if it is representation-conforming. **Layer 3 conformance is always vocabulary-qualified**: a document is "Layer 3-conforming with respect to vocabulary V" when consumed by a V-aware consumer that finds no constraint violations. Claims of Layer 3 conformance MUST name the vocabulary against which the claim is made.
 
 The layers are independent: a document may be Layer 1-conforming but Layer 2-non-conforming (well-formed but not satisfying its Template's structure, or carrying an unresolved target), and Layer 2-conforming but Layer 3-non-conforming for one vocabulary while Layer 3-conforming for another (same data; one vocabulary's constraints pass, another's fail). A conforming implementation MUST report and handle these verdicts distinctly; it MUST NOT collapse them into a single valid/invalid answer.
 
@@ -2763,7 +2763,7 @@ A parser MAY additionally implement structural conformance (Layer 2), constraint
 
 A document is **representation-conforming** if a representation-conforming parser accepts it without error.
 
-A document is **structurally conforming** (Layer 2) with respect to a set of Templates if, for every element carrying a `--type` reference resolvable to one of those Templates, the element's children align to the Template's declared slots (§8.1–§8.3), and if every @-Edge and REF target it carries resolves (§6.4.1, §6.15). This claim is vocabulary-independent: it is decidable by any consumer that can resolve Templates and targets, without loading any constraint vocabulary.
+A document is **structurally conforming** (Layer 2) with respect to a set of Templates if, for every element carrying a Type claim resolvable to one of those Templates, the element's children align to the Template's declared slots (§8.1–§8.3), and if every @-Edge and REF target it carries resolves (§6.4.1, §6.16). This claim is vocabulary-independent: it is decidable by any consumer that can resolve Templates and targets, without loading any constraint vocabulary.
 
 A document MAY separately claim **constraint conformance** (Layer 3) with respect to one or more constraint vocabularies. A document is constraint-conforming with respect to vocabulary V if a V-aware consumer finds no violations of V's Constraint Extensions (§8.4) on the document. This claim is always vocabulary-qualified, per A.1: a bare "constraint-conforming" claim naming no vocabulary is not well-formed, since a document may be constraint-conforming for one vocabulary and non-conforming for another.
 
@@ -2836,15 +2836,15 @@ A conforming implementation SHOULD verify its behavior against a test suite cove
 
 **Structural conformance tests (Layer 2):**
 
-- Template alignment: instances claiming `--type` references that resolve (by Template Id) and satisfy / fail the Template's declared slot structure (aligned by Name).
-- Resolution keys on Id: a `--type` reference resolves against Template Ids, not Names — positive test (reference matches a Template Id) and negative test (reference matches only a Template's descriptive Name, which MUST NOT resolve). Same for `#predicate` against REL Ids.
-- Rename stability: a Template/REL whose descriptive Name changes while its Id is held fixed continues to resolve; a reference does not break under a Name change.
+- Template alignment: instances whose Type claims resolve (by Template Id) and satisfy / fail the Template's declared slot structure (aligned by Name).
+- Resolution keys on Id: a `--type` token resolves against Template Ids, not Names — positive test (token matches a Template Id) and negative test (token matches only a Template's descriptive Name, which MUST NOT resolve). Same for `#predicate` against REL Ids.
+- Rename stability: a Template/REL whose descriptive Name changes while its Id is held fixed continues to resolve; a claim does not break under a Name change.
 - Resolution order: tests confirming the §8.5.2 default order is followed (local document first, then loaded vocabularies, then global IRI).
-- Resolution failure: tests confirming unresolved type references produce Layer 2 errors per §8.5.3.
+- Resolution failure: tests confirming unresolved Type claims produce Layer 2 errors per §8.5.3.
 - Validator modes: strict and lenient mode behavior on the same input documents.
 - Error accumulation: validator returns multiple errors from a single pass (per §8.5.4).
 - @-Edge target resolution: tests confirming §6.4.1 behavior for resolved and unresolved `@OBJ`/`@REL` targets, including role-mismatch detection (an `@OBJ` resolving to a REL is unresolved).
-- REF target resolution: tests confirming §6.15 behavior for resolved and unresolved REFs, including role-mismatch detection.
+- REF target resolution: tests confirming §6.16 behavior for resolved and unresolved REFs, including role-mismatch detection.
 
 **Constraint conformance tests (Layer 3):**
 
@@ -2889,6 +2889,8 @@ This appendix records the per-revision change descriptions accumulated during th
 **(80) The value an @-edge or a REF carries is a *target*, written as a *target literal*; "reference" names only the `%KIND` family (§1.1, §2.1, §2.2, §3.1, §3.3, §3.3.2, §4.1.1, §4.2, §4.2.6, §4.4, §4.8.2, §4.8.3, §5.2, §5.3.2, §6.4, §6.4.1, §6.10, §6.16, §7.2, §7.4, §8.2.1, §10.2, §11.4, Appendix A).** After v0.30.0 every link binds by Id, and the two link constructs are distinct: an @-edge (`@OBJ`, `@REL`, `@HEAD`, §6.4) asserts a relationship, and a %-reference (`%KIND`, §6.16) fills a slot. Both carry the same kind of value in their Resource (`@x`, `&x`, `$path`, `@x&y`, `@x$path`), and the specification called that value a "reference" as well: the `reference` value-kind, the "reference literal", "reference resolution", an "unresolved reference". So "reference" read two ways, as the `%` construct and as the value an edge also carries, and a sentence such as "an @-edge's Resource is a reference" said that an edge holds a reference. This is the same kind of confusion v0.30.0 removed from `@`, which had meant one thing in a prefix and another in a Resource. The value is now named by what E1 and R1 already said of it, "the Resource asserts the target's identity": it is the **target**, written as a **target literal**. *Reference* names only the %-Reference family; an `@OBJ`, `@REL` or `@HEAD` element is an *edge*.
 
 Renamed: the value-kind `reference` → `target` (§2.1, §3.3, the §3.3.2 heading "Reference Value-Kind" → "Target Value-Kind", the §4.2 literal table, the Resource value-kind columns of §5.2 and §6.4, and §7.4); "reference literal" → "target literal", and the production `ReferenceLiteral` → `TargetLiteral` (§4.2.6, retitled "Target Literals"; `GDX-Grammar.md` v0.17, `GDX-Path.md` v0.11, `GDX-Compact-Form.md` v0.13); "reference resolution", "unresolved reference" and "reference resolver" → "target resolution", "unresolved target" and "resolver" where they speak of the value either construct carries (§2.2, §6.4.1, retitled "@-Edge Target Resolution", §11.4, retitled "Path-Mode Target Resolution — Resolved", and Appendix A); and the prose names of the five forms, "root reference" and "Id reference", → "root form" and "Id form". The productions `RootRef`, `PathRef`, `IdRef`, `RootPathRef` and `RootIdRef` (and the Standard Grammar's `RootReference` … `RootIdReference`) keep their names: they name the forms a target literal takes. The Binary Form companion renames its `reference` kind row to `target`; it assigns no kind codes yet, so no tag number, byte or wire value changes. Where a sentence is about a `%` element it keeps "reference" or "REF", and where it is about an @-edge it says edge. "Type reference" (`--`) and "Predicate reference" (`#`) are unchanged: those fields carry bare Id tokens, not target literals.
+
+Two neighbouring uses of "reference" go too. The `--` and `#` fields carry bare Id tokens, not target literals, so a "Type reference" is now a **Type claim** (§4.3, retitled "Type Claims"; its token is the `--type` token) and a "Predicate reference" or "`#predicate` reference" a **predicate token** (§2.1, §2.2, §3.1, §3.2, §4.4.2, §6.14, §6.15, §7.2, §8, §10.2, §10.4, Appendix A). The Standard Grammar's documentation alias `ReferenceElement`, which named the @-edge a reference, becomes `EdgeElement` beside a new `RefElement`, and the Compact Form's `ReferencePrefix ::= "@"` gives way to the Standard Grammar's `EdgeSigil`/`RefSigil` prefix productions (`GDX-Grammar.md` v0.17, `GDX-Compact-Form.md` v0.13). Stale cross-references are corrected: REF target resolution is §6.16, not §6.15 (§2.2, A.1, A.4, A.7), and §10.2 resolves stored targets by the root's Id rather than by joining on the `Name` column.
 
 Terminology note: entries prior to this one use "reference literal", the `reference` value-kind and "reference resolution" as originally written; they are not retroactively edited, as with v0.27.0 and v0.30.0.
 

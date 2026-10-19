@@ -70,7 +70,7 @@ Mitigations:
 
 ## 4. Network Resolution
 
-The default Type and @-Edge target resolution orders (Core Spec §8.5.2 and §7.4.1) include "globally-resolvable IRIs" as a fallback resolution scope. Implementations that resolve such references over the network expose themselves to several risks:
+The default Type and @-Edge target resolution orders (Core Spec §8.5.2 and §6.4.1) include "globally-resolvable IRIs" as a fallback resolution scope. Implementations that resolve such identifiers over the network expose themselves to several risks:
 
 - **Information disclosure.** Network requests to URLs in untrusted documents can leak information about the processing system to attacker-controlled servers (timing, request patterns, internal IP addresses).
 - **Server-side request forgery (SSRF).** Documents containing IRIs targeting internal network addresses can use the parser as a proxy to reach systems otherwise inaccessible to the attacker.

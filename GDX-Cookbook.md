@@ -254,7 +254,7 @@ Qualifiers refine the meaning of their parent and travel with the data. A consum
 
 ## 9. Schema Definition and Materialization
 
-Templates define the shape; instances reference them via `--type`. The Template may declare values for slot metadata (Predicate, default Resource) that the instance is silent about; those values are logically present on the instance via §8.2.3 of the Core Specification.
+Templates define the shape; instances claim them with `--type`. The Template may declare values for slot metadata (Predicate, default Resource) that the instance is silent about; those values are logically present on the instance via §8.2.3 of the Core Specification.
 
 ```
 <DEFOBJ &com.acme.Customer
@@ -384,7 +384,7 @@ Hex is the canonical form. For larger byte sequences where compactness matters, 
 
 ## 15. Combining Layer 1 and Layer 2 Assertions
 
-A single property can carry both a representation suffix (Layer 1) and a Template reference (Layer 2).
+A single property can carry both a representation suffix (Layer 1) and a Type claim (Layer 2).
 
 ```
 <OBJ &inventory/bin-12
@@ -392,9 +392,9 @@ A single property can carry both a representation suffix (Layer 1) and a Templat
 >
 ```
 
-The suffix asserts representation (`i8` width). The Template reference asserts structural conformance — the element resolves the `vocab:positive-i8` Template (by its `Id`, Core Spec §8.5.2) and aligns to its shape; any value constraint that Template carries (here, greater than zero) is checked separately.
+The suffix asserts representation (`i8` width). The Type claim asserts structural conformance — the element resolves the `vocab:positive-i8` Template (by its `Id`, Core Spec §8.5.2) and aligns to its shape; any value constraint that Template carries (here, greater than zero) is checked separately.
 
-The two assertions operate independently and are validated separately. Per Core Spec §2.2, conformance is layered into three rungs: representation (Layer 1), **structural conformance** (Layer 2 — resolution and Template-instance alignment, owned by GDX) and **constraint conformance** (Layer 3 — constraint-vocabulary checks, owned by external vocabularies). The Template reference here is a Layer 2 assertion; the greater-than-zero constraint the Template carries is Layer 3. The next pattern shows how Layer 3 admits multiple constraint vocabularies on a single Template.
+The two assertions operate independently and are validated separately. Per Core Spec §2.2, conformance is layered into three rungs: representation (Layer 1), **structural conformance** (Layer 2 — resolution and Template-instance alignment, owned by GDX) and **constraint conformance** (Layer 3 — constraint-vocabulary checks, owned by external vocabularies). The Type claim here is a Layer 2 assertion; the greater-than-zero constraint the Template carries is Layer 3. The next pattern shows how Layer 3 admits multiple constraint vocabularies on a single Template.
 
 ## 16. Parallel Constraint Vocabularies on One Template
 
@@ -836,7 +836,7 @@ This vocabulary document defines:
 
 - **Three concept Objects** (`acme:Concept`, `acme:Person`, `acme:Organization`), each addressable by its Id from other vocabularies and instances. The `acme:Concept` Object plays the role a Class or top-of-hierarchy would in OWL; `rdfs:subClassOf` links subordinate concepts to it.
 - **Three REL declarations** (`acme:knows`, `acme:employs`, `acme:employedBy`) carrying a mix of metadata kinds: Properties for human-facing labels and descriptions (`<STR rdfs:label …>`, `<STR rdfs:comment …>`), @-edges for predicate-axiom statements (`<@OBJ #acme:domain …>`, `<@REL #acme:inverse …>`), and Extensions for primitive-valued semantic axioms (`<_BOOL acme:symmetric …>`). The choice between Property and Extension follows the "data vs axiom" rule (Pattern 17).
-- **Two Templates** (`acme:PersonShape`, `acme:OrganizationShape`) that bind instance shape to the concepts. The Template slots carry `#predicate` references aligning slot semantics to the vocabulary's predicates.
+- **Two Templates** (`acme:PersonShape`, `acme:OrganizationShape`) that bind instance shape to the concepts. The Template slots carry predicate tokens aligning slot semantics to the vocabulary's predicates.
 
 The document is one GDX file. A consumer reading it gets the predicates, the concept taxonomy, the schemas, and the alignment between them in a single parse. An instance document claiming `--acme:PersonShape` can be validated against the Template, traversed through `acme:knows` edges, and aligned to other vocabularies through `#rdfs:subClassOf` and similar cross-references.
 
@@ -1122,7 +1122,7 @@ Adding Templates declares the shape an instance is expected to satisfy. Template
 >
 ```
 
-The server is an Object, so its Template is a `DEFOBJ` (Core Spec §8.2.2), and `--vocab:Server` resolves to the Template's Id. Templates declare the contract; instances claim to satisfy it; validators check. The Template can travel in the same document as the instances it describes, or in a separate vocabulary file that consumers resolve via reference.
+The server is an Object, so its Template is a `DEFOBJ` (Core Spec §8.2.2), and `--vocab:Server` resolves to the Template's Id. Templates declare the contract; instances claim to satisfy it; validators check. The Template can travel in the same document as the instances it describes, or in a separate vocabulary file that consumers resolve by the Template's Id.
 
 ## 36. Use as Graph-Structured Data
 

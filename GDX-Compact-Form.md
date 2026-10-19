@@ -19,7 +19,7 @@ This document does not address the Standard Form, the Binary Form, semantic vali
 
 This is the v0.3 working draft. The grammar, indentation model, and Standard Form mapping are stable. The conversion algorithm in §6 is sketched at the structural level; a future revision may include a more detailed algorithmic treatment if implementer experience reveals ambiguities.
 
-Changes from v0.12 to v0.13: conformance with Core Specification v0.31.0. **Terminology rename; no grammar-shape change.** The value an @-edge or a REF carries in its Resource is a *target*, and its literal a *target literal* (Core Spec v0.31.0, entry 80); "reference" names only the `%KIND` REF family. The `Resource` production's `ReferenceLiteral` alternative is renamed `TargetLiteral`, §4.1 calls the five forms the root, path and Id forms and the composed forms, and the metadata block admits "no target literals". No production's shape changes, and every document parses as before.
+Changes from v0.12 to v0.13: conformance with Core Specification v0.31.0. **Terminology rename, and one grammar correction.** The value an @-edge or a REF carries in its Resource is a *target*, and its literal a *target literal* (Core Spec v0.31.0, entry 80); "reference" names only the `%KIND` REF family. The `Resource` production's `ReferenceLiteral` alternative is renamed `TargetLiteral`, §4.1 calls the five forms the root, path and Id forms and the composed forms, and the metadata block admits "no target literals", and a Type is called a Type claim. Appendix A's `Prefix ::= ReferencePrefix? ModifierBase SetSuffix?` with `ReferencePrefix ::= "@"`, left over from before Core v0.13.0, named the @-edge sigil a reference and had no `%`, so it could not produce a REF prefix; it is replaced by the Standard Grammar's form (`Prefix ::= RefSigil? RolePrefix`, `RolePrefix ::= EdgeSigil? ModifierBase SetSuffix?`, Standard Grammar §7.1). A parser that followed the Standard Grammar, as this appendix's inheritance comments direct, parses every document as before.
 
 Changes from v0.11 to v0.12: conformance with Core Specification v0.27.0. **Terminology rename; no grammar-shape change.** The `Rel` field is renamed `Predicate` (Core Spec v0.27.0, entry 66), adopting the word the Core Specification already used for the field's content in prose and removing the case-only collision with the `REL` role. The `#` sigil is unchanged and continues to introduce the field; a bare `#` remains malformed and an empty field is still expressed by omitting it. The Appendix A grammar production is updated (`Rel`→`Predicate`, `RelContent`→`PredicateContent`), as is the §3.3 field-order bullet. No abbreviated form is introduced. The Compact Form's `#` line-comment feature is unaffected — comments are whole-line, the field sigil is inline. Companion-version line updated to Core v0.27.0, Standard Grammar v0.15, and Path v0.9.
 
@@ -205,7 +205,7 @@ Field write order on a line is the same as in Standard Form: **Prefix · Id · P
 S &1 #schema:givenName firstName : "Alice" --gdx:string
 ```
 
-This is a string Property with key `1`, predicate `schema:givenName`, identifier `firstName`, value `"Alice"`, and Type reference `gdx:string`. The single-line form mirrors the Standard Form `<S &1 #schema:givenName firstName : "Alice" --gdx:string>`.
+This is a string Property with key `1`, predicate `schema:givenName`, identifier `firstName`, value `"Alice"`, and Type claim `gdx:string`. The single-line form mirrors the Standard Form `<S &1 #schema:givenName firstName : "Alice" --gdx:string>`.
 
 ### 3.2 Elements with Children
 
@@ -1013,9 +1013,11 @@ IndentSpaces    ::= SPACE*               // depth determines parent-child
 // Field productions are inherited from the Standard Grammar (§4).
 // All sigil-tightness rules apply.
 
-Prefix          ::= ReferencePrefix? ModifierBase SetSuffix?
+Prefix          ::= RefSigil? RolePrefix
+RolePrefix      ::= EdgeSigil? ModifierBase SetSuffix?
 
-ReferencePrefix ::= "@"
+EdgeSigil       ::= "@"   // composes only with ObjectPrefix | RelPrefix | HeadPrefix; no SetSuffix
+RefSigil        ::= "%"   // wraps any role-prefix (a %KIND REF)
 SetSuffix       ::= "*"
 
 // ModifierBase and the sub-prefix vocabulary (ObjectPrefix, RecordPrefix,
@@ -1024,7 +1026,8 @@ SetSuffix       ::= "*"
 // TemplatePrefix, RelPrefix, AnnotationPrefix, PackagePrefix, GroupPrefix)
 // are inherited from the Standard Grammar (Appendix A, §7.1).
 // The EDGE/E prefix is removed in Core v0.12.0; @-Edge elements are
-// produced by the @ operator composing with ObjectPrefix or RelPrefix.
+// produced by EdgeSigil composing with ObjectPrefix, RelPrefix or HeadPrefix,
+// and REF elements by RefSigil wrapping a role-prefix (Standard Grammar §7.1).
 //
 // The composition pattern is the same in Compact Form as in Standard Form;
 // only the surrounding delimiters and indentation rules differ.
