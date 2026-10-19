@@ -670,7 +670,7 @@ The reference `@system/audit-log&entry-12345` is an `NameIdRef`. The `@system/au
 
 If the audit log is later restructured — entries archived into nested categories, reorganized by severity, etc. — the reference continues to resolve as long as the Id is preserved. A path-based equivalent like `$/system/audit-log/entries/[1]` would break under any such change.
 
-When the referencing element shares a document with the id-bearing target, the `@Identifier` portion may be omitted; bare `&entry-12345` is an `IdRef` that looks up within the document scope.
+When the referencing element shares a document with the id-bearing target, the `@Identifier` portion may be omitted; bare `&entry-12345` is an `IdRef` that searches outward from the reference to the document root (Core Specification §4.4.5).
 
 ```
 <OBJ compliance/internal-incident

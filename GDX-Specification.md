@@ -1,7 +1,7 @@
 # GDX — Graph Data eXchange Specification
 
-- **Status:** Draft v0.27.0 (working draft, pre-1.0)
-- **Date:** 2026-07-19
+- **Status:** Draft v0.28.0 (working draft, pre-1.0)
+- **Date:** 2026-10-06
 - **Editors:** 
 - **Authors:** Julian Mussi
 
@@ -18,6 +18,7 @@ This is a pre-1.0 working draft. The specification is under active refinement; r
 
 | Version | Date       |
 |---------|------------|
+| v0.28.0 | 2026-10-06 |
 | v0.27.0 | 2026-07-19 |
 | v0.26.0 | 2026-07-17 |
 | v0.25.0 | 2026-07-16 |
@@ -777,9 +778,17 @@ The enclosing-Object rule means that two different Objects MAY each contain an e
 
 **Embedded Objects open a fresh Id scope.** An Object occupying a VAL slot (§6.11) is an Object for the purposes of the nearest-enclosing-container rule: elements inside it are Id-scoped to the embedded Object, not to the host Object. The embedded Object's own Id, if it carries one, belongs to the host's scope, exactly as any other child of the host.
 
-**Lookup consults exactly one scope.** A `IdRef` is resolved against the single scope determined by the rules above — the scope of the *referencing* element. Resolution MUST NOT fall back to an enclosing scope when the Id is not found; there is no scope chain and no shadowing. A bare `&key` inside an embedded Object cannot see the host Object's Ids; addressing across the boundary uses the composed `NameIdRef` form.
+**Lookup widens outward to the document root.** A bare `IdRef` is resolved by searching successively wider regions of the document, starting from the referencing element:
 
-**Globally-resolvable ids.** An Id written in a globally-resolvable form — an IRI, or a CURIE that expands to one (§4.4.2) — additionally participates in global resolution. When a bare `IdRef` names such an id and no element in the reference's own scope carries it, a resolver MAY resolve it against loaded document context and then against globally-resolvable IRIs, in the order defined for reference resolution in §6.4.1. This is the mechanism by which a durable root id identifies the same entity across documents: an id of the form `&https://acme.com/people/alice` needs no scope-local declaration to resolve. Non-global (local, sequential, GUID-form) ids keep the strict single-scope, no-shadowing rule above; the global tier applies only to ids whose form is itself globally resolvable.
+1. the nearest enclosing Object of the referencing element, including every element nested inside it (embedded Objects included);
+2. then the next enclosing Object outward, again including everything nested inside it, and so on;
+3. finally the whole document.
+
+The first region in which the Id occurs decides the result. If it occurs once in that region, the reference resolves to that element; if it occurs more than once there, the reference is ambiguous and a resolver MUST NOT pick one of the matches (the author pins the scope with `NameIdRef`). Because the nearest region decides, an Id inside an inner Object shadows the same Id further out. The search never leaves the document root: a bare `IdRef` cannot reach an element in another document. Cross-document addressing uses `NameIdRef`, or a globally-resolvable id (below).
+
+The outward search is what makes a bare `&key` useful: it reaches any id-bearing element of its document, not only the referencing element's own descendants, without the author naming where that element sits. The scope rules above govern where an Id must be unique; they do not limit how far a reference can see.
+
+**Globally-resolvable ids.** An Id written in a globally-resolvable form — an IRI, or a CURIE that expands to one (§4.4.2) — additionally participates in global resolution. When a bare `IdRef` names such an id and the outward search above finds no element carrying it, a resolver MAY resolve it against loaded document context and then against globally-resolvable IRIs, in the order defined for reference resolution in §6.4.1. This is the mechanism by which a durable root id identifies the same entity across documents: an id of the form `&https://acme.com/people/alice` needs no scope-local declaration to resolve. Non-global (local, sequential, GUID-form) ids keep the strict single-scope, no-shadowing rule above; the global tier applies only to ids whose form is itself globally resolvable.
 
 **Default id role in composed references.** In a composed reference (`NamePathRef`, `NameIdRef`), if the `@Base` portion carries no role marker, the resolved element MUST be of role Object. This default reflects the common case for cross-document addressing. To id a composed reference at a non-Object element (a REL, a Template, a Package, or a Group), the author MUST use an explicit role marker (§4.2.6).
 
@@ -1219,7 +1228,7 @@ An **@-edge** is a **first-class but dependent relationship** — a persistent e
 
 An @-edge's Resource is a reference to a target entity (Object for `@OBJ`, REL for `@REL`), addressed by name (`@identifier`) or by root id (`&id`, E5). Reference resolution determines whether the target exists and what entity it identifies.
 
-The default resolution order below is normative for name-addressed targets. An id-addressed target resolves by the Id scope rules of §4.4.5 — its own scope first, then, for a globally-resolvable durable id, the same loaded-context and IRI tiers listed below.
+The default resolution order below is normative for name-addressed targets. An id-addressed target resolves by the Id lookup of §4.4.5 — outward from the reference to the document root first, then, for a globally-resolvable durable id, the same loaded-context and IRI tiers listed below.
 
 The default resolution order is normative:
 
@@ -2861,6 +2870,12 @@ The test suite is exhaustive in concept and bounded in practice. Each category a
 ## Appendix B — Detailed Revision History
 
 This appendix records the per-revision change descriptions accumulated during the pre-1.0 working-draft phase. The Revision History table at the top of this document gives the version + date summary; this appendix carries the prose detail. Once the specification reaches v1.0, this appendix will be archived and subsequent revisions will use a leaner change-log format.
+
+### v0.28.0 — `IdRef` lookup widens outward to the document root
+
+**(68) A bare `IdRef` searches outward from the reference to the document root (§4.4.5, §6.4.1).** v0.22.0 (52) made `IdRef` lookup consult exactly one scope, with no outward walk and no shadowing, so that a bare `&key` inside an Object could not see an Id anywhere else in the document. That restriction is withdrawn: it removed the main purpose of the bare form, which is to reach any id-bearing element of the document without naming where it sits. Lookup now searches the nearest enclosing Object (with everything nested in it), then each wider enclosing Object, then the whole document; the first region containing the Id decides; more than one match in that region is ambiguous and is not resolved; an inner Id shadows an outer one; and the search never leaves the document root, so cross-document addressing still uses `NameIdRef` or a globally-resolvable id. The uniqueness rules of §4.4.5 (Object-scoped, document-scoped, embedded Objects opening a fresh scope) are unchanged: they say where an Id must be unique, not how far a reference can see. The globally-resolvable tier now applies when the outward search finds nothing, and §6.4.1's id-addressed resolution refers to the outward lookup.
+
+Migration: a reference that resolved under v0.27.0 resolves to the same element, unless an Object nested inside the referencing element's Object carries the same Id, in which case the first region now holds two matches and the reference is ambiguous; pin it with `NameIdRef`. References that were unresolved because their target sat outside the referencing element's scope now resolve.
 
 ### v0.27.0 — Relationship field renamed `Rel` → `Predicate`
 
