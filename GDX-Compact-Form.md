@@ -1,8 +1,8 @@
 # GDX Compact Form — Grammar Specification
 
 - **Status:** Draft v0.13 (companion to GDX Core Specification v0.31.0, working draft)
-- **Date:** 2026-07-19
-- **Companion to:** GDX Core Specification v0.27.0, GDX Standard Grammar v0.15, GDX Path Expressions v0.9
+- **Date:** 2026-10-19
+- **Companion to:** GDX Core Specification v0.31.0, GDX Standard Grammar v0.17, GDX Path Expressions v0.11
 - **Authors:** Julian Mussi
 
 
@@ -1016,14 +1016,14 @@ IndentSpaces    ::= SPACE*               // depth determines parent-child
 Prefix          ::= RefSigil? RolePrefix
 RolePrefix      ::= EdgeSigil? ModifierBase SetSuffix?
 
-EdgeSigil       ::= "@"   // composes only with ObjectPrefix | RelPrefix | HeadPrefix; no SetSuffix
+EdgeSigil       ::= "@"   // composes only with the canonical OBJ, REL or HEAD (no minified form); no SetSuffix
 RefSigil        ::= "%"   // wraps any role-prefix (a %KIND REF)
 SetSuffix       ::= "*"
 
 // ModifierBase and the sub-prefix vocabulary (ObjectPrefix, RecordPrefix,
 // PropertyPrefix, BlockPrefix, RefinementBase including
 // QualifierComposition/ExtensionComposition/NodeComposition, ValPrefix,
-// TemplatePrefix, RelPrefix, AnnotationPrefix, PackagePrefix, GroupPrefix)
+// TemplatePrefix, RelPrefix, HeadPrefix, AnnotationPrefix, PackagePrefix, GroupPrefix)
 // are inherited from the Standard Grammar (Appendix A, §7.1).
 // The EDGE/E prefix is removed in Core v0.12.0; @-Edge elements are
 // produced by EdgeSigil composing with ObjectPrefix, RelPrefix or HeadPrefix,

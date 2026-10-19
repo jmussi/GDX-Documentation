@@ -2,7 +2,7 @@
 
 - **Status:** Draft v0.1 (companion to GDX Core Specification v0.31.0, working draft). Sections 1 and 2 only.
 - **Date:** 2026-10-12
-- **Companion to:** GDX Core Specification v0.29.0
+- **Companion to:** GDX Core Specification v0.31.0
 - **Authors:** Julian Mussi
 
 
