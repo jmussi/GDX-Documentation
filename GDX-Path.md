@@ -1,8 +1,8 @@
 # GDX Path Expressions — Specification
 
-- **Status:** Draft v0.11 (companion to GDX Core Specification v0.31.0, working draft)
-- **Date:** 2026-10-19
-- **Companion to:** GDX Core Specification v0.31.0
+- **Status:** Draft v0.12 (companion to GDX Core Specification v0.32.0, working draft)
+- **Date:** 2026-10-20
+- **Companion to:** GDX Core Specification v0.32.0
 - **Authors:** Julian Mussi
 
 
@@ -269,7 +269,7 @@ The role marker is most useful in composed forms, where the base's role differs 
 
 Here the enclosing `%STR` says the terminal target is a string Property. The `@REL:my-rel` portion says the base is the REL whose Id is `my-rel`. The `&annotation-3` portion looks up an id-bearing element within the REL's subtree. Without the role marker the reference resolves the same way, since the Id `my-rel` alone picks the root; the marker adds a check that the root is a REL.
 
-**Parse-time validation.** The parser checks that `BaseRole` is one of the keywords in the closed set above. An unknown role keyword (e.g., `@FOO:bar`) is malformed and MUST be rejected.
+**Parse-time validation.** A role marker is recognized by lookup: when the bareword before the first `:` is one of the keywords in the closed set above, it is the marker, and the parser MUST reject it if no Id token follows its `:` (`@OBJ:`). Any other bareword before `:` is not a role keyword at all but a CURIE prefix and part of the Id (§5.3), whether or not the prefix is declared: `@FOO:bar` is the root whose Id is `FOO:bar` (Core Spec v0.32.0, entry 81).
 
 **Resolution-time validation.** The resolver verifies that the resolved element actually has the claimed role. A mismatch — for example, `@REL:foo` where `foo` resolves to an Object — leaves the target unresolved. This deferred validation means the parser does not need access to the data; only the resolver does.
 
@@ -462,7 +462,7 @@ BaseRole         ::= "OBJ"  | "REL"  | "PKG"  | "GRP"  | "HEAD"
 
 The address-mode singularity requirement (§7 of this specification) is added as a normative paragraph following the production. The "reserved, grammar deferred" language for `$PathExpression` is removed.
 
-The optional `BaseRole` marker states and checks the role of the resolved root in composed forms (`RootPathRef`, `RootIdRef`). In the absence of a marker, the base matches a root of any root-eligible role carrying the Id. Parse-time validation rejects unknown role keywords; resolution-time validation ensures the named element matches the claimed role.
+The optional `BaseRole` marker states and checks the role of the resolved root in composed forms (`RootPathRef`, `RootIdRef`). In the absence of a marker, the base matches a root of any root-eligible role carrying the Id. Parse-time validation rejects a marker with no Id after it; a bareword before `:` that is not a `BaseRole` keyword is part of the Id. Resolution-time validation ensures the named element matches the claimed role.
 
 ### 8.5 Template-Instance Alignment (Core Spec §8.2)
 

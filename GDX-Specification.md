@@ -1,7 +1,7 @@
 # GDX — Graph Data eXchange Specification
 
-- **Status:** Draft v0.31.0 (working draft, pre-1.0)
-- **Date:** 2026-10-19
+- **Status:** Draft v0.32.0 (working draft, pre-1.0)
+- **Date:** 2026-10-20
 - **Editors:** 
 - **Authors:** Julian Mussi
 
@@ -18,6 +18,7 @@ This is a pre-1.0 working draft. The specification is under active refinement; r
 
 | Version | Date       |
 |---------|------------|
+| v0.32.0 | 2026-10-20 |
 | v0.31.0 | 2026-10-19 |
 | v0.30.0 | 2026-10-19 |
 | v0.29.0 | 2026-10-12 |
@@ -643,7 +644,7 @@ The two composed forms are the canonical mechanisms for reaching inside another 
 
 Because `$` and `&` are not members of `NameContChar`, the boundary between the `Base` and the path or id portion is lexically unambiguous. The optional `BaseRole` keyword before `:` is distinguished from a CURIE prefix (`gdx:`, `schema:`) by lookup against the closed `BaseRole` set: only `OBJ`, `REL`, `PKG`, `GRP`, `HEAD`, `DEFOBJ`, `DEFREC`, `DEFSTR`, `DEFINT`, `DEFFLOAT`, `DEFBOOL`, `DEFBYTE`, `DEFHEAD` are recognized as role markers. The keyword wins: when the part of a `Base` before its first `:` is one of these keywords, that `:` is the role separator, never part of a CURIE. A root whose Id begins with a role keyword followed by `:` (an Id such as `REL:x`) can therefore be addressed only with an explicit marker in front of it (`@REL:REL:x`).
 
-**Parse-time vs. resolution-time validation of role markers.** The parser MUST reject an unknown role keyword (one not in the closed set). At resolution time, the resolver MUST verify that the resolved root actually has the claimed role; mismatch leaves the target unresolved.
+**Parse-time vs. resolution-time validation of role markers.** At parse time, a `BaseRole` keyword before the first `:` MUST be followed by an Id token; a parser MUST reject a marker with nothing after its `:` (`@OBJ:`). A bareword before `:` that is not a `BaseRole` keyword is not a role keyword of any kind: it is a CURIE prefix and part of the Id, whether or not the prefix is declared, so `@FOO:bar` is the root whose Id is `FOO:bar`. At resolution time, the resolver MUST verify that the resolved root actually has the claimed role; mismatch leaves the target unresolved.
 
 Target literals are the Resource of @-Edge elements (`@OBJ`, `@REL`, `@HEAD`, §6.4) and of REF elements (§6.16). An @-edge takes only a `RootRef`; a REF may take any form:
 
@@ -2883,6 +2884,10 @@ The test suite is exhaustive in concept and bounded in practice. Each category a
 ## Appendix B — Detailed Revision History
 
 This appendix records the per-revision change descriptions accumulated during the pre-1.0 working-draft phase. The Revision History table at the top of this document gives the version + date summary; this appendix carries the prose detail. Once the specification reaches v1.0, this appendix will be archived and subsequent revisions will use a leaner change-log format.
+
+### v0.32.0 — A bareword before `:` is a role marker only when it is a `BaseRole` keyword
+
+**(81) A bareword before `:` that is not a `BaseRole` keyword is part of a CURIE-style Id, never an "unknown role keyword" (§4.2.6, `GDX-Grammar.md` §5.6, `GDX-Path.md` §5.2 and §8.4).** §4.2.6 settled how a `Base` is split: when the part before its first `:` is a `BaseRole` keyword, that `:` is the role separator, and otherwise the bareword and `:` are part of the Id (`GDX-Path.md` §5.3). The same sections also said that a parser MUST reject an "unknown role keyword", and `GDX-Path.md` §5.2 gave `@FOO:bar` as an example of one. Under `Base ::= (BaseRole ":")? IdToken` the two cannot both hold: a bareword outside the closed set is not a role keyword of any kind, and nothing in the grammar tells `FOO:` apart from a CURIE prefix such as `gdx:` or `ISO:`. The rule now says only what the grammar can check. A `BaseRole` keyword before the first `:` is a marker, and an Id token MUST follow its `:` (`@OBJ:` alone is malformed); any other bareword before `:` is a CURIE prefix and part of the Id, so `@FOO:bar` is the root whose Id is `FOO:bar` and `@ISO:3166/NZ` the root whose Id is `ISO:3166/NZ`. A CURIE prefix need not be declared for the literal to be well formed; whether the prefix expands, and whether the Id then resolves, is a resolution matter (§4.4.2, §6.4.1), as it already is for an undeclared `#predicate` (§6.15). A conforming application MAY apply its own policy to stored Ids, such as expanding known aliases, without making an undeclared prefix malformed. Resolution-time checking of a marker is unchanged. Migration: none for documents. A parser that refused `@FOO:bar` as an unknown role keyword reads it as a root Id.
 
 ### v0.31.0 — The value an edge or a reference carries is a target
 
