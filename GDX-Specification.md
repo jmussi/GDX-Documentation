@@ -2695,6 +2695,36 @@ Path-mode target resolution is normatively specified by the companion GDX Path E
 
 The composed form `@Base$PathExpression` is the canonical mechanism for reaching by path inside another root: the `Base` resolves a root element by its Id (per §6.4.1), and the path portion traverses structurally from there. This form replaces the speculative path-style identifier convention (e.g., `@/people/alice`) used in earlier revisions; with the v0.11.0 narrowing of `NameStartChar` (§4.4.1), identifiers no longer begin with `/`.
 
+### 11.5 A Target Base Through a Local Edge — Considered
+
+**Section:** §4.2.6, §4.4.5, §6.4, §6.16
+
+**Status:** Considered, not adopted. Recorded 2026-10-20 as a possible enhancement; no grammar or resolution rule is proposed yet.
+
+**The problem.** A document whose references reach many elements inside a few other roots repeats each root's full Id in every target literal (`@{root id}&{id}`). A bare `IdRef` never leaves its document (§4.4.5), and no form lets a document declare a base once. In a document of many small records (a table whose cells each name a column defined in another document) the repeated root Id can be most of the document's size.
+
+**The form considered.** A base that names a local @-edge by its Id: the target resolves to the element with the given Id inside the root that the edge targets. The sketch below is illustrative only; `{via &s}` is a placeholder, not a proposed production:
+
+```gdx
+<@OBJ &s #com.acme.vocab:structure : @com.acme:wb/_private:structure>
+<%REC column : {via &s}&col-status>
+```
+
+What it would give:
+
+- the root's Id is stored once per document, in the edge, and each reference carries only a short local Id;
+- the dependency on the other root is declared once, as an edge, which is what a consumer tracing a document's dependencies already looks for;
+- a change to the other root's Id (a reissue, a move) rewrites one edge rather than every reference.
+
+What it would need:
+
+- a grammar for the base, distinct from `RootIdRef` and `IdRef`;
+- a resolution rule: one hop inside the current document to the edge, then the edge's target root, then the Id inside it; a missing edge, a non-edge element, or a role mismatch at either step is an unresolved target (Layer 2, Appendix A.1);
+- its interaction with the payload-root stop inside a Package or Group (§4.4.5), and whether the edge must be a direct child of the document's root;
+- a statement that the form is not an alias: the edge stores the full root Id, so storage policies that forbid stored aliases are unaffected.
+
+**The alternative that needs no change.** An application can keep a local section of ordinary elements, each holding one cross-document target, and point at them with bare `IdRef`s (§6.16). The indirection is then application data, not syntax, and the long root Id appears once per local element instead of once per reference. The first known use case (a workbook's cells naming columns in a shared structure document) is evaluating that alternative first; this issue records the syntactic form in case the pattern proves general.
+
 ---
 
 ## Appendix A — Conformance
