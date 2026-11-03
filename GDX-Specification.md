@@ -1,7 +1,7 @@
 # GDX — Graph Data eXchange Specification
 
-- **Status:** Draft v0.32.0 (working draft, pre-1.0)
-- **Date:** 2026-10-20
+- **Status:** Draft v0.33.0 (working draft, pre-1.0)
+- **Date:** 2026-11-02
 - **Editors:** 
 - **Authors:** Julian Mussi
 
@@ -18,6 +18,7 @@ This is a pre-1.0 working draft. The specification is under active refinement; r
 
 | Version | Date       |
 |---------|------------|
+| v0.33.0 | 2026-11-02 |
 | v0.32.0 | 2026-10-20 |
 | v0.31.0 | 2026-10-19 |
 | v0.30.0 | 2026-10-19 |
@@ -206,7 +207,7 @@ An element has six model fields plus an out-of-model metadata channel. The Prefi
 | `Predicate`      | A predicate-style label naming the relationship between this element and its parent. |
 | `Name`       | The element's **descriptive name** — a local or resource name used for Template slot alignment (§8.2), for path segments (`GDX-Path.md`), and for display. A Name is a label, not an address: no target literal resolves by Name except through a path (§4.2.6). Names are **not durable**: renaming an element does not change its machine identity. |
 | `Resource` | The element's typed scalar value. |
-| `Type`     | A Type claim: the Id of a Template the element claims to satisfy. The `--type` token resolves to the Template by the Template's **Id** (§8.5.2), not its descriptive Name. |
+| `Type`     | A Type claim: the Id of a Template the element claims to satisfy. The `--type` token resolves to the Template by the Template's **Id** (§8.5.2), not its descriptive Name. On a Set the claim types the Set's members, not the Set (§6.13.2). |
 | `Metadata` | *(Out-of-model.)* Realization-layer carriage annotation — flat key/value pairs about how the element is stored or transmitted, not about what it means. Not model content; see §4.8. |
 
 All identity fields (`Name`, `Id`, `Predicate`) use case-sensitive ordinal comparison.
@@ -683,7 +684,7 @@ In the first element, `--com.acme.Address` resolves to the Template whose Id is 
 
 The `--` sigil MUST be preceded by whitespace separating it from the previous token, and MUST be immediately followed by a Type identifier with no intervening whitespace. The Type identifier follows the lexical rules in §4.4.
 
-A Type claim asserts that the element's contents satisfy the named Template. The identifier after `--` is resolved to a Template by matching the Template's **Id** (§8.5.2) — not its descriptive Name. Resolution locates the Template entity; the subsequent structural check (does the instance's children align to the located Template's slots) is a distinct operation keyed on `Name` (§8.2.1). These are two steps — *resolve the token by Id, then align by Name* — described together in §8.
+A Type claim asserts that the element's contents satisfy the named Template; on a Set it asserts this of each member instead (§6.13.2). The identifier after `--` is resolved to a Template by matching the Template's **Id** (§8.5.2) — not its descriptive Name. Resolution locates the Template entity; the subsequent structural check (does the instance's children align to the located Template's slots) is a distinct operation keyed on `Name` (§8.2.1). These are two steps — *resolve the token by Id, then align by Name* — described together in §8.
 
 ### 4.4 Identifier Lexical Rules
 
@@ -1674,6 +1675,34 @@ When emptiness itself is meaningful for the application, the Template MAY use `g
 
 - **Required non-empty Set.** The Set element MUST appear and MUST contain at least one member.
 
+#### 6.13.2 Typed Sets
+
+A Type claim on a Set types the Set's **members**, never the Set. A Set has no content of its own but its members and carries no Resource (§7.4), so there is nothing in the Set for a Template to describe; a claim on it can only be a claim about what it holds. `<REC* fabrics --x:fabric>` is a Set every member of which is a `REC` of type `x:fabric`, as `fabric[]` is in a typed programming language. The same holds for every Set form: the members of `<STR* tags --x:colorName>` are strings of the semantic type `x:colorName`, a `DEFSTR` (§8.3).
+
+```
+<DEFREC &x:fabric
+    <STR code>
+    <FLOAT width>
+>
+
+<REC* fabrics --x:fabric
+    <REC f101 <STR code : "F-101"> <FLOAT width : 1.4>>
+    <REC f205 <STR code : "F-205"> <FLOAT width : 1.6>>
+>
+
+<STR* tags --x:colorName
+    <STR : "teal">
+    <STR : "ochre">
+>
+```
+
+The type is written in one place, all or nothing:
+
+- **Typed Set.** When the Set carries a Type claim, its members MUST NOT carry one. The type is written only on the Set; a member of a typed Set that carries its own claim — matching or not — is malformed (§7.2 rule 6a, §7.5).
+- **Untyped Set.** When the Set carries no Type claim, each member MAY carry its own, and members MAY claim different types. A `REC*` of sections whose members claim different section Templates is an untyped Set of typed members.
+
+**Effective type.** A member of a typed Set has the Set's type as its **effective type**: it is an instance of that Template exactly as if it carried the claim itself, and is aligned to the Template (§8.2.1) as one. The effective type holds for every reader, not only for a validator walking down from the Set: a target literal that resolves to the member (§4.2.6), a path that reaches it (`GDX-Path.md`), and a query that selects on type all see the member as typed. A reader that answers "what is this element's type" for a member of a typed Set MUST answer with the Set's claim. The effective type of any other element is its own Type claim. The Set's claim is model content written in the document, not a Template-supplied value, so a member's effective type is visible without resolving any Template and nothing about it is materialized (§8.2.4).
+
 ### 6.14 Template — `DEF`
 
 A Template is a **type contract** — a declaration of the shape and constraints an instance must satisfy to claim conformance to a named type (§8). Conceptually, a Template is written in instance vocabulary: it looks like the elements it describes, with the same prefixes and the same composition rules, but with `DEF` declaring "this is the contract, not the data." A Template is what an instance points to through its `--type` field; the instance asserts identity, the Template defines what that identity means structurally.
@@ -2082,7 +2111,9 @@ The following rules are consequences of the matrix and are repeated here for cla
 
 5. **Nodes are isolated subtrees.** A Node-zone element's children MUST themselves be Node-zone elements (or Annotations). Once a Node-zone element appears in a document, its subtree is uniformly Node-typed. Structured roles (Properties, Records, Sets, Edges, etc.) cannot appear within a Node subtree. Use `NREC` for the no-Resource Node-zone container that establishes such a subtree.
 
-6. **Sets contain members of their declared element type.** A Set's children MUST be elements whose prefix matches the Set's element type. A `STR*` Set contains `STR` members; a `REC*` Set contains `REC` members. Qualifiers, Extensions (where permitted), and Annotations may also appear as Set children to refine or annotate the Set itself.
+6. **Sets contain members of their declared element type.** A Set's children MUST be elements whose prefix matches the Set's element type. A `STR*` Set contains `STR` members; a `REC*` Set contains `REC` members. Qualifiers, Extensions (where permitted), and Annotations may also appear as Set children to refine or annotate the Set itself. When the Set carries no Type claim, its members MAY claim different types.
+
+6a. **A typed Set's members carry no Type claim.** A Type claim on a Set types its members (§6.13.2). When a Set carries a Type claim, no member of it may carry one, whether the member's claim matches the Set's or not. The rule is structural: it is decidable from the text alone, without resolving the claim or loading any vocabulary.
 
 7. **Extensions are adjunct.** An Extension is a vocabulary-defined assertion attached to an element (§6.10). It may appear under any parent that admits children, with two exceptions: it cannot appear under an Annotation (leaf-only) or inside a Node-zone subtree (rule 5). The Extension's bindingness is determined by the consumer that interprets its vocabulary — validators acting on Constraint Extensions on Templates (§8.4), renderers acting on presentation Extensions, ontology reasoners acting on axiom Extensions on RELs, and so on. A consumer that does not recognize an Extension's vocabulary identifier ignores it; this is the property that allows multiple vocabularies to coexist on the same element.
 
@@ -2170,7 +2201,7 @@ Per §3.3, when a Resource is present, its value-kind MUST be consistent with th
 - Float-family prefixes (`FLOAT`/`F`, `.FLOAT`/`.F`, `_FLOAT`/`_F`, `NFLOAT`/`NF`) carry `float` resources.
 - Bool-family prefixes (`BOOL`/`L`, `.BOOL`/`.L`, `_BOOL`/`_L`, `NBOOL`/`NL`) carry `bool` resources.
 - Bytes-family prefixes (`BYTE`/`B`, `.BYTE`/`.B`, `_BYTE`/`_B`, `NBYTE`/`NB`) carry `bytes` resources.
-- Set prefixes (`STR*`, `INT*`, `REC*`, and the other `*` forms) carry NO Resource of their own — a Set's content is its member children (§6.13). The members carry resources of the base family.
+- Set prefixes (`STR*`, `INT*`, `REC*`, and the other `*` forms) carry NO Resource of their own — a Set's content is its member children (§6.13). The members carry resources of the base family. For the same reason a Set's Type claim types its members, not the Set (§6.13.2).
 - @-Edge prefixes (`@OBJ`, `@REL`) carry `target` resources whose role matches the prefix: `@OBJ` resolves to an Object; `@REL` resolves to a REL declaration (see §6.4).
 - REF prefixes (every `%KIND` form, §6.16) carry `target` resources. The Resource is a target literal (any of the five forms per §4.2.6) whose resolved-element role is declared by the wrapped layer-1 prefix: `%OBJ` → Object; `%REC` → Record; `%DEFOBJ` → Template; `%@OBJ` → Object-edge; `%STR*` → Set of strings; and so on.
 - Annotation prefix (`REM`) carries `string` resources.
@@ -2189,6 +2220,7 @@ A conforming parser MUST reject any document containing:
 - A Resource whose value-kind does not match the prefix family (§7.4).
 - A Node containing a non-Node, non-Annotation child.
 - A Set containing a member whose prefix does not match the Set's element type.
+- A Set carrying a Type claim with a member that also carries one (§7.2 rule 6a).
 - An Object appearing as a non-root child in a position other than the occupant of a VAL slot (§6.11), a Package payload, or a Group payload.
 - A Package containing another Package.
 - A Group containing a Package.
@@ -2261,6 +2293,17 @@ An instance child satisfies a Template slot by matching the slot's `Name` field,
 
 When an element is untyped, its `Name`s are free identifiers — they carry semantic weight on their own, because there is no Template to resolve them against. When an element claims a `--type`, resolution (by Id, §8.5.2) locates the Template, and the type then declares a set of expected slot names to which the instance's `Name`s bind — the name's role shifts from carrying meaning to aligning with the meaning the type defines. The name must still be carried by the instance because alignment is an instance-to-template match: which filler claims which slot is irreducible instance information the type cannot supply. `Name` and `--type` therefore operate at different levels — `--type` resolves the Template by Id; `Name` aligns the instance's children to that Template's slots — and reinforce rather than duplicate, with the child-naming responsibility migrating to slot-alignment on type-claim.
 
+**Set slots.** A Template declares a Set slot as it declares any slot, with the Set prefix and a Name (`<REC* fabrics>`). A Type claim on the slot names its members' Template, as it does on an instance Set (§6.13.2): `<REC* fabrics --x:fabric>` declares a slot whose members are `x:fabric` Records. The slot's claim reconciles with the instance Set's under the claim rule (§8.2.3) like any nested `--type`, and materialization writes it onto the instance Set, never onto its members (§8.2.4). Each member of the instance Set is then aligned to the claimed Template. When the effective claim on the Set comes from the Template, a member that carries its own claim is Layer 2 non-conforming: materializing the Set would make the document malformed (§7.2 rule 6a). Constraints on the number of members (`gdx:minItems` and similar, §6.13.1) are carried by the slot as before and are unaffected by its Type claim.
+
+```
+<DEFREC &x:roll
+    <STR label>
+    <REC* fabrics --x:fabric
+        <_INT gdx:minItems : 1>
+    >
+>
+```
+
 The `Id` field plays no role in Template-instance alignment. Ids are an independent named-id mechanism (§4.4.5) used by every target literal (§4.2.6); they are not consulted during schema validation and are excluded from the universal claim rule (§8.2.3).
 
 #### 8.2.2 Cross-Role and Transport Restrictions
@@ -2274,6 +2317,7 @@ A `--type` token MUST resolve to a Template whose base role matches the instance
 - A `BYTE`/`B` instance may claim `DEFBYTE` only.
 - A `REC`/`R` instance may claim `DEFREC` only.
 - An `OBJ`/`O` instance may claim `DEFOBJ` only.
+- A Set (`STR*`, `REC*`, and the other `*` forms) claims the Template of its **members** (§6.13.2), by the member's row above: a `STR*` may claim `DEFSTR` only, a `REC*` `DEFREC` only, and so on. There is no Set Template (`DEF…*` does not exist, §7.2 rule 13); the Set's claim is checked as each member's claim.
 
 Cross-role claims (e.g., a Record instance claiming an Object Template) are Layer 2 structural-conformance failures.
 
@@ -2329,7 +2373,7 @@ This creates a real difference between the instance's logical content and its pe
 >
 ```
 
-Materialization applies to the claim-bearing fields named in §8.2.3: `Predicate`, `Resource` defaults, and nested `--type` claims. It does NOT extrapolate beyond what the Template explicitly declares; missing slots are not added — including slots for which the Template declares a default Resource — and Constraint Extensions (§8.4) are not copied from Template to instance (constraints are vocabulary-defined and remain Template-scoped). The absent-slot rule is deliberate: the instance is the reality, and a slot's absence may itself be meaningful (the slot may have been deliberately removed); materialization refines what is present, it never resurrects what is not. A default Resource therefore materializes only into a *present-but-null* slot. Imparting Template defaults into a brand-new instance — filling in every defaulted slot at creation time — is an *instantiation* operation performed by authoring tooling, not part of materialization; once instantiated, the materialized representation is authoritative.
+Materialization applies to the claim-bearing fields named in §8.2.3: `Predicate`, `Resource` defaults, and nested `--type` claims. A nested `--type` on a Set slot materializes onto the instance Set only; its members take it as their effective type (§6.13.2) and are not given a claim of their own. It does NOT extrapolate beyond what the Template explicitly declares; missing slots are not added — including slots for which the Template declares a default Resource — and Constraint Extensions (§8.4) are not copied from Template to instance (constraints are vocabulary-defined and remain Template-scoped). The absent-slot rule is deliberate: the instance is the reality, and a slot's absence may itself be meaningful (the slot may have been deliberately removed); materialization refines what is present, it never resurrects what is not. A default Resource therefore materializes only into a *present-but-null* slot. Imparting Template defaults into a brand-new instance — filling in every defaulted slot at creation time — is an *instantiation* operation performed by authoring tooling, not part of materialization; once instantiated, the materialized representation is authoritative.
 
 **Materialization is RECOMMENDED for persistence and exchange.** Documents that will be persisted, transmitted, archived, or signed SHOULD be materialized before they are written. This preserves the search and self-description properties of the data when the Template is not accessible at read time. Materialization is OPTIONAL for in-memory processing; tools MAY apply the §8.2.3 claim rule on-the-fly during processing without rewriting the document.
 
@@ -2635,6 +2679,8 @@ A single table can store an arbitrary GDX document with the following column str
 | `ResourceValue`| The Resource value, encoded per the value-kind                     |
 | `Type`         | The element's Type claim (NULL if not present)                     |
 
+The `Type` column holds the claim as written, so a member of a typed Set has NULL there and its parent Set's row holds the claim. A query that selects on type selects on the *effective* type (§6.13.2): the row's own `Type`, or, for a Set member, its parent Set's. A store MAY index the effective type directly.
+
 This single-schema approach allows GDX storage without per-document schema migration. Adding a new Object role, Property, or Template requires no schema changes — just additional rows.
 
 Store-native columns beyond those above (a persistence identifier, a row version, delta-handling state) are the at-rest form of an element's metadata channel (§4.8): they annotate how the element is stored, not what it means, and they are the natural source and sink for the `{...}` block when the element is serialized out or parsed in. Because metadata is out-of-model, these columns are outside the round-trip contract (§A.2) — a backend MAY carry, add, or drop them without affecting model-conforming round-trip.
@@ -2827,6 +2873,7 @@ A conforming implementation SHOULD verify its behavior against a test suite cove
 - Each row of the §7.1 composition matrix represented as a positive test (parent role contains valid child role) and at least one negative test (parent role contains invalid child role).
 - Top-level element restriction: positive tests for Object/Template/REL/Package as document root; negative tests for other roles at document root.
 - Set member rules: positive tests for homogeneous Set members; negative tests for heterogeneous members where applicable.
+- Typed Sets: a typed Set with untyped members and an untyped Set with members of different types (positive); a typed Set with a member carrying its own claim, matching or not (negative, §7.2 rule 6a).
 - Node subtree isolation: positive tests for Node-only subtrees; negative tests for structured roles appearing within Node subtrees.
 
 **Resource and value tests (Layer 1):**
@@ -2842,6 +2889,7 @@ A conforming implementation SHOULD verify its behavior against a test suite cove
 - Rename stability: a Template/REL whose descriptive Name changes while its Id is held fixed continues to resolve; a claim does not break under a Name change.
 - Resolution order: tests confirming the §8.5.2 default order is followed (local document first, then loaded vocabularies, then global IRI).
 - Resolution failure: tests confirming unresolved Type claims produce Layer 2 errors per §8.5.3.
+- Typed Sets: each member of a typed Set aligns to the claimed Template; a Set claiming a Template of the wrong role (a `REC*` claiming a `DEFSTR`) fails (§8.2.2); a Template Set slot's claim reconciles with the instance Set's and makes an instance member's own claim non-conforming (§8.2.1).
 - Validator modes: strict and lenient mode behavior on the same input documents.
 - Error accumulation: validator returns multiple errors from a single pass (per §8.5.4).
 - @-Edge target resolution: tests confirming §6.4.1 behavior for resolved and unresolved `@OBJ`/`@REL` targets, including role-mismatch detection (an `@OBJ` resolving to a REL is unresolved).
@@ -2884,6 +2932,16 @@ The test suite is exhaustive in concept and bounded in practice. Each category a
 ## Appendix B — Detailed Revision History
 
 This appendix records the per-revision change descriptions accumulated during the pre-1.0 working-draft phase. The Revision History table at the top of this document gives the version + date summary; this appendix carries the prose detail. Once the specification reaches v1.0, this appendix will be archived and subsequent revisions will use a leaner change-log format.
+
+### v0.33.0 — A Type claim on a Set types its members
+
+**(82) A Type claim on a Set types the Set's members, never the Set; when the Set carries one its members MUST NOT (§3.1, §4.3, §6.13.2 new, §7.2 rules 6 and 6a, §7.4, §7.5, §8.2.1, §8.2.2, §8.2.4, §10.2, A.7).** The specification let a Set carry a `--type` but never said what the claim meant. A Set has no content but its members and carries no Resource (§7.4), so there is nothing in it for a Template to describe, and §8.2.2 listed no Template a Set could claim, since no `DEF…*` exists (§7.2 rule 13). An implementation that checked the claim checked the Set as one Record and found a role mismatch; the members, which are what the claim was written about, were never checked. Applications that needed "a collection of `x:fabric`" each checked member types by hand because nothing in the format could say it. A claim on a Set now names its members' Template: `<REC* fabrics --x:fabric>` is a Set every member of which is a `REC` of type `x:fabric`, like `fabric[]`, and `<STR* tags --x:colorName>` holds strings of a `DEFSTR` semantic type. The type is written in one place, all or nothing. When the Set carries a claim, a member carrying its own is malformed, whether it matches or not (rule 6a); when the Set carries none, members MAY carry their own and MAY differ, which is what an untyped `REC*` of mixed sections relies on (rule 6). A member of a typed Set has the Set's type as its **effective type** for every reader, including a target literal that resolves to it, a path and a query. In a Template, a Set slot's claim names its members' Template; it reconciles with the instance Set's under the claim rule and materializes onto the Set only. Member-count constraints (`gdx:minItems` and similar) are unchanged.
+
+*Malformed, not non-conforming.* A member's claim inside a typed Set is a Layer 1 error because it is visible from the text alone: the Set's claim and the member's are both written, and no Template or vocabulary is needed to see that two are present. A matching member claim is rejected as well as a differing one, so there is one written form for a typed Set and a reader never has to decide whether a repeated claim is redundant or a conflict. The case the text cannot show, a Template supplying the Set's claim to an instance whose members carry their own, is a Layer 2 non-conformance (§8.2.1), since materializing it would produce the malformed form.
+
+*Alternatives considered.* (a) **Members repeat the type**: each member of a typed Set carries the same claim as the Set, and a differing one is a conflict. Rejected: it writes the type once per member, gives the Set's claim nothing to add, and leaves a document with two places that can disagree. (b) **Members may omit and inherit**: a member without a claim takes the Set's, and a member with one keeps its own or must match. Rejected: it gives a typed Set two written forms for the same content, so a reader comparing documents or a store indexing type has to normalize first, and "may match" reopens the question of which claim wins when they differ. (c) **The claim types the Set itself**: rejected because a Set has no content of its own for a Template to describe. Writing the claim only on the Set states it once, keeps it visible without resolving anything, and leaves untyped Sets free to mix member types.
+
+Migration: a document whose Set carries a claim and whose members also carry claims is now malformed; drop the members' claims if they equal the Set's, or drop the Set's claim if they differ. A document whose Sets carried no claim is unchanged. A validator that checked a Set's claim against the Set as one Record checks each member against it instead, and a reader or store that answers an element's type answers the effective type.
 
 ### v0.32.0 — A bareword before `:` is a role marker only when it is a `BaseRole` keyword
 
